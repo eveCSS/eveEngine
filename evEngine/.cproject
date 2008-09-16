@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?fileVersion 4.0.0?>
+
+<cproject>
+<storageModule moduleId="org.eclipse.cdt.core.settings">
+<cconfiguration id="org.eclipse.cdt.core.default.config.1045589313">
+<storageModule buildSystemId="org.eclipse.cdt.core.defaultConfigDataProvider" id="org.eclipse.cdt.core.default.config.1045589313" moduleId="org.eclipse.cdt.core.settings" name="Configuration">
+<externalSettings/>
+<extensions>
+<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+</extensions>
+</storageModule>
+<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+
+<storageModule moduleId="scannerConfiguration"/>
+
+<storageModule moduleId="org.eclipse.cdt.core.language.mapping"/>
+
+<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets">
+<buildTargets>
+<target name="Qt Release Build" path="" targetID="org.eclipse.cdt.make.MakeTargetBuilder">
+<buildCommand>make</buildCommand>
+<buildArguments/>
+<buildTarget>release</buildTarget>
+<stopOnError>false</stopOnError>
+<useDefaultCommand>false</useDefaultCommand>
+<runAllBuilders>true</runAllBuilders>
+</target>
+<target name="Qt Debug Build" path="" targetID="org.eclipse.cdt.make.MakeTargetBuilder">
+<buildCommand>make</buildCommand>
+<buildArguments/>
+<buildTarget>debug</buildTarget>
+<stopOnError>false</stopOnError>
+<useDefaultCommand>false</useDefaultCommand>
+<runAllBuilders>true</runAllBuilders>
+</target>
+<target name="QMake" path="" targetID="org.eclipse.cdt.make.MakeTargetBuilder">
+<buildCommand>qmake</buildCommand>
+<buildArguments>evEngine.pro</buildArguments>
+<buildTarget/>
+<stopOnError>false</stopOnError>
+<useDefaultCommand>false</useDefaultCommand>
+<runAllBuilders>true</runAllBuilders>
+</target>
+</buildTargets>
+</storageModule>
+<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+<storageModule moduleId="org.eclipse.cdt.core.pathentry">
+<pathentry base-path="/opt/qt/4.3.4/include" include="" kind="inc" path="" system="true"/>
+<pathentry base-path="/opt/qt/4.3.4/include" include="QtCore" kind="inc" path="" system="true"/>
+<pathentry base-path="/opt/qt/4.3.4/include" include="QtGui" kind="inc" path="" system="true"/>
+<pathentry base-path="/opt/qt/4.3.4/include" include="QtXml" kind="inc" path="" system="true"/>
+<pathentry base-path="/opt/qt/4.3.4/include" include="QtNetwork" kind="inc" path="" system="true"/>
+<pathentry base-path="/opt/qt/4.3.4/include" include="QtTest" kind="inc" path="" system="true"/>
+<pathentry base-path="/opt/qt/4.3.4/include" include="QtScript" kind="inc" path="" system="true"/>
+<pathentry base-path="/opt/qt/4.3.4/include" include="QtSql" kind="inc" path="" system="true"/>
+<pathentry base-path="/opt/qt/4.3.4/include" include="QtSvg" kind="inc" path="" system="true"/>
+<pathentry base-path="/opt/qt/4.3.4/include" include="Qt3Support" kind="inc" path="" system="true"/>
+<pathentry base-path="/opt/qt/4.3.4/include" include="ActiveQt" kind="inc" path="" system="true"/>
+<pathentry base-path="/opt/qt/4.3.4/include" include="QtDBus" kind="inc" path="" system="true"/>
+<pathentry base-path="/opt/qt/4.3.4/include" include="QtDesigner" kind="inc" path="" system="true"/>
+<pathentry base-path="/opt/qt/4.3.4/include" include="QtAssistant" kind="inc" path="" system="true"/>
+<pathentry base-path="/opt/qt/4.3.4/include" include="QtOpenGL" kind="inc" path="" system="true"/>
+<pathentry base-path="/opt/qt/4.3.4/include" include="QtUiTools" kind="inc" path="" system="true"/>
+<pathentry base-path="evEngine" include="NwModul" kind="inc" path="" system="true"/>
+<pathentry kind="src" path="NwModul"/>
+<pathentry kind="out" path=""/>
+<pathentry kind="src" path="scanModule"/>
+</storageModule>
+</cconfiguration>
+</storageModule>
+</cproject>
