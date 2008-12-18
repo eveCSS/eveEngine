@@ -1,2 +1,6 @@
 release
 debug
+Makefile.Debug
+Makefile.Release
+Makefile
+evEngine
