@@ -1,8 +1,11 @@
 #include "eveRequestManager.h"
 
+eveRequestManager* eveRequestManager::reqMan=NULL;
+
 eveRequestManager::eveRequestManager()
 {
 	lastId = 0;
+	reqMan = this;
 }
 
 eveRequestManager::~eveRequestManager()

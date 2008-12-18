@@ -3,7 +3,8 @@
 #include "eveMessageChannel.h"
 #include "eveError.h"
 
-eveMessageChannel::eveMessageChannel(QObject *parent): QObject(parent)
+//eveMessageChannel::eveMessageChannel(QObject *parent): QObject(parent)
+eveMessageChannel::eveMessageChannel(QObject *parent)
 {
 	connect(this, SIGNAL(messageArrived()), this, SLOT(newQueuedMessage()) ,Qt::QueuedConnection);
 }

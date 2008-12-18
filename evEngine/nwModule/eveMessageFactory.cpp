@@ -26,7 +26,7 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 
 	if (length > 0){
 		if (byteArray == 0) eveError::log(4,"eveMessageFactory::getNewMessage byteArray is NullPointer but length > 0");
-		if (byteArray->length() != length) {
+		if ((quint32)byteArray->length() != length) {
 			eveError::log(4,"eveMessageFactory::getNewMessage length of byteArray != length");
 			return new eveErrorMessage(ERROR, EVEMESSAGEFACILITY_CPARSER, 0x0008, "length mismatch");
 		}
@@ -164,29 +164,24 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 			QString xmlId;
 			quint32 timeFirst,timeSecond;
 			inStream >> timeFirst >> timeSecond >> estatus >> xmlId;
-			eveError::log(4,QString("eveMessageFactory::getNewMessage: xmlid: %1, (%2/%3/%4)").arg(xmlId).arg(timeFirst).arg(timeSecond).arg(estatus));
 			message = new eveEngineStatusMessage(estatus, xmlId);
 		}
 		break;
 		case EVEMESSAGETYPE_CHAINSTATUS:
 		{
 			struct timespec statTime;
-			quint32 cstatus;
-			quint32 cid;
-			quint32 smid;
-			quint32 poscnt;
-			inStream >> (quint32&)statTime.tv_sec >> (quint32&)statTime.tv_nsec >> cstatus >> cid >> smid >> poscnt;
+			quint32 secs, nsecs, cstatus, cid, smid, poscnt, remtime;
+			inStream >> secs >> nsecs >> cstatus >> cid >> smid >> poscnt >> remtime;
+			statTime.tv_sec = secs;
+			statTime.tv_nsec = nsecs;
 			epicsTime messageTime = statTime;
-			message = new eveChainStatusMessage(cstatus, cid, smid, poscnt, messageTime);
+			message = new eveChainStatusMessage(cstatus, cid, smid, poscnt, messageTime, remtime);
 		}
 		break;
 		case EVEMESSAGETYPE_PLAYLIST:
 		{
 			quint32 sum = 0;
 			qint32 plcount;
-			quint32 plid;
-			QString name;
-			QString author;
 			QList<evePlayListEntry> plList;
 			evePlayListEntry plEntry;
 
@@ -199,9 +194,15 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 				}
 				inStream >> plEntry.pid >> plEntry.name >> plEntry.author;
 				plList.append(plEntry);
-				sum += 12 + 2*name.length() + 2*author.length();
+				sum += 12 + 2*plEntry.name.length() + 2*plEntry.author.length();
 			}
-			message = new evePlayListMessage(plList);
+			if (length == sum) {
+				message = new evePlayListMessage(plList);
+			}
+			else {
+				return new eveErrorMessage(ERROR, EVEMESSAGEFACILITY_CPARSER, 0x0008, "corrupt playlist message (length mismatch)");
+			}
+
 			//for (int i=0; i < plList.size(); ++i) delete &(plList.takeFirst());
 		}
 		break;
@@ -216,62 +217,73 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 
 			inStream >> dtype >> dataMod >> stat.severity >> stat.condition >> stat.acqStatus;
 			inStream >> timestamp.secPastEpoch >> timestamp.nsec >> dname >> arraycount;
+			// TODO remove this and make sure we have a correct time, otherwise epics assert is called
+			timestamp.nsec = 1000;
+			timestamp.secPastEpoch = 10008;
 
 			switch (dtype) {
-				case 0:					/* epicsInt8 */
+				case epicsInt8T:					/* epicsInt8 */
 				{
 					QVector<char> cArray;
 					quint8 val;
 					// TODO check if length == arraycount *bytesize
-					for (int i = 0; i < arraycount; ++i) {
+					for (quint32 i = 0; i < arraycount; ++i) {
 						inStream >> val;
 						cArray[i] = (char)val;
 					}
 					message = new eveDataMessage(dname, stat, (eveDataModType)dataMod, epicsTime(timestamp), cArray);
 				}
 				break;
-				case 2:					/* epicsInt16 */
+				case epicsInt16T:					/* epicsInt16 */
 				{
 					QVector<short> sArray;
-					for (unsigned int i = 0; i < arraycount; ++i) {
-						inStream >> sArray[i];
+					for (quint32 i = 0; i < arraycount; ++i) {
+						short value;
+						inStream >> value;
+						sArray.append(value);
 					}
 					message = new eveDataMessage(dname, stat, (eveDataModType)dataMod, epicsTime(timestamp), sArray);
 				}
 				break;
-				case 5:					/* epicsInt32 */
+				case epicsInt32T:					/* epicsInt32 */
 				{
 					QVector<int> iArray;
 					// TODO check if length == arraycount *bytesize
-					for (int i = 0; i < arraycount; ++i) {
-						inStream >> iArray[i];
+					for (quint32 i = 0; i < arraycount; ++i) {
+						int value;
+						inStream >> value;
+						iArray.append(value);
 					}
 					message = new eveDataMessage(dname, stat, (eveDataModType)dataMod, epicsTime(timestamp), iArray);
 				}
 				break;
-				case 7:					/* epicsFLoat32 */
+				case epicsFloat32T:					/* epicsFLoat32 */
 				{
 					QVector<float> fArray;
-					for (int i = 0; i < arraycount; ++i) {
-						inStream >> fArray[i];
+					for (quint32 i = 0; i < arraycount; ++i) {
+						float value;
+						inStream >> value;
+						fArray.append(value);
 					}
 					message = new eveDataMessage(dname, stat, (eveDataModType)dataMod, epicsTime(timestamp), fArray);
 				}break;
-				case 8:					/* epicsFloat64 */
+				case epicsFloat64T:					/* epicsFloat64 */
 				{
 					QVector<double> dArray;
-					for (int i = 0; i < arraycount; ++i) {
-						inStream >> dArray[i];
+					for (quint32 i = 0; i < arraycount; ++i) {
+						double value;
+						inStream >> value;
+						dArray.append(value);
 					}
 					message = new eveDataMessage(dname, stat, (eveDataModType)dataMod, epicsTime(timestamp), dArray);
 				}
 				break;
-				case 9:					/* epicsString */
+				case epicsStringT:					/* epicsString */
 				{
 					QStringList stringData;
 					QString instring;
 					// TODO check if length == arraycount *bytesize
-					for (int i = 0; i < arraycount; ++i) {
+					for (quint32 i = 0; i < arraycount; ++i) {
 						inStream >> instring;
 						stringData.insert(i, instring);
 					}
@@ -340,8 +352,9 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 			quint32 cid  = ((eveChainStatusMessage*)message)->getChainId();
 			quint32 smid = ((eveChainStatusMessage*)message)->getSmId();
 			quint32 poscnt = ((eveChainStatusMessage*)message)->getPosCnt();
+			quint32 remtime = ((eveChainStatusMessage*)message)->getRemainingTime();
 			quint32 messageLength = 0;
-			outStream << messageLength << (quint32) statTime.tv_sec << (quint32) statTime.tv_nsec << cstatus << cid << smid << poscnt;
+			outStream << messageLength << (quint32) statTime.tv_sec << (quint32) statTime.tv_nsec << cstatus << cid << smid << poscnt << remtime;
 			outStream.device()->seek(8);
 			messageLength = block->length() - 12;
 			outStream << messageLength;
@@ -407,44 +420,43 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 		break;
 		case EVEMESSAGETYPE_DATA:
 		{
-			quint32 dtype = (quint32)((eveDataMessage*)message)->getType();
-			eveDataStatus stat = ((eveDataMessage*)message)->getStatus();
+			quint32 dtype = (quint32)((eveDataMessage*)message)->getDataType();
+			eveDataStatus stat = ((eveDataMessage*)message)->getDataStatus();
 			quint32 dataMod = (quint32)((eveDataMessage*)message)->getDataMod();
-			epicsTime dtime = ((eveDataMessage*)message)->getTimeStamp();
-			epicsTimeStamp timestamp;
-			// tbd
-			// Don't know why this doesn't work (runtime error)
-			//timestamp = dtime;
+			epicsTime dtime = ((eveDataMessage*)message)->getDataTimeStamp();
+			epicsTimeStamp dtimestamp;
+			// TODO Don't know why this doesn't work (runtime error)
+			//dtimestamp = dtime;
 			QString dname = ((eveDataMessage*)message)->getId();
 			quint32 messageLength = 0;
-			outStream << messageLength << dtype << dataMod << stat.severity << stat.condition << stat.acqStatus << timestamp.secPastEpoch << timestamp.nsec << dname;
+			outStream << messageLength << dtype << dataMod << stat.severity << stat.condition << stat.acqStatus << dtimestamp.secPastEpoch << dtimestamp.nsec << dname;
 			switch (dtype) {
-				case 0:					/* epicsInt8 */
+				case epicsInt8T:					/* epicsInt8 */
 				{
 					QVector<char> cArray = ((eveDataMessage*)message)->getCharArray();
 					outStream << cArray.count() << cArray ;
 				} break;
-				case 2:					/* epicsInt16 */
+				case epicsInt16T:					/* epicsInt16 */
 				{
 					QVector<short> sArray = ((eveDataMessage*)message)->getShortArray();
 					outStream << sArray.count() << sArray ;
 				} break;
-				case 5:					/* epicsInt32 */
+				case epicsInt32T:					/* epicsInt32 */
 				{
 					QVector<int> iArray = ((eveDataMessage*)message)->getIntArray();
 					outStream << iArray.count() << iArray ;
 				}break;
-				case 7:					/* epicsFLoat32 */
+				case epicsFloat32T:					/* epicsFLoat32 */
 				{
 					QVector<float> fArray = ((eveDataMessage*)message)->getFloatArray();
 					outStream << fArray.count() << fArray ;
 				}break;
-				case 8:					/* epicsFloat64 */
+				case epicsFloat64T:					/* epicsFloat64 */
 				{
 					QVector<double> dArray = ((eveDataMessage*)message)->getDoubleArray();
 					outStream << dArray.count() << dArray ;
 				}break;
-				case 9:					/* epicsString */
+				case epicsStringT:					/* epicsString */
 				{
 					QStringList strings = ((eveDataMessage*)message)->getStringArray();
 					outStream << strings.size();

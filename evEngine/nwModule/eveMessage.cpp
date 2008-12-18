@@ -13,9 +13,16 @@ eveMessage::eveMessage()
  * \brief Constructor
  * \param mtype the messagetype definition
  */
-eveMessage::eveMessage(int mtype)
+eveMessage::eveMessage(int mtype, int prio)
 {
+	priority = prio;
 	type = mtype;
+	assert ((type == EVEMESSAGETYPE_START) ||
+			(type == EVEMESSAGETYPE_HALT) ||
+			(type == EVEMESSAGETYPE_BREAK) ||
+			(type == EVEMESSAGETYPE_STOP) ||
+			(type == EVEMESSAGETYPE_PAUSE) ||
+			(type == EVEMESSAGETYPE_ENDPROGRAM));
 }
 
 eveMessage::~eveMessage()
@@ -39,12 +46,13 @@ bool eveMessage::compare(eveMessage *message)
  * \param mtype the type of message
  * \param text message text
  */
-eveMessageText::eveMessageText(int mType, QString text)
+eveMessageText::eveMessageText(int mType, QString text, int prio)
 {
 	type = mType;
 	// check the allowed types; for now EVEMESSAGETYPE_LIVEDESCRIPTION is the only candidate
 	assert(type == EVEMESSAGETYPE_LIVEDESCRIPTION);
 	messageText = text;
+	priority = prio;
 }
 /**
  * \brief compare two messages
@@ -81,8 +89,9 @@ bool eveMessageTextList::compare(eveMessage *message)
  * \param mtype the type of message
  * \param ival integer value of the message
  */
-eveMessageInt::eveMessageInt(int iType, int ival)
+eveMessageInt::eveMessageInt(int iType, int ival, int prio)
 {
+	priority = prio;
 	value = ival;
 	type = iType;
 	// check the allowed types
@@ -108,8 +117,9 @@ bool eveMessageInt::compare(eveMessage *message)
  * \param mtype the type of message
  * \param ival integer value of the message
  */
-eveMessageIntList::eveMessageIntList(int mtype, int ival1, int ival2)
+eveMessageIntList::eveMessageIntList(int mtype, int ival1, int ival2, int prio)
 {
+	priority = prio;
 	ivalue1 = ival1;
 	ivalue2 = ival2;
 	type = mtype;
@@ -152,8 +162,9 @@ int eveMessageIntList::getInt(int index){
  * \param xmlauthor Host and Author in the format 'author@host'
  * \param xmldata byte array of xml-data
  */
-eveAddToPlMessage::eveAddToPlMessage(QString xmlname, QString xmlauthor, QByteArray xmldata)
+eveAddToPlMessage::eveAddToPlMessage(QString xmlname, QString xmlauthor, QByteArray xmldata, int prio)
 {
+	priority = prio;
 	type = EVEMESSAGETYPE_ADDTOPLAYLIST;
 	// tbd. use try/catch block
 	XmlName = new QString(xmlname);
@@ -190,10 +201,11 @@ eveAddToPlMessage::~eveAddToPlMessage()
  * \param xmlauthor Host and Author in the format author@host
  * \param xmldata xml-formatted description
  */
-eveCurrentXmlMessage::eveCurrentXmlMessage(QString xmlname, QString xmlauthor, QByteArray xmldata)
+eveCurrentXmlMessage::eveCurrentXmlMessage(QString xmlname, QString xmlauthor, QByteArray xmldata, int prio)
 	:  eveAddToPlMessage(xmlname, xmlauthor, xmldata)
 {
 	type = EVEMESSAGETYPE_CURRENTXML;
+	priority = prio;
 }
 
 eveCurrentXmlMessage::~eveCurrentXmlMessage()
@@ -207,9 +219,10 @@ eveCurrentXmlMessage::~eveCurrentXmlMessage()
  * \param xmlname Name of currently processing scanmodule
  * \param status status of currently processing scanmodule
  */
-eveEngineStatusMessage::eveEngineStatusMessage(int status, QString xmlname)
+eveEngineStatusMessage::eveEngineStatusMessage(int status, QString xmlname, int prio)
 {
 	type = EVEMESSAGETYPE_ENGINESTATUS;
+	priority = prio;
 	XmlId = new QString(xmlname);
 	estatus = status;
 	timestamp = epicsTime::getCurrent();
@@ -262,14 +275,16 @@ eveChainStatusMessage::eveChainStatusMessage(int status, int cid, int sid, int p
  * \param pc	position counter
  * \param epTime	epicsTime
  */
-eveChainStatusMessage::eveChainStatusMessage(int status, int cid, int sid, int pc, epicsTime epTime)
+eveChainStatusMessage::eveChainStatusMessage(int status, int cid, int sid, int pc, epicsTime epTime, int remTime, int prio)
 {
 	type = EVEMESSAGETYPE_CHAINSTATUS;
+	priority = prio;
 	cstatus = status;
 	chainId = cid;
 	smId = sid;
 	posCounter = pc;
 	timestamp = epTime;
+	remainingTime =remTime;
 }
 
 eveChainStatusMessage::~eveChainStatusMessage()
@@ -418,9 +433,10 @@ bool eveRequestCancelMessage::compare(eveMessage *message)
  * \param errType predefined error types (Timeout, allocation error, etc)
  * \param errString additional error message
  */
-eveErrorMessage::eveErrorMessage(int errSeverity, int errFacility, int errType, QString errString){
+eveErrorMessage::eveErrorMessage(int errSeverity, int errFacility, int errType, QString errString, int prio){
 
 	type = EVEMESSAGETYPE_ERROR;
+	priority = prio;
 	severity = errSeverity;
 	facility = errFacility;
 	errorType = errType;
@@ -465,7 +481,7 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
 	dataStatus = stat;
 	dataModifier = dmod;
 	dataType = epicsInt32T;
-	dataArrayInt = data;
+	dataArrayInt = QVector<int>(data);
 	arraySize = dataArrayInt.size();
 	timestamp = mtime;
 };
@@ -482,7 +498,7 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
 	dataStatus = stat;
 	dataModifier = dmod;
 	dataType = epicsInt16T;
-	dataArrayShort = data;
+	dataArrayShort = QVector<short>(data);
 	arraySize = dataArrayShort.size();
 	timestamp = mtime;
 };
@@ -499,7 +515,7 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
 	dataStatus = stat;
 	dataModifier = dmod;
 	dataType = epicsInt8T;
-	dataArrayChar = data;
+	dataArrayChar = QVector<char>(data);
 	arraySize = dataArrayChar.size();
 	timestamp = mtime;
 };
@@ -516,7 +532,7 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
 	dataStatus = stat;
 	dataModifier = dmod;
 	dataType = epicsFloat32T;
-	dataArrayFloat = data;
+	dataArrayFloat = QVector<float>(data);
 	arraySize = dataArrayFloat.size();
 	timestamp = mtime;
 };
@@ -558,6 +574,40 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
 eveDataMessage::~eveDataMessage() {
 };
 
+/**
+ * \brief return a copy of this message object
+ */
+eveDataMessage* eveDataMessage::clone(){
+
+	eveDataMessage* message;
+
+	switch (dataType) {
+		case epicsInt8T:					/* epicsInt8 */
+			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayChar);
+		break;
+		case epicsInt16T:					/* epicsInt16 */
+			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayShort);
+		break;
+		case epicsInt32T:					/* epicsInt32 */
+			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayInt);
+		break;
+		case epicsFloat32T:					/* epicsFloat32 */
+			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayFloat);
+		break;
+		case epicsFloat64T:					/* epicsFloat64 */
+			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayDouble);
+		break;
+		case epicsStringT:					/* epicsString */
+			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataStrings);
+		break;
+		default:
+			eveError::log(4,"eveDataMessage unknown data type");
+			assert(true);
+		break;
+	}
+	message->setPriority(this->getPriority());
+	return message;
+};
 
 /*
  * Class evePlayListMessage

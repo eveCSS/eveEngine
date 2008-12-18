@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QHash>
 #include <QString>
+#include <QReadWriteLock>
 #include "eveMessageChannel.h"
 #include "eveNwThread.h"
 #include "eveManagerThread.h"
@@ -29,6 +30,7 @@ public:
 public slots:
 	void newMessage(int);
 	void close();
+	void waitUntilDone();
 
 signals:
 	void finished();
@@ -48,6 +50,10 @@ private:
 	int engineStatus;
 	QString currentXmlId;
 	eveRequestManager *reqMan;
+	QReadWriteLock channelLock;
+
+
+
 };
 
 #endif /*EVEMESSAGEHUB_H_*/

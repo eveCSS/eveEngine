@@ -68,6 +68,9 @@
 #define EVEMESSAGEFACILITY_NETWORK 0x0b
 #define EVEMESSAGEFACILITY_MHUB 0x0c
 #define EVEMESSAGEFACILITY_PLAYLIST 0x0d
+#define EVEMESSAGEFACILITY_MANAGER 0x0e
+#define EVEMESSAGEFACILITY_XMLPARSER 0x0f
+#define EVEMESSAGEFACILITY_SCANCHAIN 0x10
 
 #define EVEERROR_TIMEOUT 0x0009
 
@@ -75,6 +78,7 @@
 #define EVEENGINESTATUS_IDLEXML 0x01		// Idle, XML loaded
 #define EVEENGINESTATUS_LOADING 0x02		// loading XML
 #define EVEENGINESTATUS_EXECUTING 0x03		// executing
+#define EVEENGINESTATUS_AUTOSTART 0x0100		// autostart bit
 
 
 struct eveDataStatus {
@@ -98,14 +102,14 @@ class eveMessage
 {
 public:
 	eveMessage();
-	eveMessage(int);
+	eveMessage(int, int prio=0);
 	virtual ~eveMessage();
 
 	int getType(){return type;};
 	int getPriority(){return priority;};
 	void setPriority(int prio){priority = prio;};
 	virtual bool compare(eveMessage *);
-
+	virtual eveMessage* clone(){return new eveMessage(type, priority);};
 protected:
 	int type;
 	int priority;
@@ -117,10 +121,11 @@ protected:
 class eveMessageText : public eveMessage
 {
 public:
-	eveMessageText(int, QString);
+	eveMessageText(int, QString, int prio=0);
 	virtual ~eveMessageText(){};
 	QString& getText(){return messageText;};
 	bool compare(eveMessage *);
+	eveMessageText* clone(){return new eveMessageText(type,messageText, priority);};
 
 private:
 	QString messageText;
@@ -148,10 +153,11 @@ private:
 class eveMessageInt : public eveMessage
 {
 public:
-	eveMessageInt(int, int);
+	eveMessageInt(int, int, int prio=0);
 	virtual ~eveMessageInt(){};
 	int getInt(){return value;};
 	bool compare(eveMessage *);
+	eveMessageInt* clone(){return new eveMessageInt(type,value, priority);}
 
 private:
 	int value;
@@ -164,10 +170,11 @@ private:
 class eveMessageIntList : public eveMessage
 {
 public:
-	eveMessageIntList(int, int, int);
+	eveMessageIntList(int, int, int, int prio=0);
 	virtual ~eveMessageIntList(){};
 	bool compare(eveMessage *);
 	int getInt(int);
+	eveMessageIntList* clone(){return new eveMessageIntList(type,ivalue1,ivalue2, priority);};
 
 private:
 	int ivalue1;
@@ -177,17 +184,20 @@ private:
 /**
  * \brief a message to add an entry to the playlist
  */
+// TODO make one message out of the following, get rid of virtual clone method and protected members
 class eveAddToPlMessage : public eveMessage
 {
 public:
-	eveAddToPlMessage(QString, QString, QByteArray);
+	eveAddToPlMessage(QString, QString, QByteArray, int prio=0);
 	virtual ~eveAddToPlMessage();
 	QString * getXmlName(){return XmlName;};
 	QString * getXmlAuthor(){return XmlAuthor;};
 	QByteArray * getXmlData(){return XmlData;};
 	bool compare(eveMessage *);
+	virtual eveAddToPlMessage* clone(){return new eveAddToPlMessage(*XmlName, *XmlAuthor, *XmlData, priority);};
 
-private:
+
+protected:
 	QString * XmlName;
 	QString * XmlAuthor;
 	QByteArray * XmlData;
@@ -199,22 +209,34 @@ private:
 class eveCurrentXmlMessage : public eveAddToPlMessage
 {
 public:
-	eveCurrentXmlMessage(QString, QString, QByteArray);
+	eveCurrentXmlMessage(QString, QString, QByteArray, int prio=0);
 	virtual ~eveCurrentXmlMessage();
+	eveCurrentXmlMessage* clone(){return new eveCurrentXmlMessage(*XmlName, *XmlAuthor, *XmlData, priority);};
 };
 
+enum engineStatusT {eveEngIDLENOXML=1, eveEngIDLEXML, eveEngLOADINGXML, eveEngEXECUTING, eveEngPAUSED, eveEngSTOPPED, eveEngHALTED} ;
 /**
  * \brief a message containing the status of the currently processing scanmodule
+ *
+ * possible status values are:
+ * eveEngIDLENOXML: No XML is loaded, engine has just be started or all current chains have been done
+ * eveEngIDLEXML: XML is loaded, but chains are not yet executing
+ * eveEngLOADINGXML: XML is currently loading
+ * eveEngEXECUTING: at least one chain is executing (execution may be paused)
+ * eveEngPAUSED: Pause has been activated
+ * eveEngSTOPPED: Stop has been activated
+ * eveEngHALTED: Halt has been activated
  */
 class eveEngineStatusMessage : public eveMessage
 {
 public:
-	eveEngineStatusMessage(int, QString);
+	eveEngineStatusMessage(int, QString, int prio=0);
 	virtual ~eveEngineStatusMessage();
 	int getStatus(){return estatus;};
 	QString * getXmlId(){return XmlId;};
 	epicsTime getTime(){return timestamp;};
 	bool compare(eveMessage *);
+	eveEngineStatusMessage* clone(){return new eveEngineStatusMessage(estatus, *XmlId, priority);};
 
 private:
 	epicsTime timestamp;
@@ -222,21 +244,33 @@ private:
 	QString * XmlId;
 };
 
+enum chainStatusT {eveChainIDLE=1, eveChainSmINITIALIZING, eveChainSmEXECUTING, eveChainSmPAUSED, eveChainSmTRIGGERWAIT, eveChainSmDONE, eveChainDONE};
 /**
  * \brief a message containing the status of the currently processing chain
+ *
+ * possible status values are
+ * eveChainIDLE: Chain has not been started yet
+ * eveChainSmINITIALIZING: scanmodule is initializing, but may not yet started
+ * eveChainSmEXECUTING: scanmodule (and chain) is executing
+ * eveChainSmPAUSED: scanmodule (and chain) has been paused
+ * eveChainSmTRIGGERWAIT: scanmodule waits for manual trigger
+ * eveChainSmDONE: a scanmodule has finished
+ * eveChainDONE: the chain ( all scanmodules) has finished
  */
 class eveChainStatusMessage : public eveMessage
 {
 public:
 	eveChainStatusMessage(int, int, int, int);
-	eveChainStatusMessage(int, int, int, int, epicsTime);
+	eveChainStatusMessage(int, int, int, int, epicsTime, int, int prio=0);
 	virtual ~eveChainStatusMessage();
 	int getStatus(){return cstatus;};
 	int getChainId(){return chainId;};
 	int getSmId(){return smId;};
 	int getPosCnt(){return posCounter;};
 	epicsTime getTime(){return timestamp;};
+	int getRemainingTime(){return remainingTime;};
 	bool compare(eveMessage *);
+	eveChainStatusMessage* clone(){return new eveChainStatusMessage(cstatus, chainId, smId, posCounter, timestamp, remainingTime, priority);};
 
 private:
 	epicsTime timestamp;
@@ -244,6 +278,7 @@ private:
 	int chainId;
 	int smId;
 	int posCounter;
+	int remainingTime;
 };
 
 /**
@@ -307,12 +342,12 @@ private:
 };
 
 /**
- * \brief message to cancel an outstanding request
+ * \brief Error message
  */
 class eveErrorMessage : public eveMessage
 {
 public:
-	eveErrorMessage(int, int, int, QString);
+	eveErrorMessage(int, int, int, QString, int prio=0);
 	virtual ~eveErrorMessage();
 
 	int getSeverity(){return severity;};
@@ -321,6 +356,7 @@ public:
 	epicsTime getTime(){return timestamp;};
 	QString * getErrorText(){return errorString;};
 	bool compare(eveMessage *);
+	eveErrorMessage* clone(){return new eveErrorMessage(severity, facility, errorType, *errorString, priority);};
 
 private:
 	int severity;
@@ -352,12 +388,13 @@ public:
 	const QVector<double>& getDoubleArray(){return dataArrayDouble;};
 	const QStringList& getStringArray(){return dataStrings;};
 	QString getId(){return ident;};
-	eveDataStatus getStatus(){return dataStatus;};
-	epicsType getType(){return dataType;};
+	eveDataStatus getDataStatus(){return dataStatus;};
+	epicsType getDataType(){return dataType;};
 	eveDataModType getDataMod(){return dataModifier;};
-	epicsTime getTimeStamp(){return timestamp;};
+	epicsTime getDataTimeStamp(){return timestamp;};
 	bool isEmpty(){return !(arraySize);};
 	int getArraySize(){return arraySize;};
+	eveDataMessage* clone();
 
 private:
 	QString ident;

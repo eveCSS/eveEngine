@@ -53,6 +53,7 @@ public:
 	void addEntry(QString *, QString *, QByteArray *);
 	void reorderEntry(int, int);
 	void removeEntry(int);
+	bool isEmpty(){return playlist.isEmpty();};
 	evePlayListData* takeFirst();
 	evePlayListMessage* getCurrentPlayList();
 

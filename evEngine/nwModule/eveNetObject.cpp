@@ -138,19 +138,16 @@ void eveNetObject::sendMessage(eveMessage * message)
  */
 void eveNetObject::shutdown(){
 
-	eveError::log(1, QString("eveNetObject: shutdown"));
 	netListener->close();
-	foreach (eveSocket *sock, socketList) {delete sock;};
-	socketList.clear();
+	foreach (eveSocket *sock, socketList) {
+		sock->deleteSocket();
+	};
 	mHub->unregisterChannel(channelId);
 	delete mFilter;
 	mFilter = 0;
 	// TODO
-	// move sockets from socketList to closedSockedList and wait until all
-	// sockets signaled disconnected before deleting them end exiting thread
-	// for now we
-	// give sockets a chance to send remaining buffers and close before exiting
-	QTimer::singleShot(1000, QThread::currentThread(), SLOT(quit()));
+	// use QTimer to stop thread, when the current event queue has been processed
+	QThread::currentThread()->quit();
 }
 
 void eveNetObject::log(QString string){

@@ -1,4 +1,5 @@
 
+#include <QTimer>
 #include "eveMessageHub.h"
 #include "eveManagerThread.h"
 #include "eveError.h"
@@ -43,34 +44,33 @@ eveMessageHub * eveMessageHub::getmHub()
  *  \brief register a messageChannel as a new message source
  * \param messageChannel
  * \param channelId predefined nr to identify message source or 0
+ *
+ * this is usually called from a different thread
  */
 int eveMessageHub::registerChannel(eveMessageChannel * channel, int channelId)
 {
-	if (channelId == 0 ) channelId = ++nextChannel;
-	mChanHash.insert(channelId, channel);
-	connect (channel, SIGNAL(messageWaiting(int)), this, SLOT(newMessage(int)), Qt::QueuedConnection);
-	addError(INFO,0,QString("Successfully registered Channel %1\n").arg(channelId));
+	int newId = channelId;
+	QWriteLocker locker(&channelLock);
 
-	// send status if this is the network channel
-	if (channelId == EVECHANNEL_NET){
-		channel->queueMessage(new eveEngineStatusMessage(engineStatus, currentXmlId));
-	}
-	return channelId;
+	if (newId == 0 ) newId = ++nextChannel;
+	mChanHash.insert(newId, channel);
+	connect (channel, SIGNAL(messageWaiting(int)), this, SLOT(newMessage(int)), Qt::QueuedConnection);
+
+	return newId;
 }
 
 /**
  *  \brief unregister a messageChannel
- * \param channelId predefined nr to identify message source or 0
+ * \param channelId id which was assigned during registerChannel
+ *
+ * this is usually called from a different thread
  */
 void eveMessageHub::unregisterChannel(int channelId)
 {
+	QWriteLocker locker(&channelLock);
 	if (mChanHash.contains(channelId)){
 		disconnect (mChanHash.value(channelId), SIGNAL(messageWaiting(int)), this, SLOT(newMessage(int)));
 		mChanHash.remove(channelId);
-		addError(INFO,0,QString("Successfully unregistered Channel %1\n").arg(channelId));
-	}
-	else {
-		addError(4, 0, QString("Error unregistering unregistered channel %1\n").arg(channelId));
 	}
 	return;
 }
@@ -86,6 +86,7 @@ void eveMessageHub::unregisterChannel(int channelId)
 void eveMessageHub::newMessage(int messageSource)
 {
 	eveMessage *message;
+	QWriteLocker locker(&channelLock);
 
 	if (!mChanHash.contains(messageSource)){
 		addError(4,0,QString("unable to process message from unregistered source %1").arg(messageSource));
@@ -96,133 +97,112 @@ void eveMessageHub::newMessage(int messageSource)
 
 		switch (message->getType()) {
 			case EVEMESSAGETYPE_ERROR:
+			case EVEMESSAGETYPE_CURRENTXML:
+			case EVEMESSAGETYPE_ENGINESTATUS:
 				/* send errors and enginestatus to viewers if available */
 				if (mChanHash.contains(EVECHANNEL_NET)){
 					mChanHash.value(EVECHANNEL_NET)->queueMessage(message);
+					message = NULL;
 				}
 				break;
 			case EVEMESSAGETYPE_CHAINSTATUS:
-			case EVEMESSAGETYPE_DATA:
+				/* send chainstatus to manager */
+				if (mChanHash.contains(EVECHANNEL_MANAGER)){
+					mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(message->clone());
+				}
+				/* send chainstatus to storagemodul if available */
+				if (mChanHash.contains(EVECHANNEL_STORAGE)){
+					mChanHash.value(EVECHANNEL_STORAGE)->queueMessage(message->clone());
+					message = NULL;
+				}
 				/* send chainstatus to viewers if available */
 				if (mChanHash.contains(EVECHANNEL_NET)){
 					mChanHash.value(EVECHANNEL_NET)->queueMessage(message);
+					message = NULL;
+				}
+				break;
+			case EVEMESSAGETYPE_DATA:
+				/* send chainstatus to viewers if available */
+				if (mChanHash.contains(EVECHANNEL_NET)){
+					mChanHash.value(EVECHANNEL_NET)->queueMessage(message->clone());
 				}
 				/* send chainstatus to storagemodul if available */
 				if (mChanHash.contains(EVECHANNEL_STORAGE)){
 					mChanHash.value(EVECHANNEL_STORAGE)->queueMessage(message);
+					message = NULL;
 				}
-				break;
-			case EVEMESSAGETYPE_REQUEST:
-				/* send requests to viewers if available */
-				if (mChanHash.contains(EVECHANNEL_NET)){
-					/* keep track of requests */
-					//TODO
-					//reqHash.insert(message->getReqId, messageSource);
-
-					mChanHash.value(EVECHANNEL_NET)->queueMessage(message);
-				}
-				else {
-					//TODO
-					// no viewer registered, we answer the request with error and drop the message
-					addError(ERROR, 0, "EVEMESSAGETYPE_REQUEST: not yet implemented");
-					delete message;
-				}
-				break;
-			case EVEMESSAGETYPE_REQUESTCANCEL:
-				addError(ERROR,0,"EVEMESSAGETYPE_REQUESTCANCEL: this should never happen");
-				delete message;
 				break;
 			case EVEMESSAGETYPE_AUTOPLAY:
 			case EVEMESSAGETYPE_REORDERPLAYLIST:
 			case EVEMESSAGETYPE_ADDTOPLAYLIST:
 			case EVEMESSAGETYPE_REMOVEFROMPLAYLIST:
+			case EVEMESSAGETYPE_START:
+			case EVEMESSAGETYPE_STOP:
+			case EVEMESSAGETYPE_HALT:
+			case EVEMESSAGETYPE_BREAK:
+			case EVEMESSAGETYPE_PAUSE:
 				// forward this to manager
 				if (mChanHash.contains(EVECHANNEL_MANAGER)) {
-					addError(ERROR,0,"MessageHub: ADDTOPLAYLIST: got message");
 					mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(message);
+					message = NULL;
 				}
 				else {
-					addError(ERROR,0,"MessageHub: ADDTOPLAYLIST: Manager not connected");
-					delete message;
+					addError(ERROR,0,"MessageHub: Manager not connected");
 				}
 				break;
 			case EVEMESSAGETYPE_PLAYLIST:
 				/* send to viewers if any available */
 				if (mChanHash.contains(EVECHANNEL_NET)){
 					mChanHash.value(EVECHANNEL_NET)->queueMessage(message);
+					message = NULL;
 				}
-				else {
-					delete message;
-				}
-				break;
-			case EVEMESSAGETYPE_START:
-			{
-				addError(INFO,0,"received EVEMESSAGETYPE_START ");
-				delete message;
-				// TODO
-				//we send a dummy message for testing purpose only
-				eveDataStatus dstat;
-				eveMessage *newMessage = new eveDataMessage("Detektor 1", dstat, DMTunmodified, epicsTime::getCurrent(), QVector<float>(1, 15.1234));
-				if (mChanHash.contains(EVECHANNEL_NET)){
-					mChanHash.value(EVECHANNEL_NET)->queueMessage(newMessage);
-				}
-			}
-			break;
-			case EVEMESSAGETYPE_STOP:
-				addError(ERROR,0,"received EVEMESSAGETYPE_STOP: not yet implemented");
-				delete message;
-				break;
-			case EVEMESSAGETYPE_HALT:
-			{
-				//we send a dummy message for testing purpose only
-				eveMessage *newMessage = new eveRequestMessage(reqMan->newId(0),EVEREQUESTTYPE_OKCANCEL, "Sie haben HALT gedrueckt");
-				if (mChanHash.contains(EVECHANNEL_NET)){
-					mChanHash.value(EVECHANNEL_NET)->queueMessage(newMessage);
-				}
-				delete message;
-			}
-			break;
-			case EVEMESSAGETYPE_BREAK:
-				addError(ERROR,0,"received EVEMESSAGETYPE_BREAK");
-				delete message;
-				break;
-			case EVEMESSAGETYPE_PAUSE:
-				addError(ERROR,0,"received EVEMESSAGETYPE_BREAK");
-				delete message;
 				break;
 			case EVEMESSAGETYPE_ENDPROGRAM:
-				addError(ERROR,0,"received EVEMESSAGETYPE_ENDPROGRAM");
-				delete message;
+				addError(ERROR,0,"received End command, exiting...");
+				// don't just call close(); we locked the channelLock !
+				QTimer::singleShot(0, this, SLOT(close()));
 				break;
 			case EVEMESSAGETYPE_LIVEDESCRIPTION:
-				{
-					QString liveDesc = ((eveMessageText*)message)->getText();
-					addError(ERROR,0,QString("received Live Description %1").arg(liveDesc));
-					delete message;
+				addError(ERROR,0,QString("received Live Description %1").arg(((eveMessageText*)message)->getText()));
+				if (mChanHash.contains(EVECHANNEL_STORAGE)){
+					mChanHash.value(EVECHANNEL_STORAGE)->queueMessage(message);
+					message = NULL;
+				}
+				break;
+			case EVEMESSAGETYPE_REQUEST:
+			case EVEMESSAGETYPE_REQUESTCANCEL:
+				// requests may be cancelled by SMs too
+				/* send requests to viewers if available */
+				if (mChanHash.contains(EVECHANNEL_NET)){
+					/* do we need to keep track of requests ? */
+					mChanHash.value(EVECHANNEL_NET)->queueMessage(message);
+					message = NULL;
+				}
+				else {
+					// no network connection, we log an error and drop the message
+					addError(ERROR, 0, "EVEMESSAGETYPE_REQUEST(CANCEL): request cannot send request, running without net");
 				}
 				break;
 			case EVEMESSAGETYPE_REQUESTANSWER:
 			{
-				/* find the requests source and send the answer */
+				/* find the request source and send the answer */
 				int rid = ((eveRequestAnswerMessage*)message)->getReqId();
 				int mChannelId = reqMan->takeId(rid);
 				if (mChannelId){
 					if (mChanHash.contains(mChannelId)){
 						// send answer to request source
 						mChanHash.value(mChannelId)->queueMessage(message);
+						message = NULL;
 					}
 					else {
-						// request source unavailable, send error and drop the message
+						// request source unavailable, log an error and drop the message
 						addError(ERROR,0,QString("request source unavailable %1").arg(((eveRequestAnswerMessage*)message)->getReqId()));
-						delete message;
 					}
 				}
 				else {
 					addError(ERROR,0,"request without source");
-					delete message;
 				}
 				// cancel this request for other viewers
-				addError(ERROR,0,"sending cancel request");
 				if (mChanHash.contains(EVECHANNEL_NET)){
 					eveMessage *cMessage = new eveRequestCancelMessage(rid);
 					mChanHash.value(EVECHANNEL_NET)->queueMessage(cMessage);
@@ -231,9 +211,9 @@ void eveMessageHub::newMessage(int messageSource)
 			break;
 			default:
 				addError(ERROR, 0, "eveMessageHub::newMessage unknown message type");
-				delete message;
 				break;
 		}
+		if (message != NULL) delete message;
 	}
 }
 
@@ -246,6 +226,7 @@ void eveMessageHub::newMessage(int messageSource)
  */
 void eveMessageHub::addError(int severity, int errorType,  QString errorString)
 {
+	QWriteLocker locker(&channelLock);
 	if (mChanHash.contains(EVECHANNEL_NET)){
 		mChanHash.value(EVECHANNEL_NET)->queueMessage(new eveErrorMessage(severity, EVEMESSAGEFACILITY_MHUB, errorType, errorString));
 	}
@@ -258,30 +239,30 @@ void eveMessageHub::addError(int severity, int errorType,  QString errorString)
 /**
  * \brief shutdown messageHub
  *
+ * call shutdown method of all registered channels, start timer which calls waitUntilDone methode
  */
 void eveMessageHub::close()
 {
-	// if a netObject is registered, we call its shutdown method, else we kill the thread
-	if (mChanHash.contains(EVECHANNEL_NET)){
-		//mChanHash.value(EVECHANNEL_NET)->shutdown();
-		connect (this, SIGNAL(closeAll()), mChanHash.value(EVECHANNEL_NET), SLOT(shutdown()), Qt::QueuedConnection);
+	channelLock.lockForRead();
+	foreach (eveMessageChannel *channel, mChanHash) {
+		connect (this, SIGNAL(closeAll()), channel, SLOT(shutdown()), Qt::QueuedConnection);
 	}
-	// if a manager is registered, we call its shutdown method
-	if (mChanHash.contains(EVECHANNEL_MANAGER)){
-		//mChanHash.value(EVECHANNEL_MANAGER)->shutdown();
-		connect (this, SIGNAL(closeAll()), mChanHash.value(EVECHANNEL_MANAGER), SLOT(shutdown()), Qt::QueuedConnection);
-	}
+	channelLock.unlock();
+
 	emit closeAll();
-
-	if (!nwThread->wait(1000)) nwThread->terminate();
-	if (!mThread->wait(1000)) mThread->terminate();
-
+	QTimer::singleShot(500, this, SLOT(waitUntilDone()));
+}
+/**
+ * \brief wait until all channels have unregistered, then shutdown
+ *
+ */
+void eveMessageHub::waitUntilDone()
+{
+	QWriteLocker locker(&channelLock);
+	if (!mChanHash.isEmpty()){
+		QTimer::singleShot(500, this, SLOT(waitUntilDone()));
+		addError(ERROR, 0, "eveMessageHub: still waiting for threads to shutdown");
+		return;
+	}
 	emit closeParent();
 }
-// TODO remove
-void eveMessageHub::log(QString message)
-{
-	// obsolete
-	eveError::log(1,message);
-}
-

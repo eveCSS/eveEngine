@@ -2,44 +2,65 @@ TEMPLATE = app
 TARGET = evEngine
 QT += core \
     network \
-    gui
-HEADERS += scanModule/eveScanModule.h \
-    NwModul/eveParameter.h \
-    NwModul/eveManagerThread.h \
-    NwModul/eveManager.h \
-    NwModul/eveRequestManager.h \
-    NwModul/eveMessageFilter.h \
-    NwModul/eveError.h \
-    NwModul/eveMessageFactory.h \
-    NwModul/eveSocket.h \
-    NwModul/eveNetObject.h \
-    NwModul/eveMessage.h \
-    NwModul/eveMessageChannel.h \
-    NwModul/eveMessageHub.h \
-    NwModul/eveNwThread.h \
-    NwModul/evePlaylistManager.h
-SOURCES += scanModule/eveScanModule.cpp \
-    NwModul/eveParameter.cpp \
-    NwModul/eveManagerThread.cpp \
-    NwModul/eveManager.cpp \
-    NwModul/eveRequestManager.cpp \
-    NwModul/eveMessageFilter.cpp \
-    NwModul/eveError.cpp \
-    NwModul/eveMessageFactory.cpp \
-    NwModul/eveSocket.cpp \
-    NwModul/eveNetObject.cpp \
-    NwModul/eveMessage.cpp \
-    NwModul/eveMessageChannel.cpp \
-    NwModul/eveMessageHub.cpp \
-    NwModul/eveNwThread.cpp \
+    gui \
+    xml
+HEADERS += scanModule/evePosCalc.h \
+    scanModule/eveMotorPosition.h \
+    scanModule/eveDeviceList.h \
+    scanModule/eveSMAxis.h \
+    scanModule/eveTypes.h \
+    scanModule/eveDevice.h \
+    scanModule/eveXMLReader.h \
+    scanModule/eveScanManager.h \
+    scanModule/eveScanThread.h \
+    scanModule/eveManagerThread.h \
+    scanModule/eveManager.h \
+    scanModule/eveStatusTracker.h \
+    scanModule/eveScanModule.h \
+    nwModule/eveParameter.h \
+    nwModule/eveRequestManager.h \
+    nwModule/eveMessageFilter.h \
+    nwModule/eveError.h \
+    nwModule/eveMessageFactory.h \
+    nwModule/eveSocket.h \
+    nwModule/eveNetObject.h \
+    nwModule/eveMessage.h \
+    nwModule/eveMessageChannel.h \
+    nwModule/eveMessageHub.h \
+    nwModule/eveNwThread.h \
+    nwModule/evePlaylistManager.h
+SOURCES += scanModule/evePosCalc.cpp \
+    scanModule/eveMotorPosition.cpp \
+    scanModule/eveDeviceList.cpp \
+    scanModule/eveSMAxis.cpp \
+    scanModule/eveDevice.cpp \
+    scanModule/eveXMLReader.cpp \
+    scanModule/eveScanManager.cpp \
+    scanModule/eveScanThread.cpp \
+    scanModule/eveManagerThread.cpp \
+    scanModule/eveManager.cpp \
+    scanModule/eveStatusTracker.cpp \
+    scanModule/eveScanModule.cpp \
+    nwModule/eveParameter.cpp \
+    nwModule/eveRequestManager.cpp \
+    nwModule/eveMessageFilter.cpp \
+    nwModule/eveError.cpp \
+    nwModule/eveMessageFactory.cpp \
+    nwModule/eveSocket.cpp \
+    nwModule/eveNetObject.cpp \
+    nwModule/eveMessage.cpp \
+    nwModule/eveMessageChannel.cpp \
+    nwModule/eveMessageHub.cpp \
+    nwModule/eveNwThread.cpp \
     main.cpp \
-    NwModul/evePlayListManager.cpp
+    nwModule/evePlayListManager.cpp
 FORMS += 
 RESOURCES += 
-INCLUDEPATH += NwModul \
-    /soft/epics/base-3.14.9/include \
-    /soft/epics/base-3.14.9/include/os/Linux
-unix:LIBS += -L/soft/epics/base-3.14.9/lib/linux-x86 \
+INCLUDEPATH += nwModule \
+    /soft/epics/base-3.14.10/include \
+    /soft/epics/base-3.14.10/include/os/Linux \
+    scanModule
+unix:LIBS += -L/opt/epics/base-3.14.10/lib/linux-x86 \
     -lca \
     -lCom
 win32:LIBS += c:/epics/ca.lib \
