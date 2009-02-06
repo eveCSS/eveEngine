@@ -4,8 +4,13 @@ QT += core \
     network \
     gui \
     xml
-HEADERS += scanModule/evePosCalc.h \
-    scanModule/eveMotorPosition.h \
+HEADERS += scanModule/eveSMDevice.h \
+    scanModule/eveVariant.h \
+    scanModule/eveSetValue.h \
+    scanModule/eveData.h \
+    scanModule/eveCaTransport.h \
+    scanModule/eveBaseTransport.h \
+    scanModule/evePosCalc.h \
     scanModule/eveDeviceList.h \
     scanModule/eveSMAxis.h \
     scanModule/eveTypes.h \
@@ -29,8 +34,13 @@ HEADERS += scanModule/evePosCalc.h \
     nwModule/eveMessageHub.h \
     nwModule/eveNwThread.h \
     nwModule/evePlaylistManager.h
-SOURCES += scanModule/evePosCalc.cpp \
-    scanModule/eveMotorPosition.cpp \
+SOURCES += scanModule/eveSMDevice.cpp \
+    scanModule/eveVariant.cpp \
+    scanModule/eveSetValue.cpp \
+    scanModule/eveData.cpp \
+    scanModule/eveCaTransport.cpp \
+    scanModule/eveBaseTransport.cpp \
+    scanModule/evePosCalc.cpp \
     scanModule/eveDeviceList.cpp \
     scanModule/eveSMAxis.cpp \
     scanModule/eveDevice.cpp \
@@ -60,9 +70,11 @@ INCLUDEPATH += nwModule \
     /soft/epics/base-3.14.10/include \
     /soft/epics/base-3.14.10/include/os/Linux \
     scanModule
+unix:
 unix:LIBS += -L/opt/epics/base-3.14.10/lib/linux-x86 \
     -lca \
-    -lCom
+    -lCom \
+    -L/opt/test
 win32:LIBS += c:/epics/ca.lib \
     c:/epics/Com.lib
 FORMS += 

@@ -71,6 +71,9 @@
 #define EVEMESSAGEFACILITY_MANAGER 0x0e
 #define EVEMESSAGEFACILITY_XMLPARSER 0x0f
 #define EVEMESSAGEFACILITY_SCANCHAIN 0x10
+#define EVEMESSAGEFACILITY_POSITIONCALC 0x11
+#define EVEMESSAGEFACILITY_SMDEVICE 0x12
+#define EVEMESSAGEFACILITY_CATRANSPORT 0x13
 
 #define EVEERROR_TIMEOUT 0x0009
 
@@ -244,12 +247,12 @@ private:
 	QString * XmlId;
 };
 
-enum chainStatusT {eveChainIDLE=1, eveChainSmINITIALIZING, eveChainSmEXECUTING, eveChainSmPAUSED, eveChainSmTRIGGERWAIT, eveChainSmDONE, eveChainDONE};
+enum chainStatusT {eveChainSmIDLE=1, eveChainSmINITIALIZING, eveChainSmEXECUTING, eveChainSmPAUSED, eveChainSmTRIGGERWAIT, eveChainSmDONE, eveChainDONE};
 /**
  * \brief a message containing the status of the currently processing chain
  *
  * possible status values are
- * eveChainIDLE: Chain has not been started yet
+ * eveChainSmIDLE: Chain has not been started yet
  * eveChainSmINITIALIZING: scanmodule is initializing, but may not yet started
  * eveChainSmEXECUTING: scanmodule (and chain) is executing
  * eveChainSmPAUSED: scanmodule (and chain) has been paused

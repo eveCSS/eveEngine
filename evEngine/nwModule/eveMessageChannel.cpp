@@ -69,7 +69,7 @@ void eveMessageChannel::newQueuedMessage()
 	eveMessage * message;
 
 	recLock.lockForWrite();
-	if (fastEmpty=receiveFastMessageList.isEmpty()) normalEmpty=receiveMessageList.isEmpty();
+	if ((fastEmpty=receiveFastMessageList.isEmpty())) normalEmpty=receiveMessageList.isEmpty();
 	recLock.unlock();
 
 	while ((!fastEmpty) || (!normalEmpty)){
@@ -83,7 +83,7 @@ void eveMessageChannel::newQueuedMessage()
 		handleMessage(message);
 
 		recLock.lockForWrite();
-		if (fastEmpty=receiveFastMessageList.isEmpty()) normalEmpty=receiveMessageList.isEmpty();
+		if ((fastEmpty=receiveFastMessageList.isEmpty())) normalEmpty=receiveMessageList.isEmpty();
 		recLock.unlock();
 	}
 }
