@@ -9,7 +9,8 @@
 #define EVESCANTHREAD_H_
 
 #include <QThread>
-#include "eveScanManager.h"
+
+class eveScanManager;
 
 class eveScanThread : public QThread {
 public:
@@ -17,8 +18,8 @@ public:
 	virtual ~eveScanThread();
 	void run();
 	void shutdown();
-	eveScanManager * getScanManager(){return scanManager;};
 	void millisleep(unsigned long time) { QThread::msleep(time);};
+	void sendError(int, int, int,  QString);
 
 private:
 	eveScanManager * scanManager;

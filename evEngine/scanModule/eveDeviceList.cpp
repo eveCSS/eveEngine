@@ -22,7 +22,7 @@ void eveDeviceList::clearAll() {
 	foreach (eveSimpleDetector* channel, channelDefinitions) delete channel;
 	printf("deleting axes\n");
 	foreach (eveMotorAxis* axis, axisDefinitions) {
-		printf("deleting first axis %x\n", (int)axis);
+//		printf("deleting first axis %x\n", (int)axis);
 		delete axis;
 	}
 	printf("deleting done\n");

@@ -14,46 +14,53 @@
 #include "eveTypes.h"
 
 enum pvMethodT {evePUT, eveGET, evePUTCB, eveGETCB, eveGETPUT, eveGETPUTCB};
+enum eveTransportT {eveTRANS_CA, eveTRANS_LOCAL };
 
 /**
  * \brief base class for transports (CA, etc.)
  */
-class eveTransport {
+class eveTransportDef {
 public:
-	eveTransport(eveType);
-	virtual ~eveTransport();
-	virtual eveTransport* clone()=0;
-
+	eveTransportDef(eveType);
+	virtual ~eveTransportDef();
+	virtual eveTransportDef* clone()=0;
+	eveType getDataType(){return dataType;};
+	eveTransportT getTransType(){return transtype;};
 protected:
 	eveType dataType;
+	eveTransportT transtype;
 };
 
 /**
  * \brief EPICS CA transport
  */
-class eveCaTransport : public eveTransport{
+class eveCaTransportDef : public eveTransportDef{
 public:
-	eveCaTransport(eveType, pvMethodT, QString );
-	virtual ~eveCaTransport();
-	eveCaTransport* clone();
+	eveCaTransportDef(eveType, pvMethodT, QString );
+	virtual ~eveCaTransportDef();
+	eveCaTransportDef* clone();
+	QString getName(){return pV;};
+	pvMethodT getMethod(){return method;};
 
-protected:
+private:
 	QString pV;
 	pvMethodT method;
 };
 
-/** \brief trigger or unit command
+/**
+ * \brief trigger or unit command
  *
  */
 class eveDeviceCommand {
 public:
-	eveDeviceCommand(eveTransport *, QString, eveType);
+	eveDeviceCommand(eveTransportDef *, QString, eveType);
 	virtual ~eveDeviceCommand();
 	eveDeviceCommand* clone();
 	eveType getDeviceType() {return devType;};
+	eveTransportDef* getTrans() {return devCmd;};
 
 private:
-	eveTransport *devCmd;
+	eveTransportDef *devCmd;
 	QString	devString;
 	eveType devType;
 };
@@ -78,11 +85,12 @@ protected:
  */
 class eveDevice : public eveBaseDevice {
 public:
-	eveDevice(eveDeviceCommand *, eveTransport *, QString, QString);
+	eveDevice(eveDeviceCommand *, eveTransportDef *, QString, QString);
 	virtual ~eveDevice();
+	eveDeviceCommand * getUnitCmd(){return unit;};
 
 protected:
-	eveTransport * valueCmd;
+	eveTransportDef * valueCmd;
 	eveDeviceCommand * unit;
 
 };
@@ -92,7 +100,7 @@ protected:
  */
 class eveSimpleDetector : public eveDevice {
 public:
-	eveSimpleDetector(eveDeviceCommand *, eveDeviceCommand *, eveTransport *, QString, QString);
+	eveSimpleDetector(eveDeviceCommand *, eveDeviceCommand *, eveTransportDef *, QString, QString);
 	virtual ~eveSimpleDetector();
 
 protected:
@@ -121,14 +129,22 @@ private:
  */
 class eveMotorAxis : public eveDevice {
 public:
-	eveMotorAxis(eveDeviceCommand *, eveDeviceCommand *, eveDeviceCommand *, eveDeviceCommand *, eveTransport *,eveTransport *, QString, QString);
+	eveMotorAxis(eveDeviceCommand *, eveDeviceCommand *, eveTransportDef *, eveDeviceCommand *, eveTransportDef *,eveTransportDef *, eveTransportDef *, QString, QString);
 	virtual ~eveMotorAxis();
-	eveType getAxisType(){return gotoCmd->getDeviceType();};
+	eveType getAxisType(){return getGotoCmd()->getDataType();};
+	eveDeviceCommand * getTrigCmd(){return triggerCmd;};
+	eveTransportDef * getGotoCmd(){return gotoCmd;};
+	eveDeviceCommand * getStopCmd(){return stopCmd;};
+	eveTransportDef * getStatusCmd(){return axisStatusCmd;};
+	eveTransportDef * getPosCmd(){return valueCmd;};
+	eveTransportDef * getDeadbandCmd(){return deadbandCmd;};
+
 private:
+	eveTransportDef  *deadbandCmd;
 	eveDeviceCommand *triggerCmd;
-	eveDeviceCommand *gotoCmd;
+	eveTransportDef  *gotoCmd;
 	eveDeviceCommand *stopCmd;
-	eveTransport *axisStatus;
+	eveTransportDef  *axisStatusCmd;
 	//eveMotor *parentMotor;	// the corresponding motor (unused)
 
 };

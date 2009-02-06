@@ -7,28 +7,29 @@
 
 #include "eveDevice.h"
 
-eveTransport::eveTransport(eveType eptype) {
+eveTransportDef::eveTransportDef(eveType eptype) {
 	dataType=eptype;
 }
-eveTransport::~eveTransport() {
+eveTransportDef::~eveTransportDef() {
 	// TODO Auto-generated destructor stub
 }
 
 
-eveCaTransport::eveCaTransport(eveType etype, pvMethodT caMethod ,QString pvname) :
-	eveTransport::eveTransport(etype) {
+eveCaTransportDef::eveCaTransportDef(eveType etype, pvMethodT caMethod ,QString pvname) :
+	eveTransportDef::eveTransportDef(etype) {
 	pV = pvname;
 	method = caMethod;
+	transtype = eveTRANS_CA;
 }
-eveCaTransport::~eveCaTransport() {
+eveCaTransportDef::~eveCaTransportDef() {
 	// TODO Auto-generated destructor stub
 }
-eveCaTransport* eveCaTransport::clone() {
-	return new eveCaTransport(dataType, method, pV );
+eveCaTransportDef* eveCaTransportDef::clone() {
+	return new eveCaTransportDef(dataType, method, pV );
 }
 
 
-eveDeviceCommand::eveDeviceCommand(eveTransport * trans, QString value, eveType etype) {
+eveDeviceCommand::eveDeviceCommand(eveTransportDef * trans, QString value, eveType etype) {
 	devCmd = trans;
 	devString = value;
 	devType = etype;
@@ -37,7 +38,7 @@ eveDeviceCommand::~eveDeviceCommand() {
 	if (devCmd != NULL) delete devCmd;
 }
 eveDeviceCommand* eveDeviceCommand::clone() {
-	eveTransport *catrans;
+	eveTransportDef *catrans;
 	if (devCmd != NULL)
 		catrans = devCmd->clone();
 	else
@@ -57,7 +58,7 @@ eveBaseDevice::~eveBaseDevice() {
 }
 
 
-eveDevice::eveDevice(eveDeviceCommand *dUnit, eveTransport *dPv, QString dName, QString dId) :
+eveDevice::eveDevice(eveDeviceCommand *dUnit, eveTransportDef *dPv, QString dName, QString dId) :
 	eveBaseDevice::eveBaseDevice(dName, dId) {
 	valueCmd = dPv;
 	unit = dUnit;
@@ -67,7 +68,7 @@ eveDevice::~eveDevice() {
 	if (valueCmd != NULL) delete valueCmd;
 }
 
-eveSimpleDetector::eveSimpleDetector(eveDeviceCommand *trigger, eveDeviceCommand *unit, eveTransport *valuePv, QString channelname, QString channelid) :
+eveSimpleDetector::eveSimpleDetector(eveDeviceCommand *trigger, eveDeviceCommand *unit, eveTransportDef *valuePv, QString channelname, QString channelid) :
 	eveDevice::eveDevice(unit, valuePv, channelname, channelid)
 {
 	triggerCmd = trigger;
@@ -88,15 +89,15 @@ eveDetector::~eveDetector() {
 }
 
 
-eveMotorAxis::eveMotorAxis(eveDeviceCommand *triggerCom, eveDeviceCommand *aUnit, eveDeviceCommand *gotoCom, eveDeviceCommand *stopCom, eveTransport *position, eveTransport *aStatus, QString aName, QString aId) :
+eveMotorAxis::eveMotorAxis(eveDeviceCommand *triggerCom, eveDeviceCommand *aUnit, eveTransportDef *gotoCom, eveDeviceCommand *stopCom, eveTransportDef *position, eveTransportDef *aStatus, eveTransportDef *aDeadbCom, QString aName, QString aId) :
 	eveDevice::eveDevice(aUnit, position, aName, aId) {
 
 	// TODO gotoCom may not be NULL
 	triggerCmd = triggerCom;
 	gotoCmd = gotoCom;
 	stopCmd = stopCom;
-	axisStatus = aStatus;
-
+	axisStatusCmd = aStatus;
+	deadbandCmd = aDeadbCom;
 }
 
 eveMotorAxis::~eveMotorAxis() {
@@ -104,7 +105,8 @@ eveMotorAxis::~eveMotorAxis() {
 	if (triggerCmd != NULL) delete triggerCmd;
 	if (gotoCmd != NULL) delete gotoCmd;
 	if (stopCmd != NULL) delete stopCmd;
-	if (axisStatus != NULL) delete axisStatus;
+	if (axisStatusCmd != NULL) delete axisStatusCmd;
+	if (deadbandCmd != NULL) delete deadbandCmd;
 
 }
 

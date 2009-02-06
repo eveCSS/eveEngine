@@ -5,12 +5,14 @@
  *      Author: eden
  */
 
+#include <exception>
 #include <QDomDocument>
 #include <QDomNodeList>
 #include <QIODevice>
 #include <QString>
 #include "eveTypes.h"
 #include "eveXMLReader.h"
+#include "evePosCalc.h"
 
 eveXMLReader::eveXMLReader(eveManager *parentObject){
 	parent = parentObject;
@@ -57,18 +59,32 @@ bool eveXMLReader::read(QByteArray xmldata, eveDeviceList *devList)
     }
     // build indices
     // one Hash with DomElement / chain-id
-
+    // one Hash with DomElement / sm-id for every chain
+    // one Hash with previousHash /chain-id
     QDomElement domElem = root.firstChildElement("chain");
 	while (!domElem.isNull()) {
      	if (domElem.hasAttribute("id")) {
      		QString typeString = domElem.attribute("id");
-     		int number = typeString.toInt();
-     		if (number < 1) {
-     			sendError(ERROR,0,"eveXMLReader::read: chain id must be > 0 %1");
+     		int chainNo = typeString.toInt();
+     		chainDomIdHash.insert(chainNo, domElem);
+     		smIdHash.insert(chainNo, new QHash<int, QDomElement> );
+     		QDomElement domSM = domElem.firstChildElement("scanmodules");
+     		domSM = domSM.firstChildElement("scanmodule");
+     		while (!domSM.isNull()) {
+     		    if (domSM.hasAttribute("id")) {
+     		     	unsigned int smNo = QString(domSM.attribute("id")).toUInt();
+		     		(smIdHash.value(chainNo))->insert(smNo, domSM);
+     		     	QDomElement domParent = domSM.firstChildElement("parent");
+     		     	if (!domParent.isNull()) {
+     		     		bool ok;
+     		     		if (domParent.text().toInt(&ok) == 0)
+							if (ok) rootSMHash.insert(chainNo,smNo);
+     		     	}
+     		    }
+     			domSM = domSM.nextSiblingElement("scanmodule");
      		}
-     		else {
-     			chainDomIdHash.insert(number, domElem);
-     		}
+     		if (!rootSMHash.contains(chainNo))
+     			sendError(ERROR,0,QString("no root scanmodule found for chain %1").arg(chainNo));
      	}
 		domElem = domElem.nextSiblingElement("chain");
 	}
@@ -142,7 +158,7 @@ void eveXMLReader::createDetector(QDomNode detector){
 /** \brief create a CaTransport from XML
  * \param node the <pv> DomNode
  */
-eveCaTransport * eveXMLReader::createCaTransport(QDomElement node)
+eveCaTransportDef * eveXMLReader::createCaTransport(QDomElement node)
 {
 	QString typeString;
 	QString methodString;
@@ -170,7 +186,7 @@ eveCaTransport * eveXMLReader::createCaTransport(QDomElement node)
 			sendError(ERROR,0,QString("eveXMLReader::createCaTransport: unknown method: %1").arg(methodString));
 		}
 	}
-	return new eveCaTransport(pvtype, pvMethod, node.text());
+	return new eveCaTransportDef(pvtype, pvMethod, node.text());
 
 }
 
@@ -186,7 +202,7 @@ eveSimpleDetector * eveXMLReader::createChannel(QDomNode channel, eveDeviceComma
 	QString id;
 	eveDeviceCommand *trigger=defaultTrigger;
 	eveDeviceCommand *unit=defaultUnit;
-	eveCaTransport * pv=NULL;
+	eveCaTransportDef * pv=NULL;
 
 	QDomElement domElement = channel.firstChildElement("id");
     if (!domElement.isNull()) id = domElement.text();
@@ -290,10 +306,11 @@ eveMotorAxis * eveXMLReader::createAxis(QDomNode axis, eveDeviceCommand *default
 	QString id;
 	eveDeviceCommand *trigger=defaultTrigger;
 	eveDeviceCommand *unit=defaultUnit;
-	eveDeviceCommand *gotoCommand = NULL;
 	eveDeviceCommand *stopCommand = NULL;
-	eveCaTransport * positionPv=NULL;
-	eveCaTransport * statusPv=NULL;
+	eveCaTransportDef * gotoPv=NULL;
+	eveCaTransportDef * positionPv=NULL;
+	eveCaTransportDef * statusPv=NULL;
+	eveCaTransportDef * deadbandPv=NULL;
 
 	QDomElement domElement = axis.firstChildElement("id");
     if (!domElement.isNull()) id = domElement.text();
@@ -317,15 +334,18 @@ eveMotorAxis * eveXMLReader::createAxis(QDomNode axis, eveDeviceCommand *default
     }
 
     domElement = axis.firstChildElement("goto");
-    if (!domElement.isNull()) gotoCommand = createDeviceCommand(domElement);
-    if (gotoCommand == NULL) {
+    if (!domElement.isNull()) {
+     	domElement = domElement.firstChildElement("pv");
+    	if (!domElement.isNull()) gotoPv = createCaTransport(domElement);
+    }
+    if (gotoPv == NULL) {
         sendError(ERROR,0,QString("eveXMLReader::createAxis: unable to create goto command for %1, check XML").arg(name));
         return NULL;
     }
 
     domElement = axis.firstChildElement("stop");
     if (!domElement.isNull()) stopCommand = createDeviceCommand(domElement);
-    if (gotoCommand == NULL) {
+    if (stopCommand == NULL) {
         sendError(ERROR,0,QString("eveXMLReader::createAxis: unable to create stop command for %1, check XML").arg(name));
         return NULL;
     }
@@ -344,7 +364,13 @@ eveMotorAxis * eveXMLReader::createAxis(QDomNode axis, eveDeviceCommand *default
     	if (unit != NULL) unit = unit->clone();
     }
 
-	return new eveMotorAxis(trigger, unit, gotoCommand, stopCommand, positionPv, statusPv, name, id);
+	domElement = axis.firstChildElement("deadbandpv");
+	if (!domElement.isNull()) deadbandPv = createCaTransport(domElement);
+    if (deadbandPv == NULL) {
+        sendError(INFO,0,QString("eveXMLReader::createAxis: unable to check deadband, no <deadbandPv> tag for %1").arg(name));
+    }
+
+	return new eveMotorAxis(trigger, unit, gotoPv, stopCommand, positionPv, statusPv, deadbandPv, name, id);
 
 }
 
@@ -354,7 +380,7 @@ eveMotorAxis * eveXMLReader::createAxis(QDomNode axis, eveDeviceCommand *default
  *
  */
 eveDeviceCommand * eveXMLReader::createDeviceCommand(QDomNode node){
-	eveCaTransport * pv=NULL;
+	eveCaTransportDef * pv=NULL;
 	QString valueString=NULL;
 	eveType pvtype=eveUnknownT;
 
@@ -385,7 +411,7 @@ void eveXMLReader::createDevice(QDomNode device){
 	QString name;
 	QString id;
 	eveDeviceCommand *unit=NULL;
-	eveTransport* valuePv;
+	eveTransportDef* valuePv;
 
 	if (device.isNull()){
 		sendError(INFO,0,"eveXMLReader::createDevice: cannot create Null device/option, check XML-Syntax");
@@ -421,4 +447,203 @@ void eveXMLReader::createDevice(QDomNode device){
     sendError(INFO,0,QString("eveXMLReader::createDevice: Found id: %1, name: %2").arg(id).arg(name));
 }
 
+/**
+ *
+ * @param chain chainid
+ * @param smid scanmodule id
+ * @return id of nested scan-module or 0 if none
+ *
+ */
+int eveXMLReader::getNested(int chain, int smid){
+	return getIntValueOfTag(chain, smid, "nested");
+}
 
+/**
+ *
+ * @param chain chain id
+ * @param smid scanmodule id
+ * @return id of appended scanmodule or 0 if none
+ *
+ */
+int eveXMLReader::getAppended(int chain, int smid){
+	return getIntValueOfTag(chain, smid, "appended");
+}
+
+/**
+ *
+ * @param chain	chainid
+ * @return smid of root scanmodule for the given chain
+ */
+int eveXMLReader::getRootId(int chain){
+	if (rootSMHash.contains(chain))
+		return rootSMHash.value(chain);
+	else
+		return 0;
+}
+
+/**
+ *
+ * @param chain chain id
+ * @param smid scanmodule id
+ * @param tagname name of XML-Tag
+ * @return integer value of tagname
+ *
+ */
+int eveXMLReader::getIntValueOfTag(int chain, int smid, QString tagname){
+
+	bool ok;
+	if (!smIdHash.contains(chain)) return 0;
+	QDomElement domElement = smIdHash.value(chain)->value(smid);
+	domElement = domElement.firstChildElement(tagname);
+	if (!domElement.isNull()){
+		int value = domElement.text().toInt(&ok);
+		if (ok) return value;
+	}
+	return 0;
+}
+
+/**
+ *
+ * @param chain chain id
+ * @param smid chain id
+ * @return the list of prescan-smdevices
+ */
+QList<eveSMDevice*>* eveXMLReader::getPreScanList(int chain, int smid){
+	return getSMDeviceList(chain, smid, "prescan");
+}
+
+/**
+ *
+ * @param chain chain id
+ * @param smid chain id
+ * @return the list of postscan-smdevices
+ */
+QList<eveSMDevice*>* eveXMLReader::getPostScanList(int chain, int smid){
+	return getSMDeviceList(chain, smid, "postscan");
+}
+
+/**
+ *
+ * @param chain chain id
+ * @param smid scanmodule id
+ * @param tagname may be "prescan" or "postscan"
+ * @return
+ */
+QList<eveSMDevice*>* eveXMLReader::getSMDeviceList(int chain, int smid, QString tagname){
+
+	QList<eveSMDevice *> *devicelist = new QList<eveSMDevice *>;
+	if (!smIdHash.contains(chain)) return devicelist;
+	QDomElement domElement = smIdHash.value(chain)->value(smid);
+	domElement = domElement.firstChildElement(tagname);
+	while (!domElement.isNull()) {
+		bool ok = false;
+		eveVariant varValue;
+		bool reset = false;
+		eveDevice* devDef=NULL;
+
+		QDomElement domId = domElement.firstChildElement("id");
+		if (!domId.isNull())
+			devDef = deviceList->getDeviceDef(domId.text());
+
+		QDomElement domReset = domElement.firstChildElement("reset_originalvalue");
+		if (!domReset.isNull()){
+			if (domReset.text() == "true") reset = true;
+		}
+		QDomElement domValue = domElement.firstChildElement("value");
+		if (!domValue.isNull()){
+			QString value = domValue.text();
+			if (domValue.hasAttribute("type")) {
+				QString typeString = domValue.attribute("type");
+				if (typeString == "int"){
+					varValue.setType(eveINT);
+					varValue.setValue(domValue.text().toInt(&ok));
+				}
+				else if (typeString == "double"){
+					varValue.setType(eveDOUBLE);
+					varValue.setValue(domValue.text().toDouble(&ok));
+				}
+				else {
+					ok = true;
+					varValue.setType(eveSTRING);
+					varValue.setValue(domValue.text());
+				}
+				if (!ok) sendError(ERROR,0,QString("Error converting %1 type").arg(tagname));
+				if (devDef != NULL) devicelist->append(new eveSMDevice(devDef, varValue, reset));
+			}
+		}
+		domElement = domElement.nextSiblingElement(tagname);
+	}
+	return devicelist;
+}
+
+/**
+ *
+ * @param chain chain id
+ * @param smid scanmodule id
+ * @return
+ */
+QList<eveSMAxis*>* eveXMLReader::getAxisList(int chain, int smid){
+
+	QList<eveSMAxis *> *axislist = new QList<eveSMAxis *>;
+
+	try
+	{
+	if (!smIdHash.contains(chain)) return axislist;
+	QDomElement domElement = smIdHash.value(chain)->value(smid);
+	domElement = domElement.firstChildElement("smmotor");
+	while (!domElement.isNull()) {
+		bool ok = false;
+		eveVariant startvalue;
+		QString stepfunction = "none";
+		QDomElement domId = domElement.firstChildElement("axisid");
+		eveMotorAxis* axisDefinition = deviceList->getAxisDef(domId.text());
+		if (axisDefinition == NULL){
+			sendError(ERROR,0,QString("no axisdefinition found for %1").arg(domId.text()));
+			return axislist;
+		}
+		eveType axisType=axisDefinition->getAxisType();
+		QDomElement domstepf = domElement.firstChildElement("stepfunction");
+		if (!domstepf.isNull()) stepfunction = domstepf.text();
+		if (!scanManagerHash.contains(chain))
+			sendError(ERROR,0,"Could not find scanmanager for chain");
+		evePosCalc *poscalc = new evePosCalc(stepfunction, axisType, scanManagerHash.value(chain, NULL));
+
+		// TODO relative or absolute position values
+		// TODO stepamount,ismainaxis
+
+		if (!domElement.firstChildElement("start").isNull()) {
+			poscalc->setStartPos(domElement.firstChildElement("start").text());
+			poscalc->setEndPos(domElement.firstChildElement("stop").text());
+			poscalc->setStepWidth(domElement.firstChildElement("stepwidth").text());
+		}
+		else if (!domElement.firstChildElement("stepfilename").isNull()) {
+			poscalc->setStepFile(domElement.firstChildElement("stepfilename").text());
+		}
+		else if (!domElement.firstChildElement("positionlist").isNull()) {
+			poscalc->setPositionList(domElement.firstChildElement("positionlist").text());
+		}
+		else if (!domElement.firstChildElement("controller").isNull()) {
+			QDomElement domContr = domElement.firstChildElement("controller");
+			poscalc->setStepPlugin(domContr.attribute("plugin"));
+			QDomElement domParam = domContr.firstChildElement("parameter");
+			while (!domParam.isNull()){
+				QDomNamedNodeMap attribMap = domParam.attributes();
+				for (int i= 0; i < attribMap.count(); ++i)
+					poscalc->setStepPara(attribMap.item(i).nodeValue(), domParam.text());
+				domParam = domParam.nextSiblingElement("parameter");
+			}
+		}
+		else
+			sendError(ERROR,0,"No values found in XML to calculate motor positions");
+
+		axislist->append(new eveSMAxis(axisDefinition, poscalc));
+		domElement = domElement.nextSiblingElement("smmotor");
+	}
+	}
+	catch (std::exception& e)
+	{
+		printf("C++ Exception %s\n",e.what());
+		sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getAxisList").arg(e.what()));
+	}
+	return axislist;
+}

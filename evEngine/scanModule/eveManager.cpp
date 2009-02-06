@@ -42,6 +42,13 @@ void eveManager::handleMessage(eveMessage *message){
 			playlist->addEntry(((eveAddToPlMessage*)message)->getXmlName(), ((eveAddToPlMessage*)message)->getXmlAuthor(), ((eveAddToPlMessage*)message)->getXmlData());
 			// answer with the current playlist
 			addMessage(playlist->getCurrentPlayList());
+			// load the next playlist entry, if Engine is idle and no XML is loaded
+			if (engineStatus->getEngineStatus() == eveEngIDLENOXML)
+				if (loadPlayListEntry()){
+					if (engineStatus->getAutoStart())
+						if (!sendStart())
+							sendError(INFO,0,"cannot process START command with current engine status");
+				}
 			break;
 		case EVEMESSAGETYPE_REMOVEFROMPLAYLIST:
 			playlist->removeEntry( ((eveMessageInt*)message)->getInt() );
@@ -189,10 +196,13 @@ bool eveManager::createSMs(QByteArray xmldata) {
     }
 	// create a thread for every chain in the xml-File
     // TODO we might reuse existing threads in future
+
+    // TODO might be easier to loop over a QList of chainids, since we dont't need the
+    //      domelements any more
 	QHashIterator<int, QDomElement> itera(scmlParser->getChainIdHash());
 	while (itera.hasNext()) {
 		itera.next();
-		eveScanManager *scanManager = new eveScanManager(this, scmlParser, itera.key(), itera.value());
+		eveScanManager *scanManager = new eveScanManager(this, scmlParser, itera.key());
 		eveScanThread *chainThread = new eveScanThread(scanManager);
 		scanManager->moveToThread(chainThread);
 		scanThreadList.append(chainThread);

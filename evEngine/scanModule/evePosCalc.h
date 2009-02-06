@@ -11,10 +11,11 @@
 #include <QString>
 #include <QStringList>
 #include <QList>
+#include <QHash>
 #include "eveTypes.h"
-#include "eveMotorPosition.h"
+#include "eveVariant.h"
 
-enum eveSTEPFUNCTIONT {eveSTEPFUNCTION_Add, eveSTEPFUNCTION_Multiply, eveSTEPFUNCTION_Double, eveSTEPFUNCTION_File, eveSTEPFUNCTION_Plugin, eveSTEPFUNCTION_Positionlist};
+class eveScanManager;
 
 /**
  * \brief calculate the next motor position with stepfunction
@@ -22,34 +23,39 @@ enum eveSTEPFUNCTIONT {eveSTEPFUNCTION_Add, eveSTEPFUNCTION_Multiply, eveSTEPFUN
 class evePosCalc {
 
 public:
-	evePosCalc(QString , eveType);
+	evePosCalc(QString , eveType, eveScanManager* );
 	virtual ~evePosCalc();
 	void setStartPos(QString);
 	void setEndPos(QString);
 	void setStepWidth(QString);
-	void setStepPara(QString);
+	void setStepPara(QString, QString);
 	void setStepFile(QString);
 	void setStepPlugin(QString);
 	void setPositionList(QString);
-	eveMotorPosition* getNextPos();
-	eveMotorPosition* getStartPos();
+	void reset();
+	eveVariant& getNextPos();
+	eveVariant& getStartPos(){return startPos;};
+	eveVariant& getCurrentPos(){return currentPos;};
 	bool isAtEndPos(){return isAtEnd;};
 
-
 private:
-	eveMotorPosition* funcAdd();
+	void stepfuncAdd();
+	void stepfuncDummy();
+	void sendMessage(int, QString);
+	void checkValues();
 
 	int posCounter;
-	eveSTEPFUNCTIONT stepFunction;
-	eveMotorPosition *startPos, *endPos, *currentPos, *stepWidth;
+	void (evePosCalc::*stepFunction)();
+	eveVariant startPos, endPos, currentPos, stepWidth, nullVal;
 	eveType axisType;
-	QString stepPara;
-	QString stepFile;
+	QHash<QString, QString> conParaHash;
+	QString stepFile, stepPlugin;
 	QStringList positionList;
 	QList<int> posIntList;
 	QList<double> posDoubleList;
+	eveScanManager* scanManager;
 	bool isAtEnd;
-
+	bool readyToGo;
 };
 
 #endif /* EVEPOSCALC_H_ */

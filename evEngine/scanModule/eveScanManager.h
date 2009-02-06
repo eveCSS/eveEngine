@@ -12,6 +12,7 @@
 #include "eveMessageChannel.h"
 #include "eveManager.h"
 #include "eveXMLReader.h"
+#include "eveDeviceList.h"
 
 class eveScanModule;
 
@@ -26,14 +27,15 @@ class eveScanManager : public eveMessageChannel
 	Q_OBJECT
 
 public:
-	eveScanManager(eveManager *, eveXMLReader *, int, QDomElement);
+	eveScanManager(eveManager *, eveXMLReader *, int);
 	virtual ~eveScanManager();
 	// bool setRootSM(eveScanModule *);
 	void shutdown();
 	void sendError(int, int, QString);
+	virtual void sendError(int, int, int, QString);
 	void sendStatus(int, chainStatusT);
-	QDomElement getDomElement(int);
 	engineStatusT getChainStatus(){return chainStatus;};
+	//eveDeviceList * getDeviceDefs(){return manager->getDeviceDefs();};
 
 public slots:
 	void smStart(int);
@@ -46,12 +48,10 @@ public slots:
 	void smDone();
 
 private:
-	virtual void sendError(int, int, int, QString);
 	int chainId;
 	eveScanModule * rootSM;
 	engineStatusT chainStatus;
 	eveManager *manager;
-	QHash<int, QDomElement> smHash;
 	int posCounter;
 	bool doBreak;
 };

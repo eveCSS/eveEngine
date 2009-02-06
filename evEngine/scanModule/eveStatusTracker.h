@@ -62,7 +62,7 @@ public:
  * Engine status is set to EXECUTING or IDLE by the appropriate
  * chainStatus Message.
  * Commands are accepted only, if engineStatus is EXECUTING or IDLE.
- * Exception: HALT will is always accepted.
+ * Exception: HALT will is always accepted. (README_Controls)
  */
 class eveManagerStatusTracker : public eveBasicStatusTracker {
 

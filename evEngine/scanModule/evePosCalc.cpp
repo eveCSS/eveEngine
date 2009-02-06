@@ -6,33 +6,49 @@
  */
 
 #include "evePosCalc.h"
+#include "eveScanManager.h"
+#include "eveMessage.h"
 
-evePosCalc::evePosCalc(QString stepfunction, eveType type) {
+enum directionT {evePOSITIVE, eveNEGATIVE};
 
+evePosCalc::evePosCalc(QString stepfunction, eveType type, eveScanManager* scanmanager) {
+
+	scanManager = scanmanager;
+	readyToGo = false;
 	if (stepfunction.toLower() == "add"){
-		stepFunction = eveSTEPFUNCTION_Add;
+		stepFunction = &evePosCalc::stepfuncAdd;
 	}
 	else if (stepfunction.toLower() == "multiply"){
-		stepFunction = eveSTEPFUNCTION_Multiply;
-	}
-	else if (stepfunction.toLower() == "double"){
-		stepFunction = eveSTEPFUNCTION_Double;
-	}
-	else if (stepfunction.toLower() == "file"){
-		stepFunction = eveSTEPFUNCTION_File;
-	}
-	else if (stepfunction.toLower() == "plugin"){
-		stepFunction = eveSTEPFUNCTION_Plugin;
-	}
-	else if (stepfunction.toLower() == "positionlist"){
-		stepFunction = eveSTEPFUNCTION_Positionlist;
+		stepFunction = &evePosCalc::stepfuncDummy;
 	}
 	else {
-		//TODO ERROR: unknown Step-Function
+		sendMessage(ERROR, QString("unknown Step-Function: %1").arg(stepfunction));
+		stepFunction = &evePosCalc::stepfuncDummy;
 	}
 	axisType = type;
 	if ((axisType != eveINT) &&  (axisType != eveDOUBLE) && (axisType != eveSTRING)) {
-		// TODO ERROR unknown type
+		sendMessage(ERROR, "unknown axis type (allowed values: int, double, string)");
+	}
+	switch (axisType) {
+		case eveFloat32T:
+		case eveFloat64T:
+			startPos.setType(eveDOUBLE);
+			endPos.setType(eveDOUBLE);
+			currentPos.setType(eveDOUBLE);
+			stepWidth.setType(eveDOUBLE);
+			break;
+		case eveStringT:
+			startPos.setType(eveSTRING);
+			endPos.setType(eveSTRING);
+			currentPos.setType(eveSTRING);
+			stepWidth.setType(eveINT);
+			break;
+		default:
+			startPos.setType(eveINT);
+			endPos.setType(eveINT);
+			currentPos.setType(eveINT);
+			stepWidth.setType(eveINT);
+			break;
 	}
 }
 
@@ -46,18 +62,9 @@ evePosCalc::~evePosCalc() {
  */
 void evePosCalc::setStartPos(QString startpos) {
 
-	if (axisType == eveINT) {
-		bool ok;
-		startPos = new eveIntMotorPosition(startpos.toInt(&ok));
-		// TODO if (!ok) error
-	}
-	else if (axisType == eveDOUBLE) {
-		bool ok;
-		startPos = new eveDoubleMotorPosition(startpos.toDouble(&ok));
-		// TODO if (!ok) error
-	}
-	else
-		startPos = new eveStringMotorPosition(startpos);
+	if (!startPos.setValue(startpos))
+		sendMessage(ERROR, QString("unable to set %1 as start position").arg(startpos));
+	checkValues();
 }
 
 /**
@@ -66,18 +73,8 @@ void evePosCalc::setStartPos(QString startpos) {
  */
 void evePosCalc::setEndPos(QString endpos) {
 
-	if (axisType == eveINT) {
-		bool ok;
-		endPos = new eveIntMotorPosition(endpos.toInt(&ok));
-		// TODO if (!ok) error
-	}
-	else if (axisType == eveDOUBLE) {
-		bool ok;
-		endPos = new eveDoubleMotorPosition(endpos.toDouble(&ok));
-		// TODO if (!ok) error
-	}
-	else
-		endPos = new eveStringMotorPosition(endpos);
+	if (!endPos.setValue(endpos))
+		sendMessage(ERROR, QString("unable to set %1 as End position").arg(endpos));
 }
 
 /**
@@ -86,138 +83,137 @@ void evePosCalc::setEndPos(QString endpos) {
  */
 void evePosCalc::setStepWidth(QString stepwidth) {
 
-	if (axisType == eveINT) {
-		bool ok;
-		stepWidth = new eveIntMotorPosition(stepwidth.toInt(&ok));
-		// TODO if (!ok) error
+	bool ok=false;
+	if (axisType == eveINT){
+		stepWidth.setValue(stepwidth.toInt(&ok));
 	}
-	else if (axisType == eveDOUBLE) {
-		bool ok;
-		stepWidth = new eveDoubleMotorPosition(stepwidth.toDouble(&ok));
-		// TODO if (!ok) error
+	else if (axisType == eveDOUBLE){
+		stepWidth.setValue(stepwidth.toDouble(&ok));
 	}
-	else {
-		bool ok;
-		int value = stepwidth.toInt(&ok);
-		// TODO if (!ok) error
-		if (value < 0 ) value = -1 * value;	// for position strings we do not allow negative steps
-		stepWidth = new eveIntMotorPosition(stepwidth.toInt(&ok));
-	}
+	if (!ok) sendMessage(ERROR, QString("unable to set %1 as stepwidth").arg(stepwidth));
 }
 
-void evePosCalc::setStepPara(QString steppara) {
-	stepPara = steppara;
+/**
+ *
+ * @param paraname parameter name
+ * @param paravalue parameter value
+ */
+void evePosCalc::setStepPara(QString paraname, QString paravalue) {
+	conParaHash.insert(paraname, paravalue);
 }
 
+/**
+ *
+ * @param stepfile name of file with steps
+ */
 void evePosCalc::setStepFile(QString stepfile) {
 	stepFile = stepfile;
+}
+
+/**
+ *
+ * @param pluginname name of step plugin
+ */
+void evePosCalc::setStepPlugin(QString pluginname) {
+	stepPlugin = pluginname;
 }
 
 void evePosCalc::setPositionList(QString poslist) {
 	positionList = poslist.split(",",QString::SkipEmptyParts);
 	foreach (QString value, positionList){
-		if (axisType == eveDOUBLE){
+		if (axisType == eveINT){
 			bool ok;
 			posIntList.append(value.toInt(&ok));
-			// TODO if (!ok) error
+			if (!ok) sendMessage(ERROR, QString("unable to set %1 as (integer) position").arg(value));
 		}
-		else if (axisType == eveINT){
+		else if (axisType == eveDOUBLE){
 			bool ok;
 			posDoubleList.append(value.toDouble(&ok));
-			// TODO if (!ok) error
+			if (!ok) sendMessage(ERROR, QString("unable to set %1 as (double) position").arg(value));
 		}
 	}
 }
 
 /**
  *
- * @return the next valid motorposition if any, else NULL
+ * @return the next valid motorposition if any, else a NULL value
  */
-eveMotorPosition* evePosCalc::getNextPos(){
+eveVariant& evePosCalc::getNextPos(){
 
-	if (isAtEnd){
-		return NULL;
+	bool ok = true;
+
+	if (!isAtEnd){
+		++posCounter;
+		(this->*stepFunction)();
 	}
-	++posCounter;
-	if ( stepFunction == eveSTEPFUNCTION_Add){
-		return funcAdd();
-	}
-	else if (stepFunction == eveSTEPFUNCTION_Multiply){
-		// TODO
-	}
-	else if (stepFunction == eveSTEPFUNCTION_Double){
-		// TODO
-	}
-	else if (stepFunction == eveSTEPFUNCTION_File){
-		// TODO
-	}
-	else if (stepFunction == eveSTEPFUNCTION_Plugin){
-		// TODO
-	}
-	else if (stepFunction == eveSTEPFUNCTION_Positionlist){
-		// TODO
-	}
-	return NULL;
+	if (ok)
+		return currentPos;
+	else
+		return nullVal;
 }
 
 /**
  *
- * @return the startposition, reset the internal position counter
+ * @return reset the internal position counter
  */
-eveMotorPosition* evePosCalc::getStartPos(){
+void evePosCalc::reset(){
 
 	posCounter = 0;
 	isAtEnd = false;
-	if (axisType == eveINT){
-		return new eveIntMotorPosition(((eveIntMotorPosition*)startPos)->getPosition());
-	}
-	else if (axisType == eveDOUBLE){
-		return new eveDoubleMotorPosition(((eveDoubleMotorPosition*)startPos)->getPosition());
-	}
-	return new eveStringMotorPosition(((eveStringMotorPosition*)startPos)->getPosition());
-
+	currentPos = startPos;
 }
 
 /**
  *
- * @return the next valid motorposition if any, else NULL
+ * @brief set the next valid motorposition
  */
-eveMotorPosition* evePosCalc::funcAdd(){
+void evePosCalc::stepfuncAdd(){
 
-	if (axisType == eveINT){
-		int stepwidth = ((eveIntMotorPosition*)stepWidth)->getPosition();
-		int current = ((eveIntMotorPosition*)currentPos)->getPosition();
-		int endpos = ((eveIntMotorPosition*)endPos)->getPosition();
-		current += ((eveIntMotorPosition*)stepWidth)->getPosition();
-		if (((stepwidth >=0) && (current >= endpos)) || ((stepwidth < 0) && (current <= endpos))){
-			current = endpos;
-			isAtEnd = true;
-		}
-		((eveIntMotorPosition*)currentPos)->setPosition(current);
-		return new eveIntMotorPosition(current);
-	}
-	else if (axisType == eveDOUBLE){
-		double stepwidth = ((eveDoubleMotorPosition*)stepWidth)->getPosition();
-		double current = ((eveDoubleMotorPosition*)currentPos)->getPosition();
-		double endpos = ((eveDoubleMotorPosition*)endPos)->getPosition();
-		current += ((eveDoubleMotorPosition*)stepWidth)->getPosition();
-		if (((stepwidth >=0) && (current >= endpos)) || ((stepwidth < 0) && (current <= endpos))){
-			current = endpos;
-			isAtEnd = true;
-		}
-		((eveDoubleMotorPosition*)currentPos)->setPosition(current);
-		return new eveDoubleMotorPosition(current);
-	}
-	else if (axisType == eveSTRING){
-		int stepwidth = ((eveIntMotorPosition*)stepWidth)->getPosition();
+	if (axisType == eveSTRING){
+		int stepwidth = stepWidth.toInt();
 		int next = posCounter * stepwidth; // posCounter is already incremented
 		if (next >= positionList.count()){
 			isAtEnd = true;
 			next = positionList.count()-1;
 		}
-		((eveStringMotorPosition*)currentPos)->setPosition(positionList.at(next));
-		return new eveStringMotorPosition(positionList.at(next));
+		currentPos.setValue(positionList.at(next));
 	}
-	return NULL;
+	else {
+		currentPos = currentPos + stepWidth;
+		if (((stepWidth >=0) && (currentPos >= endPos)) || ((stepWidth < 0) && (currentPos <= endPos))){
+			currentPos = endPos;
+			isAtEnd = true;
+		}
+	}
+}
+
+/**
+ * @brief dummy Function
+ *
+ */
+void evePosCalc::stepfuncDummy(){
+
+	sendMessage(ERROR, "called unknown (dummy) stepfunction");
+}
+
+void evePosCalc::checkValues()
+{
+	readyToGo = false;
+	if (startPos.isNull() || endPos.isNull() || stepWidth.isNull()) return;
+
+	if ((startPos.getType() == eveINT) || (startPos.getType() == eveDOUBLE)){
+		if (((startPos > endPos) && (stepWidth > 0)) || ((startPos < endPos) && (stepWidth < 0))){
+			sendMessage(ERROR, "sign of stepwidth does not match startpos/endpos-values");
+			stepWidth = stepWidth * eveVariant(-1);
+
+		}
+
+	}
+}
+
+void evePosCalc::sendMessage(int severity, QString message)
+{
+	if (scanManager != NULL)
+		scanManager->sendError(severity, EVEMESSAGEFACILITY_POSITIONCALC, 0,  message);
 }
 

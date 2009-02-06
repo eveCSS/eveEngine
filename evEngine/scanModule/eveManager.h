@@ -33,6 +33,7 @@ public:
 	bool loadPlayListEntry();
 	bool createSMs(QByteArray);
 	bool sendStart();
+	//eveDeviceList * getDeviceDefs(){return deviceList;};
 
 signals:
 	void finished();

@@ -21,9 +21,9 @@
  */
 enum smStatusT {eveSmNOTSTARTED, eveSmEXECUTING, eveSmPAUSED, eveSmBROKEN, eveSmHALTED, eveSmDONE} ;
 
-enum stageT {eveStgINIT, eveStgMOTORINITIAL, eveStgGOTOSTART, eveStgPRESCAN,
-			eveStgSETTLETIME, eveStgNEXT, eveStgTRIGREAD, eveStgPOSCHECK,
-			eveStgPOSTSCAN, eveStgFINISH};
+enum stageT {eveStgINIT, eveStgREADPOS, eveStgGOTOSTART, eveStgPRESCAN,
+			eveStgSETTLETIME, eveStgTRIGREAD, eveStgNEXTPOS,
+			eveStgPOSTSCAN, eveStgENDPOS, eveStgFINISH};
 
 class eveScanModule: public QObject
 {
@@ -31,7 +31,7 @@ class eveScanModule: public QObject
 	Q_OBJECT
 
 public:
-	eveScanModule(eveScanManager *, eveXMLReader *, QDomElement);
+	eveScanModule(eveScanManager *, eveXMLReader *, int, int);
 	virtual ~eveScanModule();
 	bool isDone(){return (smstatus==eveSmDONE)?true:false;}
 	bool resumeSM();
@@ -39,15 +39,14 @@ public:
 	void initialize();
 
 public slots:
-	void stgReadMotorInitial();
 	void stgInit();
 	void stgGotoStart();
 	void stgPrescan();
 	void stgSettleTime();
-	void stgNext();
 	void stgTrigRead();
-	void stgPosCheck();
+	void stgNextPos();
 	void stgPostscan();
+	void stgEndPos();
 	void stgFinish();
 	void execStage();
 
@@ -68,6 +67,9 @@ private:
 	eveScanManager* manager;
 	eveScanModule* nestedSM;
 	eveScanModule* appendedSM;
+	QList<eveSMDevice *> *preScanList;
+	QList<eveSMDevice *> *postScanList;
+	QList<eveSMAxis *> *axisList;
 
 };
 

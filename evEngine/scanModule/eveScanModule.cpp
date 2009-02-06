@@ -7,8 +7,9 @@
 
 #include "eveScanModule.h"
 #include "eveScanThread.h"
+#include "eveDeviceList.h"
 
-eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, QDomElement domelem) :
+eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int chainid, int smid) :
 	QObject(parent){
 
 	manager = parent;
@@ -19,51 +20,44 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, QDomE
 	currentStageReady = false;
 	currentStageCounter = 0;
     smstatus = eveSmNOTSTARTED;
-	stageHash.insert(eveStgMOTORINITIAL, &eveScanModule::stgReadMotorInitial);
+    smId = smid;
+    chainId = chainid;
+
 	stageHash.insert(eveStgINIT, &eveScanModule::stgInit);
 	stageHash.insert(eveStgGOTOSTART, &eveScanModule::stgGotoStart);
 	stageHash.insert(eveStgPRESCAN, &eveScanModule::stgPrescan);
 	stageHash.insert(eveStgSETTLETIME, &eveScanModule::stgSettleTime);
-	stageHash.insert(eveStgNEXT, &eveScanModule::stgNext);
 	stageHash.insert(eveStgTRIGREAD, &eveScanModule::stgTrigRead);
-	stageHash.insert(eveStgPOSCHECK, &eveScanModule::stgPosCheck);
+	stageHash.insert(eveStgNEXTPOS, &eveScanModule::stgNextPos);
 	stageHash.insert(eveStgPOSTSCAN, &eveScanModule::stgPostscan);
+	stageHash.insert(eveStgENDPOS, &eveScanModule::stgEndPos);
 	stageHash.insert(eveStgFINISH, &eveScanModule::stgFinish);
 
-	// get our id, we already know it has an attribute id
-	smId = QString(domelem.attribute("id")).toUInt();
-
-	// find the parent scan (do we need this?)
-	QDomElement domElement = domelem.firstChildElement("parent");
-    if (!domElement.isNull()){
-    	if (domElement.text().toUInt() == 0) isRoot = true;
-    }
-
+	printf("Constructor: Scanmodule with id %d\n", smid);
 	// do inner scans
-	domElement = domelem.firstChildElement("nested");
-    if (!domElement.isNull()){
-    	if (!manager->getDomElement(domElement.text().toUInt()).isNull()){
-    		nestedSM = new eveScanModule(manager, parser, manager->getDomElement(domElement.text().toUInt()));
-    		connect (nestedSM, SIGNAL(SMready()), this, SLOT(execStage()), Qt::QueuedConnection);
-    	}
+	int nestedNo = parser->getNested(chainId, smId);
+    if (nestedNo > 0){
+    	nestedSM = new eveScanModule(manager, parser, chainId, nestedNo);
+    	connect (nestedSM, SIGNAL(SMready()), this, SLOT(execStage()), Qt::QueuedConnection);
     }
 
 	// do appended scans
-	domElement = domelem.firstChildElement("appended");
-    if (!domElement.isNull()){
-    	if (!manager->getDomElement(domElement.text().toUInt()).isNull()){
-    		appendedSM = new eveScanModule(manager, parser, manager->getDomElement(domElement.text().toUInt()));
-			connect (appendedSM, SIGNAL(SMready()), this, SLOT(execStage()), Qt::QueuedConnection);
-		}
+	int appendedNo = parser->getAppended(chainId, smId);
+    if (appendedNo > 0){
+    	appendedSM = new eveScanModule(manager, parser, chainId, appendedNo);
+    	connect (appendedSM, SIGNAL(SMready()), this, SLOT(execStage()), Qt::QueuedConnection);
     }
 
 	// TODO register scanmodule local events
 
 	// TODO check startevent
 
-	// TODO get all prescan actions
+	// get all prescan/postscan actions
+    preScanList = parser->getPreScanList(chainId, smId);
+    postScanList = parser->getPostScanList(chainId, smId);
 
-	// TODO get all used motors
+	// get all used motors
+    axisList = parser->getAxisList(chainId, smId);
 
 	// TODO get all used detectors
 
@@ -74,72 +68,58 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, QDomE
 
 eveScanModule::~eveScanModule() {
 
+	// TODO delete all devices, axes etc.
 	if (nestedSM != NULL) delete nestedSM;
 	if (appendedSM != NULL) delete appendedSM;
 }
 
 /**
- * \brief initialization, may be called before Start
+ * \brief initialization, will be called after thread init before sm start
  *
  * initialization:
- * -connect all Devices (connect PVs)
- * -activate Timer
  */
 void eveScanModule::initialize() {
 
-	// TODO for now we remain in status eveChainSmINITIALIZING until started
-	manager->sendStatus(smId, eveChainSmINITIALIZING);
-
-	// TODO dummy activities, wait 1 second
-	((eveScanThread *)QThread::currentThread())->millisleep(1000);
-
-	if (nestedSM != NULL) nestedSM->initialize();
-	if (appendedSM != NULL) appendedSM->initialize();
+	// TODO we don't need this any more, call stgInit() instead
+	manager->sendError(INFO,0,"initialize");
+	eveScanModule::stgInit();
 }
 
 /**
- * \brief initialization, may be called before Start
+ * \brief initialization, will be called after thread init before sm start
  *
- * all stage Methods
- * - have signals connected to their group actions, so they are called
- *   if the group received a done event by underlaying transport
- * - if called they check if their group action is finished
- *   and set currentStageReady and emit execStage.
- * - execStage decides which stage comes next.
- *
- * initialization
- * -connect all Devices (connect PVs)
- * -activate Timer
+  * -connect all Devices (connect PVs)
  */
 void eveScanModule::stgInit() {
 
-	// TODO for now we remain in status init until started
-	// TODO dummy activities, wait 1 second
-	((eveScanThread *)QThread::currentThread())->millisleep(1000);
+	manager->sendError(INFO,0,"stgInit");
+	if (currentStageCounter ==0){
+		// TODO for now we remain in status eveChainSmINITIALIZING until started
+		manager->sendStatus(smId, eveChainSmINITIALIZING);
 
-	// set true if stage done
-	currentStageReady=true;
+		// init devices
+		foreach (eveSMAxis *axis, *axisList){
+			axis->init();
+		}
 
-	emit sigExecStage();
-}
+		if (nestedSM != NULL) nestedSM->initialize();
+		if (appendedSM != NULL) appendedSM->initialize();
+		currentStageCounter=1;
+	}
+	else {
+		// TODO for now we remain in status init until started
 
-/**
- * \brief read the positions of all involved motors
- *
- * -this is done in the root SM only
- *
- */
-void eveScanModule::stgReadMotorInitial() {
-
-	if (true) {
-		manager->sendError(INFO,0,"readMotorInitial");
-		// TODO dummy activities, wait 1 second
-		((eveScanThread *)QThread::currentThread())->millisleep(1000);
-
-		// set true if stage done
-		currentStageReady=true;
-
-		emit sigExecStage();
+		bool ready = true;
+		foreach (eveSMAxis *axis, *axisList){
+			ready = axis->isDone();
+		}
+		if (ready){
+			// TODO dummy activities, wait 1 second
+			((eveScanThread *)QThread::currentThread())->millisleep(1000);
+			currentStageReady=true;
+			manager->sendStatus(smId, eveChainSmIDLE);
+			emit sigExecStage();
+		}
 	}
 }
 
@@ -162,6 +142,18 @@ void eveScanModule::stgGotoStart() {
 		// set true if stage done
 		currentStageReady=true;
 
+/* gleichzeitiger Start von CA-Kommandos:
+ * - eine GroupTransportListe initialisieren
+ * - alle SMAxis->gotoStart mit GroupTransportListe aufrufen.
+ *   dabei einen CAGroupTransport erzeugen, wenn notwendig (optional einen anderen Transport)
+ * - die Achsen schicken ihre Befehle ab ohne ca_flush
+ * - am Ende die GroupTransportListe abfeuern (flush)
+ *   feuert die caGroup und optional weitere Transports
+ *
+ *  unabhängiger Start:
+ *  - SMAxis->gotoStart(NULL ) erzeugt sich eigenen Transport und starte sich selbst.
+ *
+ */
 		emit sigExecStage();
 	}
 }
@@ -207,34 +199,6 @@ void eveScanModule::stgSettleTime() {
 }
 
 /**
- * \brief move to the next step
- *
- * - calculate the next position
- * - decide, if we do another step or if we are done
- * - if necessary, wait for position-event
- * - goto next position
- * - goto startPosition of nested scan
- * - read current position (and check status)
- * - signal ready if last position has been reached
- * - decide, if we do another step
- * - send position value
- *
- */
-void eveScanModule::stgNext() {
-
-	if (true) {
-		manager->sendError(INFO,0,"stgNext");
-		// TODO dummy activities, wait 1 second
-		((eveScanThread *)QThread::currentThread())->millisleep(1000);
-
-		// set true if stage done
-		currentStageReady=true;
-
-		emit sigExecStage();
-	}
-}
-
-/**
  * \brief trigger detectors and read their values
  *
  * - wait triggerDelay
@@ -264,14 +228,22 @@ void eveScanModule::stgTrigRead() {
 }
 
 /**
- * \brief check if we are done, or if we go to the next position
+ * \brief check if we are done and move to the next position (if any)
  *
- * may be obsolete, instead call nextPos
+ * - calculate the next position
+ * - decide, if we do another step or if we are done
+ * - if necessary, wait for position-event
+ * - goto next position
+ * - goto startPosition of nested scan
+ * - read current position (and check status)
+ * - signal ready if last position has been reached
+ * - send position value
+ *
  */
-void eveScanModule::stgPosCheck() {
+void eveScanModule::stgNextPos() {
 
 	if (true) {
-		manager->sendError(INFO,0,"stgPosCheck");
+		manager->sendError(INFO,0,"stgNextPos");
 		// TODO dummy activities, wait 1 second
 		((eveScanThread *)QThread::currentThread())->millisleep(1000);
 
@@ -290,6 +262,24 @@ void eveScanModule::stgPostscan() {
 
 	if (true) {
 		manager->sendError(INFO,0,"stgPostScan");
+		// TODO dummy activities, wait 1 second
+		((eveScanThread *)QThread::currentThread())->millisleep(1000);
+
+		// set true if stage done
+		currentStageReady=true;
+
+		emit sigExecStage();
+	}
+}
+
+/**
+ * \brief execute position plugins
+ *
+ */
+void eveScanModule::stgEndPos() {
+
+	if (true) {
+		manager->sendError(INFO,0,"stgEndPos");
 		// TODO dummy activities, wait 1 second
 		((eveScanThread *)QThread::currentThread())->millisleep(1000);
 
@@ -350,6 +340,7 @@ void eveScanModule::execStage() {
 		emit SMready();
 		return;
 	}
+
 	if (manager->getChainStatus() == eveEngEXECUTING){
 		if (smstatus == eveSmNOTSTARTED) {
 			smstatus = eveSmEXECUTING;
@@ -425,9 +416,6 @@ void eveScanModule::startSM() {
 	if ((smstatus == eveSmDONE) || (smstatus == eveSmNOTSTARTED)){
 		manager->sendStatus(smId, eveChainSmEXECUTING);
 		smstatus = eveSmEXECUTING;
-		currentStage = eveStgINIT;
-		currentStageReady = false;
-		currentStageCounter = 0;
 		emit sigExecStage();
 	}
 }

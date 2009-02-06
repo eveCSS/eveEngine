@@ -15,10 +15,9 @@
  *
  * @param parser current XML parser object
  * @param chainid our chain id
- * @param domelem this chains root element with tag <chain>
  *
  */
-eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int chainid, QDomElement domelem) :
+eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int chainid) :
 	eveMessageChannel(parent)
 {
 	QDomElement rootElement;
@@ -30,31 +29,18 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 
 	// TODO check startevent
 
-	// find the root scanmodule (with the lowest id)
-	QDomElement domElem = domelem.firstChildElement("scanmodules");
-    domElem = domElem.firstChildElement("scanmodule");
-    unsigned int lowestNumber= 0xFFFFFFFF;
-	while (!domElem.isNull()) {
-     	if (domElem.hasAttribute("id")) {
-     		unsigned int number = QString(domElem.attribute("id")).toUInt();
-     		if (number > 0) {
-     			smHash.insert(number, domElem);
-     			if (number < lowestNumber) {
-     				lowestNumber = number;
-     				rootElement = domElem;
-				}
-     		}
-     	}
-		domElem = domElem.nextSiblingElement("scanmodule");
-	}
-	if (rootElement.isNull())
+	printf("Constructor: ScanManager with chain %d\n", chainid);
+	parser->addScanManager(chainId, this);
+	int rootId = parser->getRootId(chainId);
+	if (rootId == 0)
 		sendError(ERROR,0,"eveScanManager::eveScanManager: no root scanmodule found");
 	else {
 		// walk down the tree and create all ScanModules
-		rootSM = new eveScanModule(this, parser, rootElement);
+		rootSM = new eveScanModule(this, parser, chainId, rootId);
 		connect (rootSM, SIGNAL(SMready()), this, SLOT(smDone()), Qt::QueuedConnection);
 	}
 
+	// register with messageHub
 	channelId = eveMessageHub::getmHub()->registerChannel(this, 0);
 
 	connect (manager, SIGNAL(startSMs(int)), this, SLOT(smStart(int)), Qt::QueuedConnection);
@@ -64,7 +50,6 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 	connect (manager, SIGNAL(pauseSMs()), this, SLOT(smPause()), Qt::QueuedConnection);
 
 	// parsing is finished, clear all DomElements
-	smHash.clear();
 }
 
 eveScanManager::~eveScanManager() {
@@ -90,10 +75,14 @@ bool eveScanManager::setRootSM(eveScanModule *newRoot) {
 void eveScanManager::init() {
 
 	printf("Leaving eveScanManager::init() success! \n");
+	rootSM->initialize();
 }
 
 void eveScanManager::shutdown(){
 	eveError::log(1, QString("eveScanManager: shutdown"));
+
+	delete rootSM;
+
 	// TODO make sure mHub reads all messages before closing the channel
 	// this is the workaround
 	((eveScanThread *)QThread::currentThread())->millisleep(1000);
@@ -110,6 +99,9 @@ void eveScanManager::shutdown(){
  * usually called by a signal from manager thread
  */
 void eveScanManager::smStart(int eventId) {
+
+	int dummy = eventId;
+	++ dummy;
 
 	if (chainStatus == eveEngIDLEXML){
 		chainStatus = eveEngEXECUTING;
@@ -187,21 +179,13 @@ void eveScanManager::smPause() {
  */
 void eveScanManager::smRedo(int eventId) {
 
+	int dummy = eventId;
+	++ dummy;
 }
 
 /**
- * \brief find the DomElement for scanmodule with id.
- * \param smid scanmodule id
- * \return corresponding DomElement
- */
-QDomElement eveScanManager::getDomElement(int smid) {
-	return smHash.value(smid);
-}
-
-/**
- * \brief find the DomElement for scanmodule with id.
- * \param smid scanmodule id
- * \return corresponding DomElement
+ * \brief
+ *
  */
 void eveScanManager::smDone() {
 
@@ -241,5 +225,8 @@ void eveScanManager::sendError(int severity, int facility, int errorType,  QStri
  * @param status current chain status
  */
 void eveScanManager::sendStatus(int smid, chainStatusT status){
+
+	// TODO keep track of the various scanmodule messages and send
+	// e.g. chainIDLE, when all inits are done
 	addMessage(new eveChainStatusMessage(status, chainId, smid, posCounter));
 }
