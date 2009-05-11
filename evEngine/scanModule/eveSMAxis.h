@@ -19,7 +19,7 @@
  *
  */
 
-enum eveAxisStatusT {eveAXISINIT, eveAXISIDLE, eveAXISGOTO};
+enum eveAxisStatusT {eveAXISINIT, eveAXISIDLE, eveAXISWRITEPOS, eveAXISREADPOS, eveAXISREADDEADBAND};
 
 class eveScanManager;
 
@@ -34,14 +34,15 @@ public:
 	void gotoNextPos(bool);
 	// bool isAtNextPos();
 	bool isAtEndPos();
-	eveSetValue* getPos();
+	//eveSetValue* getPos();
 	void execQueue();
 	void init();
 	bool isDone(){return ready;};
+	QString getName(){return name;};
+	QString getUnit(){return unit;};
 
 public slots:
 	void transportReady(int);
-	void transportTimeout();
 
 signals:
 	void axisDone();
@@ -49,9 +50,15 @@ signals:
 private:
 	void sendError(int, int, QString);
 	void initReady();
+	void gotoPos(eveVariant, bool);
 	bool ready;
+	bool inDeadband;
 	QString id;
 	QString name;
+	QString unit;
+	eveVariant currentPosition;
+	eveVariant targetPosition;
+	eveVariant deadbandValue;
 	QList<eveTransportT> transportList;
 	int signalCounter;
 	eveAxisStatusT axisStatus;

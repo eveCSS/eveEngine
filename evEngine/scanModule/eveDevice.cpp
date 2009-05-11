@@ -15,6 +15,19 @@ eveTransportDef::~eveTransportDef() {
 }
 
 
+eveLocalTransportDef::eveLocalTransportDef(eveType etype, pvMethodT accessMethod ,QString accessname) :
+	eveTransportDef::eveTransportDef(etype) {
+	accessDescription = accessname;
+	method = accessMethod;
+	transtype = eveTRANS_LOCAL;
+}
+eveLocalTransportDef::~eveLocalTransportDef() {
+	// TODO Auto-generated destructor stub
+}
+eveLocalTransportDef* eveLocalTransportDef::clone() {
+	return new eveLocalTransportDef(dataType, method, accessDescription );
+}
+
 eveCaTransportDef::eveCaTransportDef(eveType etype, pvMethodT caMethod ,QString pvname) :
 	eveTransportDef::eveTransportDef(etype) {
 	pV = pvname;
@@ -28,23 +41,22 @@ eveCaTransportDef* eveCaTransportDef::clone() {
 	return new eveCaTransportDef(dataType, method, pV );
 }
 
-
-eveDeviceCommand::eveDeviceCommand(eveTransportDef * trans, QString value, eveType etype) {
+eveDeviceCommand::eveDeviceCommand(eveTransportDef * trans, QString value, eveType valtype) {
 	devCmd = trans;
-	devString = value;
-	devType = etype;
+	valueString = value;
+	valueType = valtype;
 }
 eveDeviceCommand::~eveDeviceCommand() {
 	if (devCmd != NULL) delete devCmd;
 }
 eveDeviceCommand* eveDeviceCommand::clone() {
-	eveTransportDef *catrans;
+	eveTransportDef *trans;
 	if (devCmd != NULL)
-		catrans = devCmd->clone();
+		trans = devCmd->clone();
 	else
-		catrans = NULL;
+		trans = NULL;
 
-	return new eveDeviceCommand(catrans, devString, devType);
+	return new eveDeviceCommand(trans, valueString, valueType);
 }
 
 
@@ -58,7 +70,7 @@ eveBaseDevice::~eveBaseDevice() {
 }
 
 
-eveDevice::eveDevice(eveDeviceCommand *dUnit, eveTransportDef *dPv, QString dName, QString dId) :
+eveDevice::eveDevice(eveDeviceCommand *dUnit, eveDeviceCommand *dPv, QString dName, QString dId) :
 	eveBaseDevice::eveBaseDevice(dName, dId) {
 	valueCmd = dPv;
 	unit = dUnit;
@@ -68,7 +80,7 @@ eveDevice::~eveDevice() {
 	if (valueCmd != NULL) delete valueCmd;
 }
 
-eveSimpleDetector::eveSimpleDetector(eveDeviceCommand *trigger, eveDeviceCommand *unit, eveTransportDef *valuePv, QString channelname, QString channelid) :
+eveSimpleDetector::eveSimpleDetector(eveDeviceCommand *trigger, eveDeviceCommand *unit, eveDeviceCommand *valuePv, QString channelname, QString channelid) :
 	eveDevice::eveDevice(unit, valuePv, channelname, channelid)
 {
 	triggerCmd = trigger;
@@ -89,7 +101,7 @@ eveDetector::~eveDetector() {
 }
 
 
-eveMotorAxis::eveMotorAxis(eveDeviceCommand *triggerCom, eveDeviceCommand *aUnit, eveTransportDef *gotoCom, eveDeviceCommand *stopCom, eveTransportDef *position, eveTransportDef *aStatus, eveTransportDef *aDeadbCom, QString aName, QString aId) :
+eveMotorAxis::eveMotorAxis(eveDeviceCommand *triggerCom, eveDeviceCommand *aUnit, eveDeviceCommand *gotoCom, eveDeviceCommand *stopCom, eveDeviceCommand *position, eveDeviceCommand *aStatus, eveDeviceCommand *aDeadbCom, QString aName, QString aId) :
 	eveDevice::eveDevice(aUnit, position, aName, aId) {
 
 	// TODO gotoCom may not be NULL

@@ -609,6 +609,41 @@ eveDataMessage* eveDataMessage::clone(){
 	return message;
 };
 
+eveVariant eveDataMessage::toVariant(){
+	eveVariant result;
+
+	switch (dataType) {
+		case epicsInt8T:					/* epicsInt8 */
+			result.setType(eveINT);
+			if (dataArrayChar.size() > 0) result.setValue(dataArrayChar[0]);
+		break;
+		case epicsInt16T:					/* epicsInt16 */
+			result.setType(eveINT);
+			if (dataArrayShort.size() > 0) result.setValue(dataArrayShort[0]);
+		break;
+		case epicsInt32T:					/* epicsInt32 */
+			result.setType(eveINT);
+			if (dataArrayInt.size() > 0) result.setValue(dataArrayInt[0]);
+		break;
+		case epicsFloat32T:					/* epicsFloat32 */
+			result.setType(eveDOUBLE);
+			if (dataArrayFloat.size() > 0) result.setValue(dataArrayFloat[0]);
+		break;
+		case epicsFloat64T:					/* epicsFloat64 */
+			result.setType(eveDOUBLE);
+			if (dataArrayDouble.size() > 0) result.setValue(dataArrayDouble[0]);
+		break;
+		case epicsStringT:					/* epicsString */
+			result.setType(eveSTRING);
+			if (dataStrings.size() > 0) result.setValue(dataStrings.at(0));
+		break;
+		default:
+			eveError::log(4,"eveDataMessage unknown data type");
+		break;
+	}
+	return result;
+}
+
 /*
  * Class evePlayListMessage
  */

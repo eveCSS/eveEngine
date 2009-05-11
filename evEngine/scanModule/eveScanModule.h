@@ -19,7 +19,6 @@
 /**
  * \brief process a ScanModule
  */
-enum smStatusT {eveSmNOTSTARTED, eveSmEXECUTING, eveSmPAUSED, eveSmBROKEN, eveSmHALTED, eveSmDONE} ;
 
 enum stageT {eveStgINIT, eveStgREADPOS, eveStgGOTOSTART, eveStgPRESCAN,
 			eveStgSETTLETIME, eveStgTRIGREAD, eveStgNEXTPOS,
@@ -41,6 +40,7 @@ public:
 public slots:
 	void stgInit();
 	void stgGotoStart();
+	void stgReadPos();
 	void stgPrescan();
 	void stgSettleTime();
 	void stgTrigRead();
@@ -55,6 +55,7 @@ signals:
 	void SMready();
 
 private:
+	void sendError(int, int, QString);
 	int chainId;
 	int smId;
 	smStatusT smstatus;

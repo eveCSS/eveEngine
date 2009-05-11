@@ -53,7 +53,7 @@ bool eveXMLReader::read(QByteArray xmldata, eveDeviceList *devList)
         return false;
     }
     QDomElement version = root.firstChildElement("version");
-    if (version.text() != "0.1.5") {
+    if (version.text() != "0.2.0") {
 		sendError(ERROR,0,QString("eveXMLReader::read: incompatible xml version: %1").arg(version.text()));
         return false;
     }
@@ -155,38 +155,44 @@ void eveXMLReader::createDetector(QDomNode detector){
     sendError(INFO,0,QString("eveXMLReader::createDetector: id: %1, name: %2").arg(id).arg(name));
 }
 
-/** \brief create a CaTransport from XML
- * \param node the <pv> DomNode
+/** \brief create a Transport from XML
+ * \param node the <access> DomNode
  */
-eveCaTransportDef * eveXMLReader::createCaTransport(QDomElement node)
+eveTransportDef * eveXMLReader::createTransport(QDomElement node)
 {
-	QString typeString;
+	QString typeString, transportString;
 	QString methodString;
-	eveType pvtype = eveInt8T;
-	pvMethodT pvMethod= eveGET;
+	eveType accesstype = eveInt8T;
+	pvMethodT accessMethod= eveGET;
 
 	if (node.hasAttribute("type")) {
 		typeString = node.attribute("type");
-		if (typeString == "int") pvtype = eveInt32T;
-		else if (typeString == "double") pvtype = eveFloat64T;
-		else if (typeString == "string") pvtype = eveStringT;
+		if (typeString == "int") accesstype = eveInt32T;
+		else if (typeString == "double") accesstype = eveFloat64T;
+		else if (typeString == "string") accesstype = eveStringT;
 		else {
-			sendError(ERROR,0,QString("eveXMLReader::createCaTransport: unknown data type: %1").arg(typeString));
+			sendError(ERROR,0,QString("eveXMLReader::createTransport: unknown data type: %1").arg(typeString));
 		}
 	}
 	if (node.hasAttribute("method")) {
 		methodString = node.attribute("method");
-		if (methodString == "PUT") pvMethod = evePUT;
-		else if (methodString == "GET") pvMethod = eveGET;
-		else if (methodString == "GETPUT") pvMethod = eveGETPUT;
-		else if (methodString == "GETCB") pvMethod = eveGETCB;
-		else if (methodString == "PUTCB") pvMethod = evePUTCB;
-		else if (methodString == "GETPUTCB") pvMethod = eveGETPUTCB;
+		if (methodString == "PUT") accessMethod = evePUT;
+		else if (methodString == "GET") accessMethod = eveGET;
+		else if (methodString == "GETPUT") accessMethod = eveGETPUT;
+		else if (methodString == "GETCB") accessMethod = eveGETCB;
+		else if (methodString == "PUTCB") accessMethod = evePUTCB;
+		else if (methodString == "GETPUTCB") accessMethod = eveGETPUTCB;
 		else {
-			sendError(ERROR,0,QString("eveXMLReader::createCaTransport: unknown method: %1").arg(methodString));
+			sendError(ERROR,0,QString("eveXMLReader::createTransport: unknown method: %1").arg(methodString));
 		}
 	}
-	return new eveCaTransportDef(pvtype, pvMethod, node.text());
+	if (node.hasAttribute("transport")) {
+		transportString = node.attribute("transport");
+		if (methodString == "local")
+			return new eveLocalTransportDef(accesstype, accessMethod, node.text());
+	}
+	// return default transport
+	return new eveCaTransportDef(accesstype, accessMethod, node.text());
 
 }
 
@@ -197,12 +203,12 @@ eveCaTransportDef * eveXMLReader::createCaTransport(QDomElement node)
  */
 eveSimpleDetector * eveXMLReader::createChannel(QDomNode channel, eveDeviceCommand *defaultTrigger, eveDeviceCommand *defaultUnit){
 
-	// name, id, readpv, unit, trigger
+	// name, id, read, unit, trigger
 	QString name;
 	QString id;
 	eveDeviceCommand *trigger=defaultTrigger;
 	eveDeviceCommand *unit=defaultUnit;
-	eveCaTransportDef * pv=NULL;
+	eveDeviceCommand *access=NULL;
 
 	QDomElement domElement = channel.firstChildElement("id");
     if (!domElement.isNull()) id = domElement.text();
@@ -213,12 +219,11 @@ eveSimpleDetector * eveXMLReader::createChannel(QDomNode channel, eveDeviceComma
     else
     	name = id;
 
-	domElement = channel.firstChildElement("readpv");
-	if (!domElement.isNull()) pv = createCaTransport(domElement);
-    if (pv == NULL) {
-        sendError(ERROR,0,"eveXMLReader::createChannel: Syntax error in channel tag, no <readpv>");
-        return NULL;
-    }
+	domElement = channel.firstChildElement("read");
+	if (!domElement.isNull())
+		access = createDeviceCommand(domElement);
+	else
+        sendError(ERROR,0,"eveXMLReader::createChannel: Syntax error in channel tag, no <read>");
 
     domElement = channel.firstChildElement("trigger");
     if (!domElement.isNull())
@@ -234,7 +239,7 @@ eveSimpleDetector * eveXMLReader::createChannel(QDomNode channel, eveDeviceComma
     	if (unit != NULL) unit = unit->clone();
     }
 
-	return new eveSimpleDetector(trigger, unit, pv, name, id);
+	return new eveSimpleDetector(trigger, unit, access, name, id);
 
 }
 
@@ -307,10 +312,10 @@ eveMotorAxis * eveXMLReader::createAxis(QDomNode axis, eveDeviceCommand *default
 	eveDeviceCommand *trigger=defaultTrigger;
 	eveDeviceCommand *unit=defaultUnit;
 	eveDeviceCommand *stopCommand = NULL;
-	eveCaTransportDef * gotoPv=NULL;
-	eveCaTransportDef * positionPv=NULL;
-	eveCaTransportDef * statusPv=NULL;
-	eveCaTransportDef * deadbandPv=NULL;
+	eveDeviceCommand *gotoCommand=NULL;
+	eveDeviceCommand *positionCommand=NULL;
+	eveDeviceCommand *statusCommand=NULL;
+	eveDeviceCommand *deadbandCommand=NULL;
 
 	QDomElement domElement = axis.firstChildElement("id");
     if (!domElement.isNull()) id = domElement.text();
@@ -321,24 +326,21 @@ eveMotorAxis * eveXMLReader::createAxis(QDomNode axis, eveDeviceCommand *default
     else
     	name = id;
 
-	domElement = axis.firstChildElement("positionpv");
-	if (!domElement.isNull()) positionPv = createCaTransport(domElement);
-    if (positionPv == NULL) {
-        sendError(INFO,0,QString("eveXMLReader::createAxis: unable to verify position no <positionpv> tag for %1").arg(name));
+	domElement = axis.firstChildElement("position");
+	if (!domElement.isNull()) positionCommand = createDeviceCommand(domElement);
+    if (positionCommand == NULL) {
+        sendError(INFO,0,QString("eveXMLReader::createAxis: unable to verify position no <position> tag for %1").arg(name));
     }
 
-	domElement = axis.firstChildElement("statuspv");
-	if (!domElement.isNull()) statusPv = createCaTransport(domElement);
-    if (statusPv == NULL) {
-        sendError(INFO,0,QString("eveXMLReader::createAxis: unable to check status no <statuspv> tag for %1").arg(name));
+	domElement = axis.firstChildElement("status");
+	if (!domElement.isNull()) statusCommand = createDeviceCommand(domElement);
+    if (statusCommand == NULL) {
+        sendError(INFO,0,QString("eveXMLReader::createAxis: unable to check status no <status> tag for %1").arg(name));
     }
 
     domElement = axis.firstChildElement("goto");
-    if (!domElement.isNull()) {
-     	domElement = domElement.firstChildElement("pv");
-    	if (!domElement.isNull()) gotoPv = createCaTransport(domElement);
-    }
-    if (gotoPv == NULL) {
+    if (!domElement.isNull())  gotoCommand = createDeviceCommand(domElement);
+    if (gotoCommand == NULL) {
         sendError(ERROR,0,QString("eveXMLReader::createAxis: unable to create goto command for %1, check XML").arg(name));
         return NULL;
     }
@@ -364,13 +366,13 @@ eveMotorAxis * eveXMLReader::createAxis(QDomNode axis, eveDeviceCommand *default
     	if (unit != NULL) unit = unit->clone();
     }
 
-	domElement = axis.firstChildElement("deadbandpv");
-	if (!domElement.isNull()) deadbandPv = createCaTransport(domElement);
-    if (deadbandPv == NULL) {
-        sendError(INFO,0,QString("eveXMLReader::createAxis: unable to check deadband, no <deadbandPv> tag for %1").arg(name));
+	domElement = axis.firstChildElement("deadband");
+	if (!domElement.isNull()) deadbandCommand = createDeviceCommand(domElement);
+    if (deadbandCommand == NULL) {
+        sendError(INFO,0,QString("eveXMLReader::createAxis: unable to check deadband, no <deadband> tag for %1").arg(name));
     }
 
-	return new eveMotorAxis(trigger, unit, gotoPv, stopCommand, positionPv, statusPv, deadbandPv, name, id);
+	return new eveMotorAxis(trigger, unit, gotoCommand, stopCommand, positionCommand, statusCommand, deadbandCommand, name, id);
 
 }
 
@@ -380,27 +382,30 @@ eveMotorAxis * eveXMLReader::createAxis(QDomNode axis, eveDeviceCommand *default
  *
  */
 eveDeviceCommand * eveXMLReader::createDeviceCommand(QDomNode node){
-	eveCaTransportDef * pv=NULL;
-	QString valueString=NULL;
-	eveType pvtype=eveUnknownT;
+	eveTransportDef *access=NULL;
+	QString valueString="";
+	eveType valuetype=eveUnknownT;
 
-	QDomElement domElement = node.firstChildElement("pv");
-	if (!domElement.isNull()) pv = createCaTransport(domElement);
+	QDomElement domElement = node.firstChildElement("access");
+	if (!domElement.isNull())
+		access = createTransport(domElement);
+	else
+		sendError(ERROR, 0, "eveXMLReader::createDeviceCommand: missing access tag: ");
 
     domElement = node.firstChildElement("value");
     if (!domElement.isNull()){
      	valueString = domElement.text();
      	if (domElement.hasAttribute("type")) {
      		QString typeString = domElement.attribute("type");
-     		if (typeString == "int") pvtype = eveInt32T;
-     		else if (typeString == "double") pvtype = eveFloat64T;
-     		else if (typeString == "string") pvtype = eveStringT;
+     		if (typeString == "int") valuetype = eveInt32T;
+     		else if (typeString == "double") valuetype = eveFloat64T;
+     		else if (typeString == "string") valuetype = eveStringT;
      		else {
      			sendError(ERROR,0,QString("eveXMLReader::createCommand: unknown data type: %1").arg(typeString));
      		}
      	}
     }
-	return new eveDeviceCommand(pv, valueString, pvtype);
+	return new eveDeviceCommand(access, valueString, valuetype);
 }
 
 /** \brief create an option or a device from XML
@@ -411,7 +416,7 @@ void eveXMLReader::createDevice(QDomNode device){
 	QString name;
 	QString id;
 	eveDeviceCommand *unit=NULL;
-	eveTransportDef* valuePv;
+	eveDeviceCommand* valueTrans;
 
 	if (device.isNull()){
 		sendError(INFO,0,"eveXMLReader::createDevice: cannot create Null device/option, check XML-Syntax");
@@ -436,13 +441,14 @@ void eveXMLReader::createDevice(QDomNode device){
     domElement = device.firstChildElement("unit");
     if (!domElement.isNull()) unit = createDeviceCommand(domElement);
 
-    domElement = device.firstChildElement("pv");
-	if (!domElement.isNull()) valuePv = createCaTransport(domElement);
-    if (valuePv == NULL) {
-        sendError(ERROR,0,QString("eveXMLReader::createDevice: need a valid <pv> tag for %1").arg(name));
-        return;
-    }
-    deviceList->insert(id, new eveDevice(unit, valuePv, name, id));
+    domElement = device.firstChildElement("value");
+	if (!domElement.isNull())
+		valueTrans = createDeviceCommand(domElement);
+	else {
+		sendError(ERROR,0,QString("eveXMLReader::createDevice: need a valid <value> tag for %1").arg(name));
+		return;
+	}
+	deviceList->insert(id, new eveDevice(unit, valueTrans, name, id));
 	// TODO remove this
     sendError(INFO,0,QString("eveXMLReader::createDevice: Found id: %1, name: %2").arg(id).arg(name));
 }

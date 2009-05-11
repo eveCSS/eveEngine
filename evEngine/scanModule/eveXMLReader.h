@@ -53,7 +53,7 @@ private:
 	eveSimpleDetector * createChannel(QDomNode, eveDeviceCommand *, eveDeviceCommand *);
 	eveMotorAxis * createAxis(QDomNode, eveDeviceCommand *, eveDeviceCommand *);
 	void createOption(QDomNode);
-	eveCaTransportDef* createCaTransport(QDomElement node);
+	eveTransportDef* createTransport(QDomElement node);
 	eveDeviceList *deviceList;
 	eveManager *parent;
 	QHash<int, QDomElement> chainDomIdHash;

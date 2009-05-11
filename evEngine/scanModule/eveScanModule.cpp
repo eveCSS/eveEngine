@@ -5,6 +5,7 @@
  *      Author: eden
  */
 
+#include <QTimer>
 #include "eveScanModule.h"
 #include "eveScanThread.h"
 #include "eveDeviceList.h"
@@ -24,6 +25,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     chainId = chainid;
 
 	stageHash.insert(eveStgINIT, &eveScanModule::stgInit);
+	stageHash.insert(eveStgREADPOS, &eveScanModule::stgReadPos);
 	stageHash.insert(eveStgGOTOSTART, &eveScanModule::stgGotoStart);
 	stageHash.insert(eveStgPRESCAN, &eveScanModule::stgPrescan);
 	stageHash.insert(eveStgSETTLETIME, &eveScanModule::stgSettleTime);
@@ -58,6 +60,9 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 
 	// get all used motors
     axisList = parser->getAxisList(chainId, smId);
+	foreach (eveSMAxis *axis, *axisList){
+	    connect (axis, SIGNAL(axisDone()), this, SLOT(execStage()), Qt::QueuedConnection);
+	}
 
 	// TODO get all used detectors
 
@@ -81,7 +86,7 @@ eveScanModule::~eveScanModule() {
 void eveScanModule::initialize() {
 
 	// TODO we don't need this any more, call stgInit() instead
-	manager->sendError(INFO,0,"initialize");
+	sendError(INFO,0,"initialize");
 	eveScanModule::stgInit();
 }
 
@@ -92,13 +97,13 @@ void eveScanModule::initialize() {
  */
 void eveScanModule::stgInit() {
 
-	manager->sendError(INFO,0,"stgInit");
-	if (currentStageCounter ==0){
-		// TODO for now we remain in status eveChainSmINITIALIZING until started
-		manager->sendStatus(smId, eveChainSmINITIALIZING);
+	sendError(INFO,0,"stgInit");
+	if (currentStageCounter == 0){
+		manager->setStatus(smId, eveSmINITIALIZING);
 
 		// init devices
 		foreach (eveSMAxis *axis, *axisList){
+			sendError(INFO,0,QString("initializing axis %1").arg(axis->getName()));
 			axis->init();
 		}
 
@@ -111,50 +116,67 @@ void eveScanModule::stgInit() {
 
 		bool ready = true;
 		foreach (eveSMAxis *axis, *axisList){
+			sendError(INFO,0,QString("stgInit: Axis: %1 done: %2").arg(axis->getName()).arg(axis->isDone()));
 			ready = axis->isDone();
 		}
+		// TODO check if appended, nested scans are ready too
 		if (ready){
-			// TODO dummy activities, wait 1 second
-			((eveScanThread *)QThread::currentThread())->millisleep(1000);
 			currentStageReady=true;
-			manager->sendStatus(smId, eveChainSmIDLE);
+			manager->setStatus(smId, smstatus);
 			emit sigExecStage();
 		}
 	}
 }
 
 /**
+ * \brief read all motor positions if this is root scan module
+ *
+ */
+void eveScanModule::stgReadPos() {
+
+	if (isRoot) {
+		sendError(INFO,0,"stgReadPos");
+
+		// set true if stage done
+		currentStageReady=true;
+		emit sigExecStage();
+	}
+	else {
+		currentStageReady=true;
+		emit sigExecStage();
+	}
+}
+/**
  * \brief Goto Start Position
  *
  * move motors and all motors of all nested scans to start position,
- * (do not move them, if they have relative positioning).
- * - read motor positions
+  * - read motor positions
  * - send motor positions
  *
  */
 void eveScanModule::stgGotoStart() {
 
-	if (true) {
-		manager->sendError(INFO,0,"stgGotoStart");
-		// TODO dummy activities, wait 1 second
-		((eveScanThread *)QThread::currentThread())->millisleep(1000);
+	if (currentStageCounter == 0){
+		sendError(INFO,0,"stgGotoStart");
 
-		// set true if stage done
-		currentStageReady=true;
+		foreach (eveSMAxis *axis, *axisList){
+			sendError(INFO,0,QString("Moving axis %1").arg(axis->getName()));
+			axis->gotoStartPos(false);
+		}
 
-/* gleichzeitiger Start von CA-Kommandos:
- * - eine GroupTransportListe initialisieren
- * - alle SMAxis->gotoStart mit GroupTransportListe aufrufen.
- *   dabei einen CAGroupTransport erzeugen, wenn notwendig (optional einen anderen Transport)
- * - die Achsen schicken ihre Befehle ab ohne ca_flush
- * - am Ende die GroupTransportListe abfeuern (flush)
- *   feuert die caGroup und optional weitere Transports
- *
- *  unabhängiger Start:
- *  - SMAxis->gotoStart(NULL ) erzeugt sich eigenen Transport und starte sich selbst.
- *
- */
-		emit sigExecStage();
+		currentStageCounter = 1;
+	}
+	else {
+		bool ready = true;
+		foreach (eveSMAxis *axis, *axisList){
+			sendError(INFO,0,QString("stgGotoStart: Axis: %1 done: %2").arg(axis->getName()).arg(axis->isDone()));
+			ready = axis->isDone();
+		}
+
+		if (ready){
+			currentStageReady=true;
+			emit sigExecStage();
+		}
 	}
 }
 
@@ -167,10 +189,12 @@ void eveScanModule::stgGotoStart() {
  */
 void eveScanModule::stgPrescan() {
 
-	if (true) {
-		manager->sendError(INFO,0,"stgPrescan");
-		// TODO dummy activities, wait 1 second
-		((eveScanThread *)QThread::currentThread())->millisleep(1000);
+	if (currentStageCounter == 0){
+		currentStageCounter=1;
+		QTimer::singleShot(1000, this, SLOT(execStage()));
+	}
+	else {
+		sendError(INFO,0,"stgPrescan");
 
 		// set true if stage done
 		currentStageReady=true;
@@ -186,10 +210,12 @@ void eveScanModule::stgPrescan() {
  */
 void eveScanModule::stgSettleTime() {
 
-	if (true) {
-		manager->sendError(INFO,0,"stgSettleTime");
-		// TODO dummy activities, wait 1 second
-		((eveScanThread *)QThread::currentThread())->millisleep(1000);
+	if (currentStageCounter == 0){
+		currentStageCounter=1;
+		QTimer::singleShot(1000, this, SLOT(execStage()));
+	}
+	else {
+		sendError(INFO,0,"stgSettleTime");
 
 		// set true if stage done
 		currentStageReady=true;
@@ -215,10 +241,25 @@ void eveScanModule::stgSettleTime() {
  */
 void eveScanModule::stgTrigRead() {
 
-	if (true) {
-		manager->sendError(INFO,0,"stgTrigRead");
-		// TODO dummy activities, wait 1 second
-		((eveScanThread *)QThread::currentThread())->millisleep(1000);
+	/* gleichzeitiger Start von CA-Kommandos:
+	 * - eine GroupTransportListe initialisieren
+	 * - alle SMAxis->gotoStart mit GroupTransportListe aufrufen.
+	 *   dabei einen CAGroupTransport erzeugen, wenn notwendig (optional einen anderen Transport)
+	 * - die Achsen schicken ihre Befehle ab ohne ca_flush
+	 * - am Ende die GroupTransportListe abfeuern (flush)
+	 *   feuert die caGroup und optional weitere Transports
+	 *
+	 *  unabhängiger Start:
+	 *  - SMAxis->gotoStart(NULL ) erzeugt sich eigenen Transport und starte sich selbst.
+	 *
+	 */
+
+	if (currentStageCounter == 0){
+		currentStageCounter=1;
+		QTimer::singleShot(1000, this, SLOT(execStage()));
+	}
+	else {
+		sendError(INFO,0,"stgTrigRead");
 
 		// set true if stage done
 		currentStageReady=true;
@@ -242,10 +283,12 @@ void eveScanModule::stgTrigRead() {
  */
 void eveScanModule::stgNextPos() {
 
-	if (true) {
-		manager->sendError(INFO,0,"stgNextPos");
-		// TODO dummy activities, wait 1 second
-		((eveScanThread *)QThread::currentThread())->millisleep(1000);
+	if (currentStageCounter == 0){
+		currentStageCounter=1;
+		QTimer::singleShot(1000, this, SLOT(execStage()));
+	}
+	else {
+		sendError(INFO,0,"stgNextPos");
 
 		// set true if stage done
 		currentStageReady=true;
@@ -260,10 +303,12 @@ void eveScanModule::stgNextPos() {
  */
 void eveScanModule::stgPostscan() {
 
-	if (true) {
-		manager->sendError(INFO,0,"stgPostScan");
-		// TODO dummy activities, wait 1 second
-		((eveScanThread *)QThread::currentThread())->millisleep(1000);
+	if (currentStageCounter == 0){
+		currentStageCounter=1;
+		QTimer::singleShot(1000, this, SLOT(execStage()));
+	}
+	else {
+		sendError(INFO,0,"stgPostScan");
 
 		// set true if stage done
 		currentStageReady=true;
@@ -278,10 +323,12 @@ void eveScanModule::stgPostscan() {
  */
 void eveScanModule::stgEndPos() {
 
-	if (true) {
-		manager->sendError(INFO,0,"stgEndPos");
-		// TODO dummy activities, wait 1 second
-		((eveScanThread *)QThread::currentThread())->millisleep(1000);
+	if (currentStageCounter == 0){
+		currentStageCounter=1;
+		QTimer::singleShot(1000, this, SLOT(execStage()));
+	}
+	else {
+		sendError(INFO,0,"stgEndPos");
 
 		// set true if stage done
 		currentStageReady=true;
@@ -301,7 +348,7 @@ void eveScanModule::stgEndPos() {
  */
 void eveScanModule::stgFinish() {
 
-	manager->sendError(INFO,0,"stgFinish");
+	sendError(INFO,0,"stgFinish");
 	if (appendedSM && currentStageCounter == 0) {
 		++currentStageCounter;
 		if (manager->getChainStatus() == eveEngEXECUTING)
@@ -310,8 +357,6 @@ void eveScanModule::stgFinish() {
 			emit sigExecStage();
 	}
 	else {
-		// TODO dummy activities, wait 1 second
-		((eveScanThread *)QThread::currentThread())->millisleep(1000);
 
 		// set true if stage done
 		if ((appendedSM) && (manager->getChainStatus() == eveEngEXECUTING))
@@ -334,17 +379,22 @@ void eveScanModule::execStage() {
 	printf("eveScanModule::execStage: Entering\n");
 	if ((currentStage == eveStgFINISH) && currentStageReady){
 		// we are done
-		manager->sendStatus(smId, eveChainSmDONE);
-		// before leaving reset status
 		smstatus = eveSmDONE;
+		manager->setStatus(smId, smstatus);
 		emit SMready();
+		return;
+	}
+
+	// we continue initializing even if chain is not running (yet)
+	if ((currentStage == eveStgINIT) && (currentStageReady == false)){
+		(this->*stageHash.value(currentStage))();
 		return;
 	}
 
 	if (manager->getChainStatus() == eveEngEXECUTING){
 		if (smstatus == eveSmNOTSTARTED) {
 			smstatus = eveSmEXECUTING;
-			manager->sendStatus(smId, eveChainSmEXECUTING);
+			manager->setStatus(smId, smstatus);
 		}
 		// increment stagecounter if current stage is finished
 		if (currentStageReady){
@@ -357,7 +407,7 @@ void eveScanModule::execStage() {
 	}
 	else if (manager->getChainStatus() == eveEngPAUSED){
 		smstatus = eveSmPAUSED;
-		manager->sendStatus(smId, eveChainSmPAUSED);
+		manager->setStatus(smId, smstatus);
 	}
 	else if (manager->getChainStatus() == eveEngSTOPPED){
 		if ((int)currentStage < (int)eveStgPOSTSCAN) {
@@ -398,7 +448,7 @@ bool eveScanModule::resumeSM() {
 	bool success = false;
 	if (smstatus == eveSmPAUSED){
 		smstatus = eveSmEXECUTING;
-		manager->sendStatus(smId, eveChainSmEXECUTING);
+		manager->setStatus(smId, smstatus);
 		emit sigExecStage();
 		return true;
 	}
@@ -414,9 +464,15 @@ bool eveScanModule::resumeSM() {
 void eveScanModule::startSM() {
 
 	if ((smstatus == eveSmDONE) || (smstatus == eveSmNOTSTARTED)){
-		manager->sendStatus(smId, eveChainSmEXECUTING);
 		smstatus = eveSmEXECUTING;
+		manager->setStatus(smId, smstatus);
 		emit sigExecStage();
 	}
 }
 
+void eveScanModule::sendError(int severity, int errorType,  QString message){
+
+	if (manager != NULL)
+		manager->sendError(severity, EVEMESSAGEFACILITY_SCANMODULE,
+							errorType,  QString("ScanModule %1/%2: %3").arg(chainId).arg(smId).arg(message));
+}

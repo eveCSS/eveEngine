@@ -5,6 +5,7 @@
  *      Author: eden
  */
 
+#include <QTimer>
 #include "eveMessage.h"
 #include "eveCaTransport.h"
 #include "eveError.h"
@@ -20,7 +21,7 @@
 eveCaTransport::eveCaTransport(eveCaTransportDef* transdef)
 {
 
-	transStatus = UNDEFINED;
+	transStatus = eveUNDEFINED;
 	currentAction = eveIDLE;
 	transDef=transdef;
 	needEnums = true;
@@ -29,7 +30,8 @@ eveCaTransport::eveCaTransport(eveCaTransportDef* transdef)
 	dataPtr = NULL;
 	writeDataPtr = NULL;
 	name = transDef->getName();
-	scanManager = NULL; // TODO set this to send errors
+	scanManager = NULL; 	// TODO set this to send errors
+	timeOut = 1000;			// TODO get timeout from transdef, keep a low limit of 1 s
 
 	connect (this, SIGNAL(connectChange(int)), this, SLOT(setCnctStatus(int)), Qt::QueuedConnection);
 	connect (this, SIGNAL(dataReady(eveDataMessage *)), this, SLOT(readDone(eveDataMessage *)), Qt::QueuedConnection);
@@ -41,7 +43,7 @@ eveCaTransport::eveCaTransport(eveCaTransportDef* transdef)
 eveCaTransport::~eveCaTransport(){
 
 	ca_clear_channel(chanChid);
-	ca_flush_io();
+	caflush();
 }
 
 /**
@@ -55,11 +57,12 @@ int eveCaTransport::connectTrans(){
 
 	struct ca_client_context *cacontext = ca_current_context();
 	if (cacontext == NULL) {
+		sendError(INFO, 0, QString("creating CA Context %1").arg(name));
 		status = ca_context_create (ca_enable_preemptive_callback);
-		if(status != ECA_NORMAL)sendError(ERROR, 0, QString("Error creating CA Context %1").arg(name));
+		if (status != ECA_NORMAL) sendError(ERROR, 0, QString("Error creating CA Context %1").arg(name));
 		cacontext = ca_current_context();
 	}
-	if (transStatus != UNDEFINED) return false;
+	if (transStatus != eveUNDEFINED) return false;
 	currentAction = eveCONNECT;
 
 	status=ca_create_channel(name.toAscii().data(), &eveCaTransportConnectCB, (void*) this, 0, &chanChid);
@@ -67,7 +70,9 @@ int eveCaTransport::connectTrans(){
 		sendError(ERROR, 0, QString("Error creating CA Channel %1").arg(name));
 		retstat = 1;
 	}
-	flush();
+	ca_pend_io(0.0);
+	int cTimeout=5000;
+	QTimer::singleShot(cTimeout, this, SLOT(connectTimeout()));
 	return retstat;
 }
 
@@ -78,26 +83,44 @@ int eveCaTransport::connectTrans(){
  */
 void eveCaTransport::eveCaTransportConnectCB(struct connection_handler_args arg){
 
+	printf("called ConnectCB\n");
 	eveCaTransport *pv = (eveCaTransport *) ca_puser(arg.chid);
 	if (arg.op == CA_OP_CONN_UP) {
-		emit pv->connectChange((int)CONNECTED);
+		emit pv->connectChange((int)eveCONNECTED);
 	}
 	else {
-		emit pv->connectChange((int)NOTCONNECTED);
+		emit pv->connectChange((int)eveNOTCONNECTED);
 	}
+}
+
+/** \brief called if connection timeout
+ *
+ */
+void eveCaTransport::connectTimeout(){
+
+	if (currentAction == eveCONNECT) emit connectChange((int)eveTIMEOUT);
 }
 
 /** \brief set connection status
  *
- * may be called from a different thread
  */
 void eveCaTransport::setCnctStatus(int status) {
 
 	transStatus = (eveTransStatusT)status;
-	if (transStatus == NOTCONNECTED){
+
+	if (transStatus == eveNOTCONNECTED){
 		sendError(ERROR, 0, QString("Connection lost: %1").arg(name));
+		if (currentAction == eveCONNECT) currentAction = eveIDLE;
+	}
+	else if (transStatus == eveTIMEOUT){
+		sendError(ERROR, 0, QString("Timeout while connecting to: %1").arg(name));
+		if (currentAction == eveCONNECT) {
+			currentAction = eveIDLE;
+			emit done(1);
+		}
 	}
 	else {
+		sendError(INFO, 0, QString("connected to: %1").arg(name));
 		dataCount = ca_element_count(chanChid);
 		elementType = ca_field_type(chanChid);
 		// as request type we always use DBR_TIME_<PRIMITIVE TYPE>
@@ -112,6 +135,7 @@ void eveCaTransport::setCnctStatus(int status) {
 		else{
 			if (currentAction == eveCONNECT) {
 				currentAction = eveIDLE;
+				disconnect(this, SLOT(connectTimeout()));
 				emit done(0);
 			}
 		}
@@ -121,7 +145,7 @@ void eveCaTransport::setCnctStatus(int status) {
 /** \brief return true, if connected
  */
 bool eveCaTransport::isConnected() {
-	if (transStatus == CONNECTED)
+	if (transStatus == eveCONNECTED)
 		return true;
 	else
 		return false;
@@ -136,9 +160,9 @@ void eveCaTransport::getEnumStrs(){
 	int status = ca_array_get_callback(DBR_CTRL_ENUM, ca_element_count(chanChid),
 							chanChid, eveCaTransportEnumCB, enumData);
 	if (status != ECA_NORMAL) {
-		sendError(ERROR,0,QString("get Enum Strings: %1").arg(name));
+		sendError(ERROR,0,"cannot get Enum Strings");
 	}
-	ca_flush_io();
+	caflush();
 }
 
 /** \brief read callback
@@ -178,6 +202,7 @@ void eveCaTransport::enumDone(QStringList *stringlist) {
 	}
 	if (currentAction == eveCONNECT) {
 		currentAction = eveIDLE;
+		disconnect(this, SLOT(connectTimeout()));
 		if (stringlist == NULL)
 			emit done(1);
 		else
@@ -210,7 +235,7 @@ bool eveCaTransport::get(eveData* data){
 bool eveCaTransport::getCB(bool flush)
 {
 
-	if (transStatus != CONNECTED) return false;
+	if (transStatus != eveCONNECTED) return false;
 	if (currentAction != eveIDLE) return false;
 	currentAction = eveREAD;
 
@@ -222,12 +247,16 @@ bool eveCaTransport::getCB(bool flush)
 
 	int status;
 	bool retstatus = true;
-	status = ca_array_get_callback(requestType, dataCount, chanChid, eveCaTransportGetCB, dataPtr);
+	printf("calling getCb (ca_get_callback)\n");
+	status = ca_array_get_callback(requestType, dataCount, chanChid, &eveCaTransport::eveCaTransportGetCB, dataPtr);
 	if (status != ECA_NORMAL) {
 		sendError(ERROR,0,QString("eveCaTransport getCB: %1, CA-Message: %2").arg(name).arg(ca_message(status)));
 		retstatus = false;
 	}
-	if (flush) ca_flush_io();
+	if (flush) caflush();
+	//ca_pend_io(0.0);
+
+	QTimer::singleShot(timeOut, this, SLOT(getTimeout()));
 	return retstatus;
 }
 
@@ -242,6 +271,7 @@ void eveCaTransport::eveCaTransportGetCB(struct event_handler_args arg){
 	eveDataMessage *newdata;
 	eveCaTransport *pv = (eveCaTransport *) ca_puser(arg.chid);
 
+	printf("getCb fired: status: %d\n", arg.status);
 	if ((arg.status == ECA_NORMAL) && (arg.count == pv->getElemCnt())
 									&& (arg.type == pv->getRequestType())) {
 		epicsAlarmCondition status;
@@ -320,16 +350,26 @@ void eveCaTransport::eveCaTransportGetCB(struct event_handler_args arg){
 void eveCaTransport::readDone(eveDataMessage *data) {
 
 	setData(data);
-	if (currentAction != eveREAD){
+	if (currentAction == eveREAD){
+		currentAction = eveIDLE;
+		disconnect(this, SLOT(getTimeout()));
+		if (data == NULL)
+			emit done(1);
+		else
+			emit done(0);
+	}
+	else {
 		sendError(MINOR, 0, QString("%1: Read Callback called, but current action was: %2").arg(name).arg((int)currentAction));
 	}
-	if (data == NULL)
-		emit done(1);
-	else
-		emit done(0);
-	currentAction = eveIDLE;
 }
 
+void eveCaTransport::getTimeout() {
+
+	if (currentAction == eveREAD){
+		sendError(ERROR, 0, "Read Timeout");
+		readDone((eveDataMessage *)NULL);
+	}
+}
 /** \brief write data without waiting
  *
  * TODO
@@ -337,10 +377,10 @@ void eveCaTransport::readDone(eveDataMessage *data) {
  */
 bool eveCaTransport::putCB(eveType datatype, int elemCount, void* data, bool execute){
 
-	if (transStatus != CONNECTED) return false;
+	if (transStatus != eveCONNECTED) return false;
 	if (currentAction != eveIDLE) return false;
 	if (data == NULL) return false;
-	if (currentAction > dataCount){
+	if (elemCount > dataCount){
 		sendError(ERROR,0,QString("Cannot send array data with arraycount %1, maximum: %2").arg(elemCount).arg(dataCount));
 		return false;
 	}
@@ -350,12 +390,14 @@ bool eveCaTransport::putCB(eveType datatype, int elemCount, void* data, bool exe
 	bool retstatus = true;
 
 	status = ca_array_put_callback(convertEpicsToDBR(convertEveToEpicsType(datatype)), elemCount,
-							chanChid, data, eveCaTransportPutCB, NULL);
+							chanChid, data, &eveCaTransport::eveCaTransportPutCB, NULL);
 	if (status != ECA_NORMAL) {
 		sendError(ERROR,0,QString("eveCaTransport putCB: %1, CA-Message: %2").arg(name).arg(ca_message(status)));
 		retstatus = false;
 	}
-	if (execute) flush();
+	if (execute) caflush();
+	int timeout = 10000;
+	QTimer::singleShot(timeout, this, SLOT(putTimeout()));
 	return retstatus;
 }
 
@@ -370,7 +412,8 @@ void eveCaTransport::eveCaTransportPutCB(struct event_handler_args arg){
 	int status=1;
 	eveCaTransport *pv = (eveCaTransport *) ca_puser(arg.chid);
 	if ( arg.status == ECA_NORMAL ) status = 0;
-	pv->writeReady(status);
+	emit pv->writeReady(status);
+	printf("leaving PutCB-Callback\n");
 }
 
 /** \brief is called by write callback
@@ -379,18 +422,30 @@ void eveCaTransport::eveCaTransportPutCB(struct event_handler_args arg){
  */
 void eveCaTransport::writeDone(int status) {
 
-	if (currentAction != eveWRITE){
+	if (currentAction == eveWRITE){
+		disconnect(this, SLOT(putTimeout()));
+		emit done(status);
+		currentAction = eveIDLE;
+	}
+	else {
 		sendError(MINOR, 0, QString("%1: Write Callback called, but current action was: %2").arg(name).arg((int)currentAction));
 	}
-	emit done(status);
-	currentAction = eveIDLE;
 }
 
-/** \brief write data without waiting, without Callback
+void eveCaTransport::putTimeout() {
+
+	if (currentAction == eveWRITE){
+		sendError(ERROR, 0, "Write Timeout");
+		writeDone(1);
+	}
+}
+
+
+/** \brief write data without Callback
  */
 bool eveCaTransport::put(eveType datatype, int elemCount, void* data, bool execute){
 
-	if (transStatus != CONNECTED) return false;
+	if (transStatus != eveCONNECTED) return false;
 	if (data == NULL) return false;
 	if (elemCount > dataCount){
 		sendError(ERROR,0,QString("Cannot send array data with arraycount %1, maximum: %2").arg(elemCount).arg(dataCount));
@@ -405,11 +460,12 @@ bool eveCaTransport::put(eveType datatype, int elemCount, void* data, bool execu
 		sendError(ERROR,0,QString("eveCaTransport put: %1, CA-Message: %2").arg(name).arg(ca_message(status)));
 		retstatus = false;
 	}
-	if (execute) flush();
+	if (execute) caflush();
 	return retstatus;
 }
 
-void eveCaTransport::flush(){
+void eveCaTransport::caflush(){
+	printf("flushing ...\n");
 	ca_flush_io();
 }
 
@@ -426,9 +482,9 @@ QString eveCaTransport::getEnumString(int index) {
 void eveCaTransport::sendError(int severity, int errorType,  QString message){
 
 	// for now we write output to local console too
-	eveError::log(severity, message);
+	eveError::log(severity, QString("PV %1: %2").arg(name).arg(message));
 	if (scanManager != NULL)
-		scanManager->sendError(severity, EVEMESSAGEFACILITY_CATRANSPORT, errorType,  message);
+		scanManager->sendError(severity, EVEMESSAGEFACILITY_CATRANSPORT, errorType,  QString("PV %1: %2").arg(name).arg(message));
 }
 
 /**
@@ -494,6 +550,6 @@ int eveCaTransport::writeData(eveVariant writedata, bool queue){
  * start executing previous queued commands
  */
 int eveCaTransport::execQueue(){
-	eveCaTransport::flush();
+	eveCaTransport::caflush();
 	return 0;
 }

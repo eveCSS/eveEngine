@@ -224,9 +224,28 @@ void eveScanManager::sendError(int severity, int facility, int errorType,  QStri
  * @param smid id of scanmodule
  * @param status current chain status
  */
+void eveScanManager::setStatus(int smid, smStatusT status){
+	// TODO
+	// makes not much  sense to have different types smStatusT and chainStatusT
+	if (status == eveSmINITIALIZING)
+		sendStatus(smid, eveChainSmINITIALIZING);
+	else if (status == eveSmNOTSTARTED)
+		sendStatus(smid, eveChainSmIDLE);
+	else if (status == eveSmEXECUTING)
+		sendStatus(smid, eveChainSmEXECUTING);
+	else if (status == eveSmPAUSED)
+		sendStatus(smid, eveChainSmPAUSED);
+	else if (status == eveSmTRIGGERWAIT)
+		sendStatus(smid, eveChainSmTRIGGERWAIT);
+	else if (status == eveSmDONE)
+		sendStatus(smid, eveChainSmDONE);
+}
+/**
+ *
+ * @param smid id of scanmodule
+ * @param status current chain status
+ */
 void eveScanManager::sendStatus(int smid, chainStatusT status){
 
-	// TODO keep track of the various scanmodule messages and send
-	// e.g. chainIDLE, when all inits are done
 	addMessage(new eveChainStatusMessage(status, chainId, smid, posCounter));
 }

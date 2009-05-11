@@ -66,6 +66,13 @@ bool eveVariant::setValue(QString value) {
 	return ok;
 }
 
+eveVariant eveVariant::abs() {
+	if (*this < 0.0)
+		return *this * (-1.0);
+	else
+		return *this;
+}
+
 eveVariant eveVariant::operator+ (const eveVariant& other){
 	eveVariant result;
 
@@ -76,6 +83,20 @@ eveVariant eveVariant::operator+ (const eveVariant& other){
 	else if (varianttype == eveINT){
 		result.setType(eveINT);
 		result.setValue(toInt() + other.toInt());
+	}
+	return result;
+}
+
+eveVariant eveVariant::operator- (const eveVariant& other){
+	eveVariant result;
+
+	if (varianttype == eveDOUBLE){
+		result.setType(eveDOUBLE);
+		result.setValue(toDouble() - other.toDouble());
+	}
+	else if (varianttype == eveINT){
+		result.setType(eveINT);
+		result.setValue(toInt() - other.toInt());
 	}
 	return result;
 }

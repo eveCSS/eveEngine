@@ -16,6 +16,8 @@
 
 class eveScanModule;
 
+enum smStatusT {eveSmNOTSTARTED, eveSmINITIALIZING, eveSmEXECUTING, eveSmPAUSED, eveSmBROKEN, eveSmHALTED, eveSmTRIGGERWAIT, eveSmDONE} ;
+
 /**
  * \brief Manager class for scanModules
  *
@@ -33,7 +35,7 @@ public:
 	void shutdown();
 	void sendError(int, int, QString);
 	virtual void sendError(int, int, int, QString);
-	void sendStatus(int, chainStatusT);
+	void setStatus(int, smStatusT);
 	engineStatusT getChainStatus(){return chainStatus;};
 	//eveDeviceList * getDeviceDefs(){return manager->getDeviceDefs();};
 
@@ -48,6 +50,7 @@ public slots:
 	void smDone();
 
 private:
+	void sendStatus(int, chainStatusT);
 	int chainId;
 	eveScanModule * rootSM;
 	engineStatusT chainStatus;

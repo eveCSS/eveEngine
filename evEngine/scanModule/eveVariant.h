@@ -24,7 +24,9 @@ public:
 	bool setValue(int);
 	bool setValue(double);
 	bool setValue(QString);
+	eveVariant abs();
 	eveVariant operator + (const eveVariant&);
+	eveVariant operator - (const eveVariant&);
 	eveVariant operator * (const eveVariant&);
 	bool operator > (const eveVariant&);
 	bool operator >= (const eveVariant&);

@@ -18,7 +18,7 @@
 #include "eveData.h"
 
 enum eveTransActionT {eveCONNECT, eveREAD, eveWRITE, eveIDLE };
-enum eveTransStatusT {CONNECTED, NOTCONNECTED, UNDEFINED };
+enum eveTransStatusT {eveCONNECTED, eveNOTCONNECTED, eveTIMEOUT, eveUNDEFINED };
 
 class eveScanManager;
 
@@ -43,7 +43,7 @@ public:
 	bool isConnected();
 	chtype getRequestType(){return requestType;};
 	int getElemCnt(){return dataCount;};
-	static void flush();
+	static void caflush();
 	static void eveCaTransportConnectCB(struct connection_handler_args args);
 	static void eveCaTransportGetCB(struct event_handler_args arg);
 	static void eveCaTransportPutCB(struct event_handler_args arg);
@@ -56,6 +56,9 @@ public slots:
 	void readDone(eveDataMessage *);
 	void writeDone(int);
     void enumDone(QStringList *);
+    void connectTimeout();
+    void getTimeout();
+    void putTimeout();
 
 signals:
 	void writeReady(int);
@@ -70,6 +73,7 @@ private:
 	eveTransStatusT transStatus;
 	eveTransActionT currentAction;
 	int dataCount;
+	int timeOut;
 	QString name;
 	eveCaTransportDef *transDef;
 	QStringList *enumStringList;

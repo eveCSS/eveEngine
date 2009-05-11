@@ -34,7 +34,9 @@ enum chainStatusT {
 ScanModul Status:
 	eveSmNOTSTARTED: only at the very beginning
 					 no start signal received yet
+	eveSmINITIALIZING: is initializing, smstatus does not use this
 	eveSmEXECUTING:	 executing
+	eveSmTRIGGERWAIT: waiting for Trigger
 	eveSmPAUSED:	 paused
 	eveSmBROKEN:	 break signal received
 	eveSmHALTED:	 Halt signal received

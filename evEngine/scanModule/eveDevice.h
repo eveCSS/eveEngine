@@ -48,6 +48,22 @@ private:
 };
 
 /**
+ * \brief Local transport
+ */
+class eveLocalTransportDef : public eveTransportDef{
+public:
+	eveLocalTransportDef(eveType, pvMethodT, QString );
+	virtual ~eveLocalTransportDef();
+	eveLocalTransportDef* clone();
+	QString getName(){return accessDescription;};
+	pvMethodT getMethod(){return method;};
+
+private:
+	QString accessDescription;
+	pvMethodT method;
+};
+
+/**
  * \brief trigger or unit command
  *
  */
@@ -56,13 +72,13 @@ public:
 	eveDeviceCommand(eveTransportDef *, QString, eveType);
 	virtual ~eveDeviceCommand();
 	eveDeviceCommand* clone();
-	eveType getDeviceType() {return devType;};
+	eveType getValueType() {return valueType;};
 	eveTransportDef* getTrans() {return devCmd;};
 
 private:
 	eveTransportDef *devCmd;
-	QString	devString;
-	eveType devType;
+	QString	valueString;
+	eveType valueType;
 };
 
 /**
@@ -85,12 +101,12 @@ protected:
  */
 class eveDevice : public eveBaseDevice {
 public:
-	eveDevice(eveDeviceCommand *, eveTransportDef *, QString, QString);
+	eveDevice(eveDeviceCommand *, eveDeviceCommand *, QString, QString);
 	virtual ~eveDevice();
 	eveDeviceCommand * getUnitCmd(){return unit;};
 
 protected:
-	eveTransportDef * valueCmd;
+	eveDeviceCommand * valueCmd;
 	eveDeviceCommand * unit;
 
 };
@@ -100,7 +116,7 @@ protected:
  */
 class eveSimpleDetector : public eveDevice {
 public:
-	eveSimpleDetector(eveDeviceCommand *, eveDeviceCommand *, eveTransportDef *, QString, QString);
+	eveSimpleDetector(eveDeviceCommand *, eveDeviceCommand *, eveDeviceCommand *, QString, QString);
 	virtual ~eveSimpleDetector();
 
 protected:
@@ -129,22 +145,22 @@ private:
  */
 class eveMotorAxis : public eveDevice {
 public:
-	eveMotorAxis(eveDeviceCommand *, eveDeviceCommand *, eveTransportDef *, eveDeviceCommand *, eveTransportDef *,eveTransportDef *, eveTransportDef *, QString, QString);
+	eveMotorAxis(eveDeviceCommand *, eveDeviceCommand *, eveDeviceCommand *, eveDeviceCommand *, eveDeviceCommand *,eveDeviceCommand *, eveDeviceCommand *, QString, QString);
 	virtual ~eveMotorAxis();
-	eveType getAxisType(){return getGotoCmd()->getDataType();};
+	eveType getAxisType(){return getGotoCmd()->getTrans()->getDataType();};
 	eveDeviceCommand * getTrigCmd(){return triggerCmd;};
-	eveTransportDef * getGotoCmd(){return gotoCmd;};
+	eveDeviceCommand * getGotoCmd(){return gotoCmd;};
 	eveDeviceCommand * getStopCmd(){return stopCmd;};
-	eveTransportDef * getStatusCmd(){return axisStatusCmd;};
-	eveTransportDef * getPosCmd(){return valueCmd;};
-	eveTransportDef * getDeadbandCmd(){return deadbandCmd;};
+	eveDeviceCommand * getStatusCmd(){return axisStatusCmd;};
+	eveDeviceCommand * getPosCmd(){return valueCmd;};
+	eveDeviceCommand * getDeadbandCmd(){return deadbandCmd;};
 
 private:
-	eveTransportDef  *deadbandCmd;
+	eveDeviceCommand  *deadbandCmd;
 	eveDeviceCommand *triggerCmd;
-	eveTransportDef  *gotoCmd;
+	eveDeviceCommand  *gotoCmd;
 	eveDeviceCommand *stopCmd;
-	eveTransportDef  *axisStatusCmd;
+	eveDeviceCommand  *axisStatusCmd;
 	//eveMotor *parentMotor;	// the corresponding motor (unused)
 
 };

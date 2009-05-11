@@ -104,8 +104,8 @@ void eveSocket::sendMessage(QByteArray *messageStream)
 	if (messageStream->length() > 0){
 		if (socket->write(*messageStream) != messageStream->length())
 			eveError::log(4,"eveSocket::sendMessage: unable to send buffer");
-		else
-			eveError::log(4,QString("eveSocket::sendMessage: sent buffer with %1 bytes").arg(messageStream->length()));
+		//else
+		//	eveError::log(4,QString("eveSocket::sendMessage: sent buffer with %1 bytes").arg(messageStream->length()));
 	}
 	else {
 		eveError::log(4,"eveSocket::sendMessage: not sending messages with 0 bytes ");

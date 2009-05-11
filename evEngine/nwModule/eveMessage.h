@@ -8,6 +8,7 @@
 #include <epicsTime.h>
 #include <epicsTypes.h>
 #include <alarm.h>
+#include "eveVariant.h"
 
 #define EVEMESSAGE_STARTTAG 0x0d0f0d0a
 #define EVEMESSAGE_VERSION 0x0100
@@ -74,6 +75,7 @@
 #define EVEMESSAGEFACILITY_POSITIONCALC 0x11
 #define EVEMESSAGEFACILITY_SMDEVICE 0x12
 #define EVEMESSAGEFACILITY_CATRANSPORT 0x13
+#define EVEMESSAGEFACILITY_SCANMODULE 0x14
 
 #define EVEERROR_TIMEOUT 0x0009
 
@@ -398,6 +400,7 @@ public:
 	bool isEmpty(){return !(arraySize);};
 	int getArraySize(){return arraySize;};
 	eveDataMessage* clone();
+	eveVariant toVariant();
 
 private:
 	QString ident;
