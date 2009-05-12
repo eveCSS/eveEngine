@@ -55,12 +55,12 @@ int eveCaTransport::connectTrans(){
 	int status;
 	int retstat=0;
 
-	struct ca_client_context *cacontext = ca_current_context();
-	if (cacontext == NULL) {
+	caThreadContext = ca_current_context();
+	if (caThreadContext == NULL) {
 		sendError(INFO, 0, QString("creating CA Context %1").arg(name));
 		status = ca_context_create (ca_enable_preemptive_callback);
 		if (status != ECA_NORMAL) sendError(ERROR, 0, QString("Error creating CA Context %1").arg(name));
-		cacontext = ca_current_context();
+		caThreadContext = ca_current_context();
 	}
 	if (transStatus != eveUNDEFINED) return false;
 	currentAction = eveCONNECT;
@@ -239,6 +239,12 @@ bool eveCaTransport::getCB(bool flush)
 	if (currentAction != eveIDLE) return false;
 	currentAction = eveREAD;
 
+	if (caThreadContext != ca_current_context()) {
+		int status = ca_attach_context(caThreadContext);
+		if (status == ECA_ISATTACHED) printf("getCB context was already attached\n");
+		else if (status == ECA_NOTTHREADED) printf("getCB context not threaded\n");
+	}
+
 	if (dataPtr == NULL) {
 		int arraysize = dbr_size_n (requestType, dataCount);
 		dataPtr = malloc(arraysize);
@@ -247,14 +253,12 @@ bool eveCaTransport::getCB(bool flush)
 
 	int status;
 	bool retstatus = true;
-	printf("calling getCb (ca_get_callback)\n");
 	status = ca_array_get_callback(requestType, dataCount, chanChid, &eveCaTransport::eveCaTransportGetCB, dataPtr);
 	if (status != ECA_NORMAL) {
 		sendError(ERROR,0,QString("eveCaTransport getCB: %1, CA-Message: %2").arg(name).arg(ca_message(status)));
 		retstatus = false;
 	}
 	if (flush) caflush();
-	//ca_pend_io(0.0);
 
 	QTimer::singleShot(timeOut, this, SLOT(getTimeout()));
 	return retstatus;
@@ -389,6 +393,12 @@ bool eveCaTransport::putCB(eveType datatype, int elemCount, void* data, bool exe
 	int status;
 	bool retstatus = true;
 
+	if (caThreadContext != ca_current_context()) {
+		int status = ca_attach_context(caThreadContext);
+		if (status == ECA_ISATTACHED) printf("putCB context was already attached\n");
+		else if (status == ECA_NOTTHREADED) printf("putCB context not threaded\n");
+	}
+
 	status = ca_array_put_callback(convertEpicsToDBR(convertEveToEpicsType(datatype)), elemCount,
 							chanChid, data, &eveCaTransport::eveCaTransportPutCB, NULL);
 	if (status != ECA_NORMAL) {
@@ -454,6 +464,12 @@ bool eveCaTransport::put(eveType datatype, int elemCount, void* data, bool execu
 
 	int status;
 	bool retstatus = true;
+
+	if (caThreadContext != ca_current_context()) {
+		int status = ca_attach_context(caThreadContext);
+		if (status == ECA_ISATTACHED) printf("getCB context was already attached\n");
+		else if (status == ECA_NOTTHREADED) printf("getCB context not threaded\n");
+	}
 
 	status = ca_array_put(convertEpicsToDBR(convertEveToEpicsType(datatype)), elemCount, chanChid, data);
 	if (status != ECA_NORMAL) {
@@ -547,7 +563,7 @@ int eveCaTransport::writeData(eveVariant writedata, bool queue){
 }
 
 /**
- * start executing previous queued commands
+ * start executing previously queued commands
  */
 int eveCaTransport::execQueue(){
 	eveCaTransport::caflush();

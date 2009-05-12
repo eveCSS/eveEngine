@@ -86,6 +86,8 @@ private:
 	void *writeDataPtr;
 	bool needEnums;
 	bool enumsInProgress;
+	struct ca_client_context *caThreadContext;
+
 };
 
 #endif /* EVECATRANSPORT_H_ */
