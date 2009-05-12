@@ -75,6 +75,11 @@ unix:LIBS += -L/opt/epics/base-3.14.10/lib/linux-x86 \
     -lca \
     -lCom \
     -L/opt/test
-win32:LIBS += c:/epics/ca.lib \
-    c:/epics/Com.lib
+win32:INCLUDEPATH += nwModule \
+    J:\epics\3.14\windows\base-3.14.10\include \
+    J:\epics\3.14\windows\base-3.14.10\include\os\WIN32 \
+    scanModule
+win32:LIBS += J:\epics\3.14\windows\base-3.14.10\lib\win32-x86-mingw\ca.lib \
+    J:\epics\3.14\windows\base-3.14.10\lib\win32-x86-mingw\Com.lib \
+    -lws2_32
 FORMS += 
