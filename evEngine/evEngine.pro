@@ -4,7 +4,8 @@ QT += core \
     network \
     gui \
     xml
-HEADERS += scanModule/eveSMDevice.h \
+HEADERS += scanModule/eveSMChannel.h \
+    scanModule/eveSMDevice.h \
     scanModule/eveVariant.h \
     scanModule/eveSetValue.h \
     scanModule/eveData.h \
@@ -34,7 +35,8 @@ HEADERS += scanModule/eveSMDevice.h \
     nwModule/eveMessageHub.h \
     nwModule/eveNwThread.h \
     nwModule/evePlaylistManager.h
-SOURCES += scanModule/eveSMDevice.cpp \
+SOURCES += scanModule/eveSMChannel.cpp \
+    scanModule/eveSMDevice.cpp \
     scanModule/eveVariant.cpp \
     scanModule/eveSetValue.cpp \
     scanModule/eveData.cpp \
@@ -64,8 +66,6 @@ SOURCES += scanModule/eveSMDevice.cpp \
     nwModule/eveNwThread.cpp \
     main.cpp \
     nwModule/evePlayListManager.cpp
-FORMS += 
-RESOURCES += 
 INCLUDEPATH += nwModule \
     /soft/epics/base-3.14.10/include \
     /soft/epics/base-3.14.10/include/os/Linux \
@@ -83,3 +83,4 @@ win32:LIBS += J:\epics\3.14\windows\base-3.14.10\lib\win32-x86-mingw\ca.lib \
     J:\epics\3.14\windows\base-3.14.10\lib\win32-x86-mingw\Com.lib \
     -lws2_32
 FORMS += 
+RESOURCES += 
