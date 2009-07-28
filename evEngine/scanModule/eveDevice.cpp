@@ -28,8 +28,9 @@ eveLocalTransportDef* eveLocalTransportDef::clone() {
 	return new eveLocalTransportDef(dataType, method, accessDescription );
 }
 
-eveCaTransportDef::eveCaTransportDef(eveType etype, pvMethodT caMethod ,QString pvname) :
+eveCaTransportDef::eveCaTransportDef(eveType etype, pvMethodT caMethod, double timeo, QString pvname) :
 	eveTransportDef::eveTransportDef(etype) {
+	timeout = timeo;
 	pV = pvname;
 	method = caMethod;
 	transtype = eveTRANS_CA;
@@ -38,21 +39,21 @@ eveCaTransportDef::~eveCaTransportDef() {
 	// TODO Auto-generated destructor stub
 }
 eveCaTransportDef* eveCaTransportDef::clone() {
-	return new eveCaTransportDef(dataType, method, pV );
+	return new eveCaTransportDef(dataType, method, timeout, pV );
 }
 
 eveDeviceCommand::eveDeviceCommand(eveTransportDef * trans, QString value, eveType valtype) {
-	devCmd = trans;
+	transDef = trans;
 	valueString = value;
 	valueType = valtype;
 }
 eveDeviceCommand::~eveDeviceCommand() {
-	if (devCmd != NULL) delete devCmd;
+	if (transDef != NULL) delete transDef;
 }
 eveDeviceCommand* eveDeviceCommand::clone() {
 	eveTransportDef *trans;
-	if (devCmd != NULL)
-		trans = devCmd->clone();
+	if (transDef != NULL)
+		trans = transDef->clone();
 	else
 		trans = NULL;
 
@@ -80,12 +81,14 @@ eveDevice::~eveDevice() {
 	if (valueCmd != NULL) delete valueCmd;
 }
 
-eveSimpleDetector::eveSimpleDetector(eveDeviceCommand *trigger, eveDeviceCommand *unit, eveDeviceCommand *valuePv, QString channelname, QString channelid) :
+eveDetectorChannel::eveDetectorChannel(eveDeviceCommand *trigger, eveDeviceCommand *unit, eveDeviceCommand *valuePv, QString channelname, QString channelid) :
 	eveDevice::eveDevice(unit, valuePv, channelname, channelid)
 {
 	triggerCmd = trigger;
+	// TODO
+	stopCmd = NULL;
 }
-eveSimpleDetector::~eveSimpleDetector() {
+eveDetectorChannel::~eveDetectorChannel() {
 	if (triggerCmd != NULL) delete triggerCmd;
 }
 

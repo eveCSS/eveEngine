@@ -6,19 +6,20 @@
  */
 
 #include <QTimer>
+// TODO remove QThread
+#include <QThread>
 #include "eveMessage.h"
 #include "eveCaTransport.h"
 #include "eveError.h"
 #include "db_access.h"
-#include "eveScanManager.h"
+//#include "eveScanManager.h"
 
 /**
- * \brief constructor connects to EPICS PVs
- * \param pvname EPICS PV name
- * \param wait if true, wait until connected or timeout (5 secs)
- * \param parent parent
+ * \brief init connection to EPICS PV
+ * \param transdef definition of EPICS PV related properties
+ * \param parent
  */
-eveCaTransport::eveCaTransport(eveCaTransportDef* transdef)
+eveCaTransport::eveCaTransport(QObject *parent, QString devname, eveCaTransportDef* transdef) : eveBaseTransport(parent)
 {
 
 	transStatus = eveUNDEFINED;
@@ -29,9 +30,11 @@ eveCaTransport::eveCaTransport(eveCaTransportDef* transdef)
 	chanChid = 0;
 	dataPtr = NULL;
 	writeDataPtr = NULL;
-	name = transDef->getName();
-	scanManager = NULL; 	// TODO set this to send errors
-	timeOut = 1000;			// TODO get timeout from transdef, keep a low limit of 1 s
+	haveNewData = false;
+	name = devname;
+	pvname = transDef->getName();
+	//scanManager = NULL; 	// TODO set this to send errors
+	timeOut = (int)(transDef->getTimeout()*1000.0);			// TODO get timeout from transdef, keep a low limit of 1 s
 
 	connect (this, SIGNAL(connectChange(int)), this, SLOT(setCnctStatus(int)), Qt::QueuedConnection);
 	connect (this, SIGNAL(dataReady(eveDataMessage *)), this, SLOT(readDone(eveDataMessage *)), Qt::QueuedConnection);
@@ -47,8 +50,7 @@ eveCaTransport::~eveCaTransport(){
 }
 
 /**
- * connect the transport
- * signals done if ready
+ * \brief connect the transport, signals done if ready
  */
 int eveCaTransport::connectTrans(){
 
@@ -57,17 +59,20 @@ int eveCaTransport::connectTrans(){
 
 	caThreadContext = ca_current_context();
 	if (caThreadContext == NULL) {
-		sendError(INFO, 0, QString("creating CA Context %1").arg(name));
+		sendError(INFO, 0, "creating CA Context");
 		status = ca_context_create (ca_enable_preemptive_callback);
-		if (status != ECA_NORMAL) sendError(ERROR, 0, QString("Error creating CA Context %1").arg(name));
-		caThreadContext = ca_current_context();
+		if (status != ECA_NORMAL) sendError(ERROR, 0, "Error creating CA Context");
+//		caThreadContext = ca_current_context();
+//		printf("Assigned context: %d\n",caThreadContext);
 	}
+//	printf("Thread context: %d\n",caThreadContext);
+//	printf("Thread id: %d\n",QThread::currentThread());
 	if (transStatus != eveUNDEFINED) return false;
 	currentAction = eveCONNECT;
 
-	status=ca_create_channel(name.toAscii().data(), &eveCaTransportConnectCB, (void*) this, 0, &chanChid);
+	status=ca_create_channel(pvname.toAscii().data(), &eveCaTransportConnectCB, (void*) this, 0, &chanChid);
 	if(status != ECA_NORMAL){
-		sendError(ERROR, 0, QString("Error creating CA Channel %1").arg(name));
+		sendError(ERROR, 0, "Error creating CA Channel");
 		retstat = 1;
 	}
 	ca_pend_io(0.0);
@@ -83,7 +88,6 @@ int eveCaTransport::connectTrans(){
  */
 void eveCaTransport::eveCaTransportConnectCB(struct connection_handler_args arg){
 
-	printf("called ConnectCB\n");
 	eveCaTransport *pv = (eveCaTransport *) ca_puser(arg.chid);
 	if (arg.op == CA_OP_CONN_UP) {
 		emit pv->connectChange((int)eveCONNECTED);
@@ -109,18 +113,18 @@ void eveCaTransport::setCnctStatus(int status) {
 	transStatus = (eveTransStatusT)status;
 
 	if (transStatus == eveNOTCONNECTED){
-		sendError(ERROR, 0, QString("Connection lost: %1").arg(name));
+		sendError(ERROR, 0, "Connection lost");
 		if (currentAction == eveCONNECT) currentAction = eveIDLE;
 	}
 	else if (transStatus == eveTIMEOUT){
-		sendError(ERROR, 0, QString("Timeout while connecting to: %1").arg(name));
+		sendError(ERROR, 0, "Timeout while connecting");
 		if (currentAction == eveCONNECT) {
 			currentAction = eveIDLE;
 			emit done(1);
 		}
 	}
 	else {
-		sendError(INFO, 0, QString("connected to: %1").arg(name));
+		sendError(INFO, 0, "connected");
 		dataCount = ca_element_count(chanChid);
 		elementType = ca_field_type(chanChid);
 		// as request type we always use DBR_TIME_<PRIMITIVE TYPE>
@@ -156,11 +160,11 @@ bool eveCaTransport::isConnected() {
 void eveCaTransport::getEnumStrs(){
 
 	enumData = malloc(dbr_size_n(DBR_CTRL_ENUM, ca_element_count(chanChid)));
-	if (enumData==NULL) sendError(ERROR,0,QString("eveCaTransport EnumString: Unable to allocate memory"));
+	if (enumData==NULL) sendError(ERROR, 0, "eveCaTransport EnumString: Unable to allocate memory");
 	int status = ca_array_get_callback(DBR_CTRL_ENUM, ca_element_count(chanChid),
 							chanChid, eveCaTransportEnumCB, enumData);
 	if (status != ECA_NORMAL) {
-		sendError(ERROR,0,"cannot get Enum Strings");
+		sendError(ERROR, 0, "cannot get enum strings");
 	}
 	caflush();
 }
@@ -172,13 +176,17 @@ void eveCaTransport::getEnumStrs(){
  */
 void eveCaTransport::eveCaTransportEnumCB(struct event_handler_args arg){
 
-	QStringList *enumStringList=NULL;;
+	QStringList *enumStringList=NULL;
+	char charArray[MAX_ENUM_STRING_SIZE+1];
 	eveCaTransport *pv = (eveCaTransport *) ca_puser(arg.chid);
 	if (arg.type == DBR_CTRL_ENUM) {
 		enumStringList = new QStringList;
 		struct dbr_ctrl_enum *pValue = (struct dbr_ctrl_enum *) arg.dbr;
 		for (int i=0; i < pValue->no_str; ++i){
-			enumStringList->append(QString::fromAscii(pValue->strs[i],MAX_ENUM_STRING_SIZE));
+			// make sure we have a trailing zero
+			strncpy(charArray,pValue->strs[i], MAX_ENUM_STRING_SIZE);
+			charArray[MAX_ENUM_STRING_SIZE] = 0;
+			enumStringList->append(QString::fromAscii(charArray));
 		}
 	}
 	emit pv->enumReady(enumStringList);
@@ -195,10 +203,10 @@ void eveCaTransport::enumDone(QStringList *stringlist) {
 	enumsInProgress = false;
 	if (enumData) free(enumData);
 	if (currentAction != eveCONNECT){
-		sendError(MINOR, 0, QString("%1: Enum Callback called, but current action was: %2").arg(name).arg((int)currentAction));
+		sendError(MINOR, 0, QString("enum callback called, but current action was: %1").arg((int)currentAction));
 	}
 	if (stringlist == NULL){
-		sendError(ERROR, 0, QString("%1: Error Reading Enums!").arg(name));
+		sendError(ERROR, 0, "error reading enums!");
 	}
 	if (currentAction == eveCONNECT) {
 		currentAction = eveIDLE;
@@ -210,26 +218,6 @@ void eveCaTransport::enumDone(QStringList *stringlist) {
 	}
 }
 
-
-/** \brief get data and wait until done (deprecated, use getCB)
-*
-bool eveCaTransport::get(eveData* data){
-
-	int status;
-	// check if connected
-	if (transStatus != CONNECTED) return false;
-	if (data == NULL) return false;
-
-	ca_get(data->getRequestType(), chanChid, data->getPtr());
-	status=ca_pend_io(((double)readTimeout)/1000.0);
-	if (status != ECA_NORMAL) {
-		sendError(ERROR,0,QString("eveCaTransport get: %1, CA-Message: %2").arg(name).arg(ca_message(status)));
-		return false;
-	}
-	return true;
-}
- */
-
 /** \brief get data without waiting
  */
 bool eveCaTransport::getCB(bool flush)
@@ -239,23 +227,27 @@ bool eveCaTransport::getCB(bool flush)
 	if (currentAction != eveIDLE) return false;
 	currentAction = eveREAD;
 
-	if (caThreadContext != ca_current_context()) {
-		int status = ca_attach_context(caThreadContext);
-		if (status == ECA_ISATTACHED) printf("getCB context was already attached\n");
-		else if (status == ECA_NOTTHREADED) printf("getCB context not threaded\n");
-	}
+	// TODO remove, should not happen
+//	if (caThreadContext != ca_current_context()) {
+//		printf("Thread context: %d (getCB)\n",caThreadContext);
+//		printf("Current context: %d (getCB)\n",ca_current_context());
+//		printf("Thread id: %d\n",QThread::currentThread());
+//		int status = ca_attach_context(caThreadContext);
+//		if (status == ECA_ISATTACHED) printf("getCB context was already attached\n");
+//		else if (status == ECA_NOTTHREADED) printf("getCB context not threaded\n");
+//	}
 
 	if (dataPtr == NULL) {
 		int arraysize = dbr_size_n (requestType, dataCount);
 		dataPtr = malloc(arraysize);
-		if (!dataPtr) sendError(ERROR,0,QString("eveCaTransport Unable to allocate memory"));
+		if (!dataPtr) sendError(ERROR, 0, "eveCaTransport Unable to allocate memory");
 	}
 
 	int status;
 	bool retstatus = true;
 	status = ca_array_get_callback(requestType, dataCount, chanChid, &eveCaTransport::eveCaTransportGetCB, dataPtr);
 	if (status != ECA_NORMAL) {
-		sendError(ERROR,0,QString("eveCaTransport getCB: %1, CA-Message: %2").arg(name).arg(ca_message(status)));
+		sendError(ERROR, 0, QString("eveCaTransport getCB CA-Message: %1").arg(ca_message(status)));
 		retstatus = false;
 	}
 	if (flush) caflush();
@@ -275,7 +267,6 @@ void eveCaTransport::eveCaTransportGetCB(struct event_handler_args arg){
 	eveDataMessage *newdata;
 	eveCaTransport *pv = (eveCaTransport *) ca_puser(arg.chid);
 
-	printf("getCb fired: status: %d\n", arg.status);
 	if ((arg.status == ECA_NORMAL) && (arg.count == pv->getElemCnt())
 									&& (arg.type == pv->getRequestType())) {
 		epicsAlarmCondition status;
@@ -302,7 +293,7 @@ void eveCaTransport::eveCaTransportGetCB(struct event_handler_args arg){
 			newdata = new eveDataMessage(id, dStatus, dataMod, etime, dataArray);
 		}
 		else if (arg.type == DBR_TIME_CHAR){
-			QVector<char> dataArray(arg.count);
+			QVector<signed char> dataArray(arg.count);
 			memcpy((void *)dataArray.data(), (const void *) &((struct dbr_time_char *)arg.dbr)->value, sizeof(char)*arg.count);
 			newdata = new eveDataMessage(id, dStatus, dataMod, etime, dataArray);
 		}
@@ -323,7 +314,7 @@ void eveCaTransport::eveCaTransportGetCB(struct event_handler_args arg){
 			foreach(short index, dataArray){
 				qsl.insert(index, pv->getEnumString(index));
 			}
-			newdata = new eveDataMessage(id, dStatus, dataMod, etime, dataArray);
+			newdata = new eveDataMessage(id, dStatus, dataMod, etime, qsl);
 		}
 		else if (arg.type == DBR_TIME_STRING){
 			char buffer[MAX_STRING_SIZE+1];
@@ -349,28 +340,41 @@ void eveCaTransport::eveCaTransportGetCB(struct event_handler_args arg){
 
 /** \brief is called if data has been received
  *
- *
+ *	if haveNewData is true, the previous data has not been fetched, delete it
  */
 void eveCaTransport::readDone(eveDataMessage *data) {
 
-	setData(data);
 	if (currentAction == eveREAD){
 		currentAction = eveIDLE;
 		disconnect(this, SLOT(getTimeout()));
-		if (data == NULL)
+		if (data == NULL) {
 			emit done(1);
-		else
+		}
+		else {
+			if (haveNewData) delete newData;
+			newData=data;
+			haveNewData = true;
 			emit done(0);
+		}
 	}
 	else {
-		sendError(MINOR, 0, QString("%1: Read Callback called, but current action was: %2").arg(name).arg((int)currentAction));
+		sendError(MINOR, 0, QString("read callback called, but current action was: %1").arg((int)currentAction));
 	}
 }
+
+/**
+ * \brief get the internal data, mark the data as fetched
+ * @return last read data
+ */
+eveDataMessage *eveCaTransport::getData(){
+	haveNewData = false;
+	return newData;
+};
 
 void eveCaTransport::getTimeout() {
 
 	if (currentAction == eveREAD){
-		sendError(ERROR, 0, "Read Timeout");
+		sendError(ERROR, 0, "read timeout");
 		readDone((eveDataMessage *)NULL);
 	}
 }
@@ -385,7 +389,7 @@ bool eveCaTransport::putCB(eveType datatype, int elemCount, void* data, bool exe
 	if (currentAction != eveIDLE) return false;
 	if (data == NULL) return false;
 	if (elemCount > dataCount){
-		sendError(ERROR,0,QString("Cannot send array data with arraycount %1, maximum: %2").arg(elemCount).arg(dataCount));
+		sendError(ERROR, 0, QString("cannot send array data with arraycount %1, maximum: %2").arg(elemCount).arg(dataCount));
 		return false;
 	}
 	currentAction = eveWRITE;
@@ -393,21 +397,22 @@ bool eveCaTransport::putCB(eveType datatype, int elemCount, void* data, bool exe
 	int status;
 	bool retstatus = true;
 
-	if (caThreadContext != ca_current_context()) {
-		int status = ca_attach_context(caThreadContext);
-		if (status == ECA_ISATTACHED) printf("putCB context was already attached\n");
-		else if (status == ECA_NOTTHREADED) printf("putCB context not threaded\n");
-	}
+	// TODO remove, this should never happen
+//	if (caThreadContext != ca_current_context()) {
+//		printf("putCB CA context mismatch\n");
+//		int status = ca_attach_context(caThreadContext);
+//		if (status == ECA_ISATTACHED) printf("putCB context was already attached\n");
+//		else if (status == ECA_NOTTHREADED) printf("putCB context not threaded\n");
+//	}
 
 	status = ca_array_put_callback(convertEpicsToDBR(convertEveToEpicsType(datatype)), elemCount,
 							chanChid, data, &eveCaTransport::eveCaTransportPutCB, NULL);
 	if (status != ECA_NORMAL) {
-		sendError(ERROR,0,QString("eveCaTransport putCB: %1, CA-Message: %2").arg(name).arg(ca_message(status)));
+		sendError(ERROR,0,QString("eveCaTransport putCB CA-Message: %1").arg(ca_message(status)));
 		retstatus = false;
 	}
 	if (execute) caflush();
-	int timeout = 10000;
-	QTimer::singleShot(timeout, this, SLOT(putTimeout()));
+	QTimer::singleShot(timeOut, this, SLOT(putTimeout()));
 	return retstatus;
 }
 
@@ -423,12 +428,11 @@ void eveCaTransport::eveCaTransportPutCB(struct event_handler_args arg){
 	eveCaTransport *pv = (eveCaTransport *) ca_puser(arg.chid);
 	if ( arg.status == ECA_NORMAL ) status = 0;
 	emit pv->writeReady(status);
-	printf("leaving PutCB-Callback\n");
 }
 
 /** \brief is called by write callback
  *
- *
+ * \param status
  */
 void eveCaTransport::writeDone(int status) {
 
@@ -438,18 +442,20 @@ void eveCaTransport::writeDone(int status) {
 		currentAction = eveIDLE;
 	}
 	else {
-		sendError(MINOR, 0, QString("%1: Write Callback called, but current action was: %2").arg(name).arg((int)currentAction));
+		sendError(MINOR, 0, QString("write callback called, but current action was: %1").arg((int)currentAction));
 	}
 }
 
+/**
+ * slot is called in case of caput timeout
+ */
 void eveCaTransport::putTimeout() {
 
 	if (currentAction == eveWRITE){
-		sendError(ERROR, 0, "Write Timeout");
+		sendError(ERROR, 0, "write timeout");
 		writeDone(1);
 	}
 }
-
 
 /** \brief write data without Callback
  */
@@ -458,22 +464,22 @@ bool eveCaTransport::put(eveType datatype, int elemCount, void* data, bool execu
 	if (transStatus != eveCONNECTED) return false;
 	if (data == NULL) return false;
 	if (elemCount > dataCount){
-		sendError(ERROR,0,QString("Cannot send array data with arraycount %1, maximum: %2").arg(elemCount).arg(dataCount));
+		sendError(ERROR, 0, QString("cannot send array data with arraycount %1, maximum: %2").arg(elemCount).arg(dataCount));
 		return false;
 	}
 
 	int status;
 	bool retstatus = true;
 
-	if (caThreadContext != ca_current_context()) {
-		int status = ca_attach_context(caThreadContext);
-		if (status == ECA_ISATTACHED) printf("getCB context was already attached\n");
-		else if (status == ECA_NOTTHREADED) printf("getCB context not threaded\n");
-	}
+//	if (caThreadContext != ca_current_context()) {
+//		int status = ca_attach_context(caThreadContext);
+//		if (status == ECA_ISATTACHED) printf("getCB context was already attached\n");
+//		else if (status == ECA_NOTTHREADED) printf("getCB context not threaded\n");
+//	}
 
 	status = ca_array_put(convertEpicsToDBR(convertEveToEpicsType(datatype)), elemCount, chanChid, data);
 	if (status != ECA_NORMAL) {
-		sendError(ERROR,0,QString("eveCaTransport put: %1, CA-Message: %2").arg(name).arg(ca_message(status)));
+		sendError(ERROR, 0, QString("eveCaTransport put ca-message: %1").arg(ca_message(status)));
 		retstatus = false;
 	}
 	if (execute) caflush();
@@ -481,7 +487,6 @@ bool eveCaTransport::put(eveType datatype, int elemCount, void* data, bool execu
 }
 
 void eveCaTransport::caflush(){
-	printf("flushing ...\n");
 	ca_flush_io();
 }
 
@@ -498,9 +503,9 @@ QString eveCaTransport::getEnumString(int index) {
 void eveCaTransport::sendError(int severity, int errorType,  QString message){
 
 	// for now we write output to local console too
-	eveError::log(severity, QString("PV %1: %2").arg(name).arg(message));
-	if (scanManager != NULL)
-		scanManager->sendError(severity, EVEMESSAGEFACILITY_CATRANSPORT, errorType,  QString("PV %1: %2").arg(name).arg(message));
+	eveError::log(severity, QString("PV %1(%2): %3").arg(name).arg(pvname).arg(message));
+//	if (scanManager != NULL)
+//		scanManager->sendError(severity, EVEMESSAGEFACILITY_CATRANSPORT, errorType,  QString("PV %1: %2").arg(pvname).arg(message));
 }
 
 /**
@@ -531,10 +536,14 @@ int eveCaTransport::writeData(eveVariant writedata, bool queue){
 		// TODO
 		// this can be more specific, enhance for arrays
 		writeDataPtr = malloc(MAX_STRING_SIZE+1);
-		if (!writeDataPtr) sendError(ERROR,0,QString("eveCaTransport::writeData Unable to allocate memory"));
+		if (!writeDataPtr) {
+			sendError(ERROR,0,QString("eveCaTransport::writeData Unable to allocate memory"));
+			return 1;
+		}
 	}
 	if (writedata.getType() != transDef->getDataType()){
-		sendError(ERROR,0,QString("eveCaTransport::Datatype mismatch, check XML-File"));
+		sendError(ERROR, 0, QString("eveCaTransport: datatype mismatch, %1 <-> %2").arg((int)writedata.getType()).arg((int)transDef->getDataType()));
+		// TODO try to convert and proceed
 		return 1;
 	}
 
@@ -552,10 +561,14 @@ int eveCaTransport::writeData(eveVariant writedata, bool queue){
 
 	// TODO
 	// by now, no array data is allowed (elemCount = 1)
-	if ((transDef->getMethod() == evePUT) || (transDef->getMethod() == eveGETPUT))
+	if ((transDef->getMethod() == evePUT) || (transDef->getMethod() == eveGETPUT)){
 		retstat = put(transDef->getDataType(), 1, writeDataPtr, !queue);
+		// we signal immediately
+		if (retstat)emit done(0);
+	}
 	else
 		retstat = putCB(transDef->getDataType(), 1, writeDataPtr, !queue);
+
 	if (retstat)
 		return 0;
 	else

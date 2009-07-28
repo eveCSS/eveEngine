@@ -17,13 +17,14 @@ class eveBaseTransport: public QObject{
 	Q_OBJECT
 
 public:
-	eveBaseTransport();
+	eveBaseTransport(QObject *);
 	virtual ~eveBaseTransport();
 	virtual int readData(bool)=0;
 	virtual int writeData(eveVariant, bool)=0;
 	virtual int connectTrans()=0;
 	virtual bool isConnected()=0;
-	virtual eveDataMessage *getData(){return newData;};
+	virtual bool haveData()=0;
+	virtual eveDataMessage *getData()=0;
 
 
 signals:
@@ -31,9 +32,9 @@ signals:
 
 protected:
 	void setData(eveDataMessage *data){newData=data;};
+	eveDataMessage *newData;
 
 private:
-	eveDataMessage *newData;
 	int readTimeout;		// in ms
 	int writeTimeout;		// in ms
 };

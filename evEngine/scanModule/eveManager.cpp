@@ -75,11 +75,6 @@ void eveManager::handleMessage(eveMessage *message){
 				if (!sendStart())
 					sendError(INFO,0,"cannot process START command with current engine status");
 			}
-
-			// TODO
-			//we send dummy data for testing purpose only
-			eveDataStatus dstat;
-			addMessage(new eveDataMessage("Detektor 1", dstat, DMTunmodified, epicsTime::getCurrent(), QVector<float>(1, 15.1234)));
 		}
 		break;
 		case EVEMESSAGETYPE_STOP:
@@ -207,6 +202,9 @@ bool eveManager::createSMs(QByteArray xmldata) {
 		scanManager->moveToThread(chainThread);
 		scanThreadList.append(chainThread);
 		chainThread->start();
+		// TODO remove prints
+		printf("ScanManager: Current Thread id: %d\n",QThread::currentThread());
+		printf("ScanManager: new Thread id: %d\n", chainThread);
 	}
 	delete scmlParser;
 
@@ -222,7 +220,7 @@ bool eveManager::createSMs(QByteArray xmldata) {
 bool eveManager::sendStart(){
 
 	if (engineStatus->setStart()){
-		emit startSMs(0);
+		emit startSMs();
 		addMessage(engineStatus->getEngineStatusMessage());
 		return true;
 	}

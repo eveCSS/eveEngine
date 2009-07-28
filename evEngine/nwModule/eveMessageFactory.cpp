@@ -213,10 +213,10 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 			quint32 dataMod;
 			epicsTimeStamp timestamp;
 			QString dname;
-			quint32 arraycount;
+//			quint32 arraycount;
 
 			inStream >> dtype >> dataMod >> stat.severity >> stat.condition >> stat.acqStatus;
-			inStream >> timestamp.secPastEpoch >> timestamp.nsec >> dname >> arraycount;
+			inStream >> timestamp.secPastEpoch >> timestamp.nsec >> dname;
 			// TODO remove this and make sure we have a correct time, otherwise epics assert is called
 			timestamp.nsec = 1000;
 			timestamp.secPastEpoch = 10008;
@@ -224,69 +224,42 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 			switch (dtype) {
 				case epicsInt8T:					/* epicsInt8 */
 				{
-					QVector<char> cArray;
-					quint8 val;
-					// TODO check if length == arraycount *bytesize
-					for (quint32 i = 0; i < arraycount; ++i) {
-						inStream >> val;
-						cArray[i] = (char)val;
-					}
+					QVector<qint8> cArray;
+					inStream >> cArray;
 					message = new eveDataMessage(dname, stat, (eveDataModType)dataMod, epicsTime(timestamp), cArray);
 				}
 				break;
 				case epicsInt16T:					/* epicsInt16 */
 				{
 					QVector<short> sArray;
-					for (quint32 i = 0; i < arraycount; ++i) {
-						short value;
-						inStream >> value;
-						sArray.append(value);
-					}
+					inStream >> sArray;
 					message = new eveDataMessage(dname, stat, (eveDataModType)dataMod, epicsTime(timestamp), sArray);
 				}
 				break;
 				case epicsInt32T:					/* epicsInt32 */
 				{
 					QVector<int> iArray;
-					// TODO check if length == arraycount *bytesize
-					for (quint32 i = 0; i < arraycount; ++i) {
-						int value;
-						inStream >> value;
-						iArray.append(value);
-					}
+					inStream >> iArray;
 					message = new eveDataMessage(dname, stat, (eveDataModType)dataMod, epicsTime(timestamp), iArray);
 				}
 				break;
 				case epicsFloat32T:					/* epicsFLoat32 */
 				{
 					QVector<float> fArray;
-					for (quint32 i = 0; i < arraycount; ++i) {
-						float value;
-						inStream >> value;
-						fArray.append(value);
-					}
+					inStream >> fArray;
 					message = new eveDataMessage(dname, stat, (eveDataModType)dataMod, epicsTime(timestamp), fArray);
 				}break;
 				case epicsFloat64T:					/* epicsFloat64 */
 				{
 					QVector<double> dArray;
-					for (quint32 i = 0; i < arraycount; ++i) {
-						double value;
-						inStream >> value;
-						dArray.append(value);
-					}
+					inStream >> dArray;
 					message = new eveDataMessage(dname, stat, (eveDataModType)dataMod, epicsTime(timestamp), dArray);
 				}
 				break;
 				case epicsStringT:					/* epicsString */
 				{
 					QStringList stringData;
-					QString instring;
-					// TODO check if length == arraycount *bytesize
-					for (quint32 i = 0; i < arraycount; ++i) {
-						inStream >> instring;
-						stringData.insert(i, instring);
-					}
+					inStream >> stringData;
 					message = new eveDataMessage(dname, stat, (eveDataModType)dataMod, epicsTime(timestamp), stringData);
 				}
 				break;
@@ -433,7 +406,7 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 			switch (dtype) {
 				case epicsInt8T:					/* epicsInt8 */
 				{
-					QVector<char> cArray = ((eveDataMessage*)message)->getCharArray();
+					QVector<signed char> cArray = ((eveDataMessage*)message)->getCharArray();
 					outStream << cArray.count() << cArray ;
 				} break;
 				case epicsInt16T:					/* epicsInt16 */
@@ -454,13 +427,12 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 				case epicsFloat64T:					/* epicsFloat64 */
 				{
 					QVector<double> dArray = ((eveDataMessage*)message)->getDoubleArray();
-					outStream << dArray.count() << dArray ;
+					outStream << dArray ;
 				}break;
 				case epicsStringT:					/* epicsString */
 				{
 					QStringList strings = ((eveDataMessage*)message)->getStringArray();
-					outStream << strings.size();
-					foreach (QString outstring, strings) {outStream << outstring; };
+					outStream << strings;
 				} break;
 			}
 			outStream.device()->seek(8);

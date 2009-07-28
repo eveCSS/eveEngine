@@ -30,7 +30,7 @@ eveXMLReader::~eveXMLReader() {
 }
 
 
-/** \brief read XML-Data and create all devices, hashes etc.
+/** \brief read XML-Data and create all device definitions and various hashes etc.
  * \param xmldata XML text data
  */
 bool eveXMLReader::read(QByteArray xmldata, eveDeviceList *devList)
@@ -114,7 +114,7 @@ void eveXMLReader::createDetector(QDomNode detector){
 	QString id;
 	eveDeviceCommand *trigger=NULL;
 	eveDeviceCommand *unit=NULL;
-	eveSimpleDetector* channel;
+	eveDetectorChannel* channel;
 
 	if (detector.isNull()){
 		sendError(INFO,0,"eveXMLReader::createDetector: cannot create Null detector, check XML-Syntax");
@@ -160,8 +160,9 @@ void eveXMLReader::createDetector(QDomNode detector){
  */
 eveTransportDef * eveXMLReader::createTransport(QDomElement node)
 {
-	QString typeString, transportString;
+	QString typeString, transportString, timeoutString;
 	QString methodString;
+	double timeout = 5.0;
 	eveType accesstype = eveInt8T;
 	pvMethodT accessMethod= eveGET;
 
@@ -186,13 +187,24 @@ eveTransportDef * eveXMLReader::createTransport(QDomElement node)
 			sendError(ERROR,0,QString("eveXMLReader::createTransport: unknown method: %1").arg(methodString));
 		}
 	}
+	if (node.hasAttribute("timeout")) {
+		bool ok;
+		double tmpdouble;
+		tmpdouble = node.attribute("timeout").toDouble(&ok);
+		if (ok){
+			timeout = tmpdouble;
+		}
+		else {
+			sendError(ERROR,0,QString("eveXMLReader::createTransport: unable to read timeout from xml"));
+		}
+	}
 	if (node.hasAttribute("transport")) {
 		transportString = node.attribute("transport");
 		if (methodString == "local")
 			return new eveLocalTransportDef(accesstype, accessMethod, node.text());
 	}
 	// return default transport
-	return new eveCaTransportDef(accesstype, accessMethod, node.text());
+	return new eveCaTransportDef(accesstype, accessMethod, timeout, node.text());
 
 }
 
@@ -201,7 +213,7 @@ eveTransportDef * eveXMLReader::createTransport(QDomElement node)
  * \param defaultTrigger the default trigger if avail. else NULL
  * \param defaultUnit the default unit if avail. else NULL
  */
-eveSimpleDetector * eveXMLReader::createChannel(QDomNode channel, eveDeviceCommand *defaultTrigger, eveDeviceCommand *defaultUnit){
+eveDetectorChannel * eveXMLReader::createChannel(QDomNode channel, eveDeviceCommand *defaultTrigger, eveDeviceCommand *defaultUnit){
 
 	// name, id, read, unit, trigger
 	QString name;
@@ -239,7 +251,7 @@ eveSimpleDetector * eveXMLReader::createChannel(QDomNode channel, eveDeviceComma
     	if (unit != NULL) unit = unit->clone();
     }
 
-	return new eveSimpleDetector(trigger, unit, access, name, id);
+	return new eveDetectorChannel(trigger, unit, access, name, id);
 
 }
 
@@ -514,8 +526,8 @@ int eveXMLReader::getIntValueOfTag(int chain, int smid, QString tagname){
  * @param smid chain id
  * @return the list of prescan-smdevices
  */
-QList<eveSMDevice*>* eveXMLReader::getPreScanList(int chain, int smid){
-	return getSMDeviceList(chain, smid, "prescan");
+QList<eveSMDevice*>* eveXMLReader::getPreScanList(eveScanModule* scanmodule, int chain, int smid){
+	return getSMDeviceList(scanmodule, chain, smid, "prescan");
 }
 
 /**
@@ -524,8 +536,8 @@ QList<eveSMDevice*>* eveXMLReader::getPreScanList(int chain, int smid){
  * @param smid chain id
  * @return the list of postscan-smdevices
  */
-QList<eveSMDevice*>* eveXMLReader::getPostScanList(int chain, int smid){
-	return getSMDeviceList(chain, smid, "postscan");
+QList<eveSMDevice*>* eveXMLReader::getPostScanList(eveScanModule* scanmodule, int chain, int smid){
+	return getSMDeviceList(scanmodule, chain, smid, "postscan");
 }
 
 /**
@@ -535,7 +547,7 @@ QList<eveSMDevice*>* eveXMLReader::getPostScanList(int chain, int smid){
  * @param tagname may be "prescan" or "postscan"
  * @return
  */
-QList<eveSMDevice*>* eveXMLReader::getSMDeviceList(int chain, int smid, QString tagname){
+QList<eveSMDevice*>* eveXMLReader::getSMDeviceList(eveScanModule* scanmodule, int chain, int smid, QString tagname){
 
 	QList<eveSMDevice *> *devicelist = new QList<eveSMDevice *>;
 	if (!smIdHash.contains(chain)) return devicelist;
@@ -555,6 +567,7 @@ QList<eveSMDevice*>* eveXMLReader::getSMDeviceList(int chain, int smid, QString 
 		if (!domReset.isNull()){
 			if (domReset.text() == "true") reset = true;
 		}
+
 		QDomElement domValue = domElement.firstChildElement("value");
 		if (!domValue.isNull()){
 			QString value = domValue.text();
@@ -574,9 +587,13 @@ QList<eveSMDevice*>* eveXMLReader::getSMDeviceList(int chain, int smid, QString 
 					varValue.setValue(domValue.text());
 				}
 				if (!ok) sendError(ERROR,0,QString("Error converting %1 type").arg(tagname));
-				if (devDef != NULL) devicelist->append(new eveSMDevice(devDef, varValue, reset));
 			}
 		}
+		if (devDef != NULL)
+			devicelist->append(new eveSMDevice(scanmodule, devDef, varValue, reset));
+		else
+			sendError(ERROR, 0, QString("Error reading device %1 (XML-Syntax Error)").arg(tagname));
+
 		domElement = domElement.nextSiblingElement(tagname);
 	}
 	return devicelist;
@@ -588,7 +605,7 @@ QList<eveSMDevice*>* eveXMLReader::getSMDeviceList(int chain, int smid, QString 
  * @param smid scanmodule id
  * @return
  */
-QList<eveSMAxis*>* eveXMLReader::getAxisList(int chain, int smid){
+QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chain, int smid){
 
 	QList<eveSMAxis *> *axislist = new QList<eveSMAxis *>;
 
@@ -610,9 +627,9 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(int chain, int smid){
 		eveType axisType=axisDefinition->getAxisType();
 		QDomElement domstepf = domElement.firstChildElement("stepfunction");
 		if (!domstepf.isNull()) stepfunction = domstepf.text();
-		if (!scanManagerHash.contains(chain))
-			sendError(ERROR,0,"Could not find scanmanager for chain");
-		evePosCalc *poscalc = new evePosCalc(stepfunction, axisType, scanManagerHash.value(chain, NULL));
+//		if (!scanManagerHash.contains(chain))
+//			sendError(ERROR,0,"Could not find scanmanager for chain");
+		evePosCalc *poscalc = new evePosCalc(scanmodule, stepfunction, axisType);
 
 		// TODO relative or absolute position values
 		// TODO stepamount,ismainaxis
@@ -642,7 +659,7 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(int chain, int smid){
 		else
 			sendError(ERROR,0,"No values found in XML to calculate motor positions");
 
-		axislist->append(new eveSMAxis(axisDefinition, poscalc));
+		axislist->append(new eveSMAxis(scanmodule, axisDefinition, poscalc));
 		domElement = domElement.nextSiblingElement("smmotor");
 	}
 	}
@@ -652,4 +669,46 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(int chain, int smid){
 		sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getAxisList").arg(e.what()));
 	}
 	return axislist;
+}
+
+/**
+ *
+ * @param chain chain id
+ * @param smid scanmodule id
+ * @return
+ */
+QList<eveSMChannel*>* eveXMLReader::getChannelList(eveScanModule* scanmodule, int chain, int smid){
+
+	QList<eveSMChannel *> *channellist = new QList<eveSMChannel *>;
+
+	try
+	{
+	if (!smIdHash.contains(chain)) return channellist;
+	QDomElement domElement = smIdHash.value(chain)->value(smid);
+	domElement = domElement.firstChildElement("smdetector");
+	while (!domElement.isNull()) {
+		QHash<QString, QString> paraHash;
+		bool ok = false;
+		QDomElement domId = domElement.firstChildElement("channelid");
+		eveDetectorChannel* channelDefinition = deviceList->getChannelDef(domId.text());
+		if (channelDefinition == NULL){
+			sendError(ERROR,0,QString("no channeldefinition found for %1").arg(domId.text()));
+			return channellist;
+		}
+		domId = domElement.firstChildElement();
+		while (!domId.isNull()){
+			paraHash.insert(domId.nodeName(), domId.text());
+			domId = domId.nextSiblingElement();
+		}
+
+		channellist->append(new eveSMChannel(scanmodule, channelDefinition, paraHash));
+		domElement = domElement.nextSiblingElement("smdetector");
+	}
+	}
+	catch (std::exception& e)
+	{
+		printf("C++ Exception %s\n",e.what());
+		sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getChannelList").arg(e.what()));
+	}
+	return channellist;
 }

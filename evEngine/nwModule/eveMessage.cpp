@@ -509,13 +509,13 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
  * \param mtime time of data acquisition
  * \param data char array data
  */
-eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, epicsTime mtime, QVector<char> data){
+eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, epicsTime mtime, QVector<signed char> data){
 	type = EVEMESSAGETYPE_DATA;
 	ident = Id;
 	dataStatus = stat;
 	dataModifier = dmod;
 	dataType = epicsInt8T;
-	dataArrayChar = QVector<char>(data);
+	dataArrayChar = QVector<signed char>(data);
 	arraySize = dataArrayChar.size();
 	timestamp = mtime;
 };

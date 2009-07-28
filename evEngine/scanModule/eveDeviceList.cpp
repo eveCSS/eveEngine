@@ -19,7 +19,7 @@ void eveDeviceList::clearAll() {
 	printf("deleting devices\n");
 	foreach (eveDevice* device, deviceDefinitions) delete device;
 	printf("deleting channels\n");
-	foreach (eveSimpleDetector* channel, channelDefinitions) delete channel;
+	foreach (eveDetectorChannel* channel, channelDefinitions) delete channel;
 	printf("deleting axes\n");
 	foreach (eveMotorAxis* axis, axisDefinitions) {
 //		printf("deleting first axis %x\n", (int)axis);
@@ -32,7 +32,7 @@ void eveDeviceList::insert(QString ident, eveMotorAxis* axis){
 	axisDefinitions.insert(ident, axis);
 }
 
-void eveDeviceList::insert(QString ident, eveSimpleDetector* channel ){
+void eveDeviceList::insert(QString ident, eveDetectorChannel* channel ){
 	channelDefinitions.insert(ident, channel);
 }
 

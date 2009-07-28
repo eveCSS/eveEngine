@@ -38,9 +38,8 @@ ScanModul Status:
 	eveSmEXECUTING:	 executing
 	eveSmTRIGGERWAIT: waiting for Trigger
 	eveSmPAUSED:	 paused
-	eveSmBROKEN:	 break signal received
-	eveSmHALTED:	 Halt signal received
 	eveSmDONE:		 ready
+	eveSmAPPEND: 	dieser Scan ist fertig, aber appended läuft noch
  
 ScanModul Stages:
 	eveStgINIT:			
@@ -55,7 +54,8 @@ ScanModul Stages:
 
 	eveStgREADPOS macht keinen Sinn, da im scanmodul nur die benutzten Motoren
 	bekannt sind, aber alle definierten Motoren gelesen werden sollen. 
-	Daher ReadPos/MotorInitial in ScanManagers start-Methode verschieben.
+	Daher ReadPos/MotorInitial in ScanManagers start-Methode verschieben
+	oder vom root-Scan eine ReadPos-Methode des Scan-Managers aufrufen.
 	Dort evtl nochmal unterteilen in init (vor dem Start) und read 
 	(erste Aktion nach Start).
  
@@ -65,4 +65,92 @@ ScanModul Stages:
  * - if called they check if their group action is finished
  *   and set currentStageReady and emit execStage.
  * - execStage decides which stage comes next.
+ 
+ 
+======================
+
+QObject Hierarchien:
+
+ScanThread:
+	- ScanManager (kein Object-Parent!)
+		- ScanModule
+			- SMAxis
+				- CaTransport
+					- BaseTransport
+
+==========================
+
+Events:
+	- Beim Umschalten der Pausen ist das exakte Mitzählen von 
+	  sigExecStage-Signalen aufgegeben ScanModule muss nach jeder stage
+	  slebst testen ob weitergegengen werden darf, nicht auf 
+	  signalCounter verlassen 
+	- können von GUI oder monitor kommen => Signal an ScanManager
+	   ruft über den rootSM-Baum die xxxxSM-Methode mit id=0 auf
+	- können von monitor direkt an SM kommen => Signal an ScanModule
+	   ruft per Signal die entsprechende xxxxSM-Methode mit id!=0 auf
+	
+	start: 
+	- beendet pause status, egal von wem gesetzt
+	- starten eines nested scans im Zustand eveSmDone erfolgt durch 
+	  Aufruf der startNestedSM-Methode vom Parent SM
+	
+	Wenn SMStatus == eveSmNOTSTARTED
+		dann wird dieser Scan gestartet
+	Wenn id==0
+		dann wird die resumeSM-Methode aufgerufen, die den ganzen
+		Baum durchsucht und alle nested Scans von Pause auf Exec setzt.
+		Der Aufruf kann abgebrochen werden, sobald ein paused scan 
+		gefunden wurde.
+	
+	resumeSM:
+	- beendet pause, setzt status auf eveSmEXECUTING und schickt
+	  sigExecStage. Das kann zu doppeltem sigExecStage-Signal führen,
+	  wenn ein innerer Scan noch läuft.
+	
+	
+	pause:
+	- SMs können nur von executing nach pause wechseln 
+	Wenn SMStatus == eveSmEXECUTING
+		dann wird dieser Scan in den Status paused gesetzt
+		dann wird die startSM-Methode aller nested scans aufgerufen.
+		(da sie auch executing sein können), der Aufruf kann abgebrochen
+		werden, sobald ein nested scan nicht executing ist.
+	id == 0 && SMStatus != executing
+		dann wird auch die pauseSM-Methode aller appended scans aufgerufen.
+
+	halt:
+	- gibt es nur als GUI-Befehl
+	Wenn SMStatus != eveSmDONE
+		Wenn SMStatus == eveSmPAUSED
+			dann status auf eveSmEXECUTING setzen
+		Wenn SMStatus == eveSmEXECUTING oder SMStatus == eveSmPAUSED
+			dann prüfen ob stage == StgGotoStart oder StgNextPos
+				=> MotorStop schicken
+			dann status auf eveStgPOSTSCAN und currentStageReady=true setzen.
+
+	stop:
+		wie halt ohne Motor anhalten
+	
+	break:
+	- falls von GUI ausgelöst, dann nur den innersten Scan anhalten,
+	  d.h. erst die nested-break-Methode aufrufen, dann inneren Scan testen,
+	  falls der ein break ausgelöst hat, dann kein break auslösen
+
+	Wenn id == 0 && (SMStatus == eveSmEXECUTING oder SMStatus == eveSmPAUSED)
+		dann prüfen ob nested-scan einen break ausgeführt hat, 
+		wenn nicht dann status auf eveStgNextPos und currentStageReady=true setzen.
+	Wenn id == 0 && !(SMStatus == eveSmEXECUTING oder SMStatus == eveSmPAUSED)
+		dann appended scan breakSM aufrufen
+	Wenn id != 0
+		wenn (SMStatus == eveSmEXECUTING oder SMStatus == eveSmPAUSED)
+		dann status auf eveStgNextPos und currentStageReady=true setzen.
+	redo:
+		redo-Flag im SM setzen
+
+
+	
+	
+
+
  

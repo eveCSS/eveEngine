@@ -37,7 +37,7 @@ public:
 
 signals:
 	void finished();
-	void startSMs(int);
+	void startSMs();
 	void stopSMs();
 	void breakSMs();
 	void haltSMs();

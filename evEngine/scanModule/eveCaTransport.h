@@ -20,18 +20,21 @@
 enum eveTransActionT {eveCONNECT, eveREAD, eveWRITE, eveIDLE };
 enum eveTransStatusT {eveCONNECTED, eveNOTCONNECTED, eveTIMEOUT, eveUNDEFINED };
 
-class eveScanManager;
+//class eveScanManager;
 
 class eveCaTransport: public eveBaseTransport {
 
 	Q_OBJECT
 
 public:
-	eveCaTransport(eveCaTransportDef*);
+	eveCaTransport(QObject *parent, QString, eveCaTransportDef*);
 	virtual ~eveCaTransport();
 	int readData(bool queue=false);
 	int writeData(eveVariant, bool queue=false);
 	int connectTrans();
+	bool isConnected();
+	bool haveData(){return haveNewData;};
+	eveDataMessage *getData();
 	static int execQueue();
 
 	void sendError(int, int,  QString);
@@ -40,7 +43,6 @@ public:
 	bool getCB(bool flush=true);
 	bool put(eveType, int, void*, bool execute=true);
 	bool putCB(eveType, int, void*, bool execute=true);
-	bool isConnected();
 	chtype getRequestType(){return requestType;};
 	int getElemCnt(){return dataCount;};
 	static void caflush();
@@ -75,9 +77,10 @@ private:
 	int dataCount;
 	int timeOut;
 	QString name;
+	QString pvname;
 	eveCaTransportDef *transDef;
 	QStringList *enumStringList;
-	eveScanManager* scanManager;
+	//eveScanManager* scanManager;
 	chid chanChid;
 	chtype elementType;
 	chtype requestType;
@@ -86,6 +89,7 @@ private:
 	void *writeDataPtr;
 	bool needEnums;
 	bool enumsInProgress;
+	bool haveNewData;
 	struct ca_client_context *caThreadContext;
 
 };

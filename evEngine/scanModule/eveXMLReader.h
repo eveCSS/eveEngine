@@ -17,8 +17,9 @@
 #include "eveDeviceList.h"
 #include "eveSMDevice.h"
 #include "eveSMAxis.h"
+#include "eveSMChannel.h"
 
-class eveScanManager;
+class eveScanModule;
 
 /**
  * \brief reads XML and creates all indices, motors, detectors, devices
@@ -36,10 +37,10 @@ public:
 	QHash<int, QDomElement> getChainIdHash(){return chainDomIdHash;};
 	int getNested(int, int);
 	int getAppended(int, int);
-	void addScanManager(int chain, eveScanManager* smPtr){scanManagerHash.insert(chain, smPtr);};
-	QList<eveSMDevice*>* getPreScanList(int, int);
-	QList<eveSMDevice*>* getPostScanList(int, int);
-	QList<eveSMAxis*>* getAxisList(int, int);
+	QList<eveSMDevice*>* getPreScanList(eveScanModule*, int, int);
+	QList<eveSMDevice*>* getPostScanList(eveScanModule*, int, int);
+	QList<eveSMAxis*>* getAxisList(eveScanModule*, int, int);
+	QList<eveSMChannel*>* getChannelList(eveScanModule*, int, int);
 
 private:
 	void sendError(int, int,  QString);
@@ -47,10 +48,10 @@ private:
 	void createMotor(QDomNode);
 	void createDevice(QDomNode);
 	int getIntValueOfTag(int, int, QString);
-	QList<eveSMDevice*>* getSMDeviceList(int, int, QString);
+	QList<eveSMDevice*>* getSMDeviceList(eveScanModule*, int, int, QString);
     QDomDocument *domDocument;
 	eveDeviceCommand * createDeviceCommand(QDomNode);
-	eveSimpleDetector * createChannel(QDomNode, eveDeviceCommand *, eveDeviceCommand *);
+	eveDetectorChannel * createChannel(QDomNode, eveDeviceCommand *, eveDeviceCommand *);
 	eveMotorAxis * createAxis(QDomNode, eveDeviceCommand *, eveDeviceCommand *);
 	void createOption(QDomNode);
 	eveTransportDef* createTransport(QDomElement node);
@@ -59,7 +60,7 @@ private:
 	QHash<int, QDomElement> chainDomIdHash;
 	QHash<int, QHash<int, QDomElement>* > smIdHash;
 	QHash<int, int> rootSMHash; // has id of the root sm in chain
-	QHash<int, eveScanManager*> scanManagerHash;
+	//QHash<int, eveScanManager*> scanManagerHash;
 	// for now we don't care about detectors and motors
 	// we are interested in channels and axes only
 	//QHash<QString, eveDetector*> detectorDefinitions;

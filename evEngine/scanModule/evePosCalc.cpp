@@ -6,14 +6,14 @@
  */
 
 #include "evePosCalc.h"
-#include "eveScanManager.h"
+#include "eveScanModule.h"
 #include "eveMessage.h"
 
 enum directionT {evePOSITIVE, eveNEGATIVE};
 
-evePosCalc::evePosCalc(QString stepfunction, eveType type, eveScanManager* scanmanager) {
+evePosCalc::evePosCalc(eveScanModule* sm, QString stepfunction, eveType type) {
 
-	scanManager = scanmanager;
+	scanModule = sm;
 	readyToGo = false;
 	if (stepfunction.toLower() == "add"){
 		stepFunction = &evePosCalc::stepfuncAdd;
@@ -213,7 +213,6 @@ void evePosCalc::checkValues()
 
 void evePosCalc::sendMessage(int severity, QString message)
 {
-	if (scanManager != NULL)
-		scanManager->sendError(severity, EVEMESSAGEFACILITY_POSITIONCALC, 0,  message);
+		scanModule->sendError(severity, EVEMESSAGEFACILITY_POSITIONCALC, 0,  message);
 }
 

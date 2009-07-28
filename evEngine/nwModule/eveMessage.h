@@ -299,6 +299,7 @@ public:
 	int getReqType(){return requestType;};
 	QString& getReqText() {return requestString;};
 	bool compare(eveMessage *);
+	eveRequestMessage* clone(){return new eveRequestMessage(requestId, requestType, requestString);};
 
 private:
 	int requestId;
@@ -341,6 +342,7 @@ public:
 	virtual ~eveRequestCancelMessage(){};
 	int getReqId(){return requestId;};
 	bool compare(eveMessage *);
+	eveRequestCancelMessage* clone(){return new eveRequestCancelMessage(requestId);};
 
 private:
 	int requestId;
@@ -380,7 +382,7 @@ public:
 	eveDataMessage(QString, eveDataStatus);
 	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<int> );
 	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<short> );
-	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<char> );
+	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<signed char> );
 	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<float> );
 	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<double> );
 	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QStringList );
@@ -388,7 +390,7 @@ public:
 
 	const QVector<int>& getIntArray(){return dataArrayInt;};
 	const QVector<short>& getShortArray(){return dataArrayShort;};
-	const QVector<char>& getCharArray(){return dataArrayChar;};
+	const QVector<signed char>& getCharArray(){return dataArrayChar;};
 	const QVector<float>& getFloatArray(){return dataArrayFloat;};
 	const QVector<double>& getDoubleArray(){return dataArrayDouble;};
 	const QStringList& getStringArray(){return dataStrings;};
@@ -411,7 +413,7 @@ private:
 	eveDataModType dataModifier;
 	QVector<int> dataArrayInt;
 	QVector<short> dataArrayShort;
-	QVector<char> dataArrayChar;
+	QVector<signed char> dataArrayChar;
 	QVector<float> dataArrayFloat;
 	QVector<double> dataArrayDouble;
 	QStringList dataStrings;

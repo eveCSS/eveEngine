@@ -30,7 +30,7 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 	// TODO check startevent
 
 	printf("Constructor: ScanManager with chain %d\n", chainid);
-	parser->addScanManager(chainId, this);
+	//parser->addScanManager(chainId, this);
 	int rootId = parser->getRootId(chainId);
 	if (rootId == 0)
 		sendError(ERROR,0,"eveScanManager::eveScanManager: no root scanmodule found");
@@ -43,7 +43,7 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 	// register with messageHub
 	channelId = eveMessageHub::getmHub()->registerChannel(this, 0);
 
-	connect (manager, SIGNAL(startSMs(int)), this, SLOT(smStart(int)), Qt::QueuedConnection);
+	connect (manager, SIGNAL(startSMs()), this, SLOT(smStart()), Qt::QueuedConnection);
 	connect (manager, SIGNAL(stopSMs()), this, SLOT(smStop()), Qt::QueuedConnection);
 	connect (manager, SIGNAL(breakSMs()), this, SLOT(smBreak()), Qt::QueuedConnection);
 	connect (manager, SIGNAL(haltSMs()), this, SLOT(smHalt()), Qt::QueuedConnection);
@@ -81,8 +81,8 @@ void eveScanManager::init() {
 void eveScanManager::shutdown(){
 	eveError::log(1, QString("eveScanManager: shutdown"));
 
-	delete rootSM;
-
+	if (rootSM) delete rootSM;
+	rootSM = NULL;
 	// TODO make sure mHub reads all messages before closing the channel
 	// this is the workaround
 	((eveScanThread *)QThread::currentThread())->millisleep(1000);
@@ -94,39 +94,24 @@ void eveScanManager::shutdown(){
 
 /**
  * \brief  start SM (or continue if previously paused)
- * \param eventId registered id of start event
  *
  * usually called by a signal from manager thread
  */
-void eveScanManager::smStart(int eventId) {
-
-	int dummy = eventId;
-	++ dummy;
-
-	if (chainStatus == eveEngIDLEXML){
-		chainStatus = eveEngEXECUTING;
-		if (rootSM != NULL) rootSM->startSM();
-	}
-	else {
-		chainStatus = eveEngEXECUTING;
-		if (rootSM != NULL) rootSM->resumeSM();
-	}
+void eveScanManager::smStart() {
+	sendError(INFO,0,"eveScanManager::smStart: starting root");
+	if (rootSM) rootSM->startSM(true);
 }
 
 /**
- * \brief  Halt SM, stop all motors
+ * \brief  Slot for halt signal; stop all motors, halt chain
  *
- * Emergency: stop current SMs, stop running motors, terminate chain, save data
- * do not do prescan, do always
+ * Emergency: stop all running motors, set all executing SM to last stage,
+ * terminate chain, save data do not do postscan actions.
+ *
+ *
  */
 void eveScanManager::smHalt() {
-	bool resume;
-	// TODO
-	// walk down the motor list tree and HALT all running motors
-	if (chainStatus == eveEngPAUSED) resume = true;
-	chainStatus = eveEngHALTED;
-	doBreak = false;
-	if (resume && (rootSM != NULL)) rootSM->resumeSM();
+	if (rootSM) rootSM->haltSM(true);
 }
 
 /**
@@ -136,9 +121,7 @@ void eveScanManager::smHalt() {
  * do nothing, if we are halted or stopped
  */
 void eveScanManager::smBreak() {
-	if ((chainStatus == eveEngEXECUTING) || (chainStatus == eveEngPAUSED)) {
-		doBreak = true;
-	}
+	if (rootSM) rootSM->breakSM(true);
 }
 
 /**
@@ -149,13 +132,7 @@ void eveScanManager::smBreak() {
  * do nothing, if we are already halted, clear a break
  */
 void eveScanManager::smStop() {
-	bool resume;
-	if ((chainStatus == eveEngEXECUTING) || (chainStatus == eveEngPAUSED)) {
-		if (chainStatus == eveEngPAUSED) resume = true;
-		chainStatus = eveEngSTOPPED;
-		doBreak = false;
-		if (resume && (rootSM != NULL)) rootSM->resumeSM();
-	}
+	if (rootSM) rootSM->stopSM(true);
 }
 
 /**
@@ -165,22 +142,15 @@ void eveScanManager::smStop() {
  * do only if we are currently executing
  */
 void eveScanManager::smPause() {
-	if (chainStatus == eveEngEXECUTING) {
-		chainStatus = eveEngPAUSED;
-	}
+	if (rootSM) rootSM->pauseSM(true);
 }
 
 /**
  * \brief signals an redo event.
- * \param eventId registered id of redo event
  *
- * there may be several redo events for the various scanModules
- * eventId shows us, which scanModule to inform
  */
-void eveScanManager::smRedo(int eventId) {
-
-	int dummy = eventId;
-	++ dummy;
+void eveScanManager::smRedo() {
+	if (rootSM) rootSM->redoSM(true);
 }
 
 /**
@@ -189,13 +159,18 @@ void eveScanManager::smRedo(int eventId) {
  */
 void eveScanManager::smDone() {
 
-	sendStatus(0, eveChainDONE);
-	disconnect (manager, SIGNAL(startSMs(int)), this, SLOT(smStart(int)));
-	disconnect (manager, SIGNAL(stopSMs()), this, SLOT(smStop()));
-	disconnect (manager, SIGNAL(breakSMs()), this, SLOT(smBreak()));
-	disconnect (manager, SIGNAL(haltSMs()), this, SLOT(smHalt()));
-	disconnect (manager, SIGNAL(pauseSMs()), this, SLOT(smPause()));
+	if (rootSM->isDone()){
+		sendStatus(0, eveChainDONE);
+		disconnect (manager, SIGNAL(startSMs()), this, SLOT(smStart()));
+		disconnect (manager, SIGNAL(stopSMs()), this, SLOT(smStop()));
+		disconnect (manager, SIGNAL(breakSMs()), this, SLOT(smBreak()));
+		disconnect (manager, SIGNAL(haltSMs()), this, SLOT(smHalt()));
+		disconnect (manager, SIGNAL(pauseSMs()), this, SLOT(smPause()));
+	}
+}
 
+void eveScanManager::sendMessage(eveMessage *message){
+	addMessage(message);
 }
 
 /**

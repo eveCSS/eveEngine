@@ -12,9 +12,13 @@
 #include <QDomElement>
 #include <QHash>
 #include "eveMessage.h"
-#include "eveScanManager.h"
+#include "eveSMAxis.h"
+#include "eveSMChannel.h"
 #include "eveXMLReader.h"
+#include "eveScanManager.h"
 //#include "eveMessageChannel.h"
+
+class eveScanManager;
 
 /**
  * \brief process a ScanModule
@@ -32,12 +36,29 @@ class eveScanModule: public QObject
 public:
 	eveScanModule(eveScanManager *, eveXMLReader *, int, int);
 	virtual ~eveScanModule();
-	bool isDone(){return (smstatus==eveSmDONE)?true:false;}
+	bool isDone(){return (smStatus==eveSmDONE)?true:false;}
 	bool resumeSM();
-	void startSM();
+	bool breakNestedSM();
 	void initialize();
+	void sendError(int, int, int, QString);
+	void gotoStart();
+	void readPos();
 
 public slots:
+	void execStage();
+
+	void startSM(bool);
+	void stopSM(bool);
+	void breakSM(bool);
+	void pauseSM(bool);
+	void haltSM(bool);
+	void redoSM(bool);
+
+signals:
+	void sigExecStage();
+	void SMready();
+
+private:
 	void stgInit();
 	void stgGotoStart();
 	void stgReadPos();
@@ -48,22 +69,18 @@ public slots:
 	void stgPostscan();
 	void stgEndPos();
 	void stgFinish();
-	void execStage();
-
-signals:
-	void sigExecStage();
-	void SMready();
-
-private:
 	void sendError(int, int, QString);
 	int chainId;
 	int smId;
-	smStatusT smstatus;
+	smStatusT smStatus, smLastStatus;
 	stageT currentStage;
 	engineStatusT engineStatus;
 	bool currentStageReady;
 	int currentStageCounter;
+	int signalCounter;
 	bool isRoot;
+	bool catchedRedo;
+	double triggerDelay;
 	QHash<stageT, void(eveScanModule::*)()> stageHash;
 	eveScanManager* manager;
 	eveScanModule* nestedSM;
@@ -71,6 +88,7 @@ private:
 	QList<eveSMDevice *> *preScanList;
 	QList<eveSMDevice *> *postScanList;
 	QList<eveSMAxis *> *axisList;
+	QList<eveSMChannel *> *channelList;
 
 };
 

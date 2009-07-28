@@ -19,7 +19,7 @@
  *
  */
 
-enum eveAxisStatusT {eveAXISINIT, eveAXISIDLE, eveAXISWRITEPOS, eveAXISREADPOS, eveAXISREADDEADBAND};
+enum eveAxisStatusT {eveAXISINIT, eveAXISIDLE, eveAXISWRITEPOS, eveAXISREADPOS, eveAXISREADSTATUS};
 
 class eveScanManager;
 
@@ -28,18 +28,23 @@ class eveSMAxis: public QObject {
 	Q_OBJECT
 
 public:
-	eveSMAxis(eveMotorAxis *, evePosCalc *);
+	eveSMAxis(eveScanModule *, eveMotorAxis *, evePosCalc *);
 	virtual ~eveSMAxis();
 	void gotoStartPos(bool);
 	void gotoNextPos(bool);
+	void gotoPos(eveVariant, bool);
+	eveVariant getPos(){return currentPosition;};
 	// bool isAtNextPos();
-	bool isAtEndPos();
+	void stop();
+	bool isAtEndPos(){return posCalc->isAtEndPos();};
+	bool isOK(){return axisOK;};
 	//eveSetValue* getPos();
 	void execQueue();
 	void init();
 	bool isDone(){return ready;};
 	QString getName(){return name;};
 	QString getUnit(){return unit;};
+	eveDataMessage* getPositionMessage();
 
 public slots:
 	void transportReady(int);
@@ -49,20 +54,24 @@ signals:
 
 private:
 	void sendError(int, int, QString);
-	void initReady();
-	void gotoPos(eveVariant, bool);
+	void initAll();
+	void signalReady();
 	bool ready;
 	bool inDeadband;
+	bool axisStop;
 	QString id;
 	QString name;
 	QString unit;
 	eveVariant currentPosition;
 	eveVariant targetPosition;
 	eveVariant deadbandValue;
+	eveVariant stopValue;
+	eveVariant triggerValue;
 	QList<eveTransportT> transportList;
+	eveDataMessage* curPosition;
 	int signalCounter;
 	eveAxisStatusT axisStatus;
-	eveScanManager* scanManager;
+	eveScanModule* scanModule;
 	evePosCalc *posCalc;
 	eveMotorAxis *axisDef;
 	eveBaseTransport* gotoTrans;
@@ -79,6 +88,7 @@ private:
 	bool haveStop;
 	bool havePos;
 	bool haveGoto;
+	bool axisOK;
 };
 
 #endif /* EVESMAXIS_H_ */

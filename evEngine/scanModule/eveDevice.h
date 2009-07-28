@@ -36,15 +36,17 @@ protected:
  */
 class eveCaTransportDef : public eveTransportDef{
 public:
-	eveCaTransportDef(eveType, pvMethodT, QString );
+	eveCaTransportDef(eveType, pvMethodT, double, QString );
 	virtual ~eveCaTransportDef();
 	eveCaTransportDef* clone();
 	QString getName(){return pV;};
 	pvMethodT getMethod(){return method;};
+	double getTimeout(){return timeout;};
 
 private:
 	QString pV;
 	pvMethodT method;
+	double timeout;
 };
 
 /**
@@ -73,10 +75,11 @@ public:
 	virtual ~eveDeviceCommand();
 	eveDeviceCommand* clone();
 	eveType getValueType() {return valueType;};
-	eveTransportDef* getTrans() {return devCmd;};
+	QString getValueString() {return valueString;};
+	eveTransportDef* getTrans() {return transDef;};
 
 private:
-	eveTransportDef *devCmd;
+	eveTransportDef *transDef;
 	QString	valueString;
 	eveType valueType;
 };
@@ -103,6 +106,7 @@ class eveDevice : public eveBaseDevice {
 public:
 	eveDevice(eveDeviceCommand *, eveDeviceCommand *, QString, QString);
 	virtual ~eveDevice();
+	eveDeviceCommand * getValueCmd(){return valueCmd;};
 	eveDeviceCommand * getUnitCmd(){return unit;};
 
 protected:
@@ -114,14 +118,18 @@ protected:
 /**
  * \brief a simple detector or a detectorchannel
  */
-class eveSimpleDetector : public eveDevice {
+class eveDetectorChannel : public eveDevice {
 public:
-	eveSimpleDetector(eveDeviceCommand *, eveDeviceCommand *, eveDeviceCommand *, QString, QString);
-	virtual ~eveSimpleDetector();
+	eveDetectorChannel(eveDeviceCommand *, eveDeviceCommand *, eveDeviceCommand *, QString, QString);
+	virtual ~eveDetectorChannel();
+	eveType getChannelType(){return getValueCmd()->getTrans()->getDataType();};
+	eveDeviceCommand * getTrigCmd(){return triggerCmd;};
+	eveDeviceCommand * getStopCmd(){return stopCmd;};
 
 protected:
 	//eveDetector *parent; // the corresponding Detector if any (unused)
-	eveDeviceCommand * triggerCmd;
+	eveDeviceCommand *triggerCmd;
+	eveDeviceCommand *stopCmd;
 
 };
 
@@ -134,10 +142,10 @@ class eveDetector : public eveBaseDevice {
 public:
 	eveDetector(QString, QString);
 	virtual ~eveDetector();
-	void addChannel(eveSimpleDetector*);
+	void addChannel(eveDetectorChannel*);
 
 private:
-	QList<eveSimpleDetector*> channelList;
+	QList<eveDetectorChannel*> channelList;
 };
 
 /**

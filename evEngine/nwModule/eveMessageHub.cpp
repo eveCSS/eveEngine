@@ -106,30 +106,37 @@ void eveMessageHub::newMessage(int messageSource)
 				}
 				break;
 			case EVEMESSAGETYPE_CHAINSTATUS:
-				/* send chainstatus to manager */
-				if (mChanHash.contains(EVECHANNEL_MANAGER)){
-					mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(message->clone());
-				}
 				/* send chainstatus to storagemodul if available */
 				if (mChanHash.contains(EVECHANNEL_STORAGE)){
 					mChanHash.value(EVECHANNEL_STORAGE)->queueMessage(message->clone());
-					message = NULL;
 				}
-				/* send chainstatus to viewers if available */
-				if (mChanHash.contains(EVECHANNEL_NET)){
-					mChanHash.value(EVECHANNEL_NET)->queueMessage(message);
-					message = NULL;
-				}
-				break;
-			case EVEMESSAGETYPE_DATA:
 				/* send chainstatus to viewers if available */
 				if (mChanHash.contains(EVECHANNEL_NET)){
 					mChanHash.value(EVECHANNEL_NET)->queueMessage(message->clone());
 				}
-				/* send chainstatus to storagemodul if available */
-				if (mChanHash.contains(EVECHANNEL_STORAGE)){
-					mChanHash.value(EVECHANNEL_STORAGE)->queueMessage(message);
+				/* send chainstatus to manager (we always have one)*/
+				if (mChanHash.contains(EVECHANNEL_MANAGER)){
+					mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(message);
 					message = NULL;
+				}
+				break;
+			case EVEMESSAGETYPE_DATA:
+				{
+					// check if we need message-clones
+					eveMessage *netMessage = message;
+					eveMessage *storageMessage = message;
+					if ((mChanHash.contains(EVECHANNEL_NET)) && (mChanHash.contains(EVECHANNEL_STORAGE)))
+						storageMessage = message->clone();
+					/* send chainstatus to viewers if available */
+					if (mChanHash.contains(EVECHANNEL_NET)){
+						mChanHash.value(EVECHANNEL_NET)->queueMessage(netMessage);
+						message = NULL;
+					}
+					/* send chainstatus to storagemodul if available */
+					if (mChanHash.contains(EVECHANNEL_STORAGE)){
+						mChanHash.value(EVECHANNEL_STORAGE)->queueMessage(storageMessage);
+						message = NULL;
+					}
 				}
 				break;
 			case EVEMESSAGETYPE_AUTOPLAY:

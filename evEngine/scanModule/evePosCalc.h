@@ -14,8 +14,10 @@
 #include <QHash>
 #include "eveTypes.h"
 #include "eveVariant.h"
+//#include "eveScanModule.h"
 
-class eveScanManager;
+//class eveScanModule;
+class eveScanModule;
 
 /**
  * \brief calculate the next motor position with stepfunction
@@ -23,7 +25,7 @@ class eveScanManager;
 class evePosCalc {
 
 public:
-	evePosCalc(QString , eveType, eveScanManager* );
+	evePosCalc(eveScanModule*, QString , eveType );
 	virtual ~evePosCalc();
 	void setStartPos(QString);
 	void setEndPos(QString);
@@ -53,7 +55,7 @@ private:
 	QStringList positionList;
 	QList<int> posIntList;
 	QList<double> posDoubleList;
-	eveScanManager* scanManager;
+	eveScanModule* scanModule;
 	bool isAtEnd;
 	bool readyToGo;
 };
