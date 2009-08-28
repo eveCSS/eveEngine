@@ -1,0 +1,18 @@
+
+
+Es gibt einen StorageThread pro Datenfile:
+	MessageHub muss routen, dazu muss der Datenquelle eine
+   	Adresse mitgeteilt werden. Da geht so:
+   	eveManager erzeugt einen StorageManager in eigenem StorageThread
+   	für jeden Dateinamen.
+   	ScanManager schickt ein Initialisierungspaket (StoarageConfig)
+   	und registriert sich dabei beim StorageManager für seinen
+   	Datenfilenamen. Der entsprechende StorageManager schickt eine
+   	StorageInfo-Nachricht zurück und teilt seine ChannelID mit.
+   	Die kann das ScanModule zum routen seiner Nachrichten verwenden.
+   			
+   	mehrere Chains können in ein File schreiben.
+   	Falls die Input-Queue des Storage -Threads überläuft,
+   	kann er gezielt die richtigen Chains abbremsen.
+   		
+   		
