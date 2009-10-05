@@ -25,6 +25,7 @@ public:
 	virtual bool isConnected()=0;
 	virtual bool haveData()=0;
 	virtual eveDataMessage *getData()=0;
+	virtual QStringList* getInfo()=0;
 
 
 signals:

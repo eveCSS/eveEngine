@@ -1,0 +1,32 @@
+/*
+ * eveFileWriter.h
+ *
+ *  Created on: 10.09.2009
+ *      Author: eden
+ */
+
+#ifndef EVEFILEWRITER_H_
+#define EVEFILEWRITER_H_
+
+#include <QHash>
+#include <QString>
+#include <QStringList>
+#include "eveMessage.h"
+
+/*
+ *
+ */
+class eveFileWriter {
+public:
+	eveFileWriter();
+	virtual ~eveFileWriter();
+	virtual int init(int, QString, QString, QHash<QString, QString>*) = 0;
+	virtual int setCols(int, QString, QString, QStringList) = 0;
+	virtual int open(int) = 0;
+	virtual int addData(int, eveDataMessage*) = 0;
+	virtual int close(int) = 0;
+	virtual QString errorText() = 0;
+
+};
+
+#endif /* EVEFILEWRITER_H_ */

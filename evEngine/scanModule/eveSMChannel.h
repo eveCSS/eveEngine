@@ -40,6 +40,7 @@ public:
 	bool isOK(){return channelOK;};
 	QString getName(){return name;};
 	QString getUnit(){return unit;};
+	eveDevInfoMessage* getDeviceInfo();
 	eveDataMessage* getValueMessage();
 
 public slots:
@@ -61,8 +62,9 @@ private:
 	int signalCounter;
 	QList<eveTransportT> transportList;
 	eveChannelStatusT channelStatus;
+	QString xmlId;
 	QString name;
-	QString unit;
+	QString unit, readyeventId;
 	eveType channelType;
 	eveScanModule* scanModule;
 	eveBaseTransport* valueTrans;
@@ -74,7 +76,7 @@ private:
 	eveVariant stopValue;
 	int averageCount, maxAttempts;
 	double maxDeviation, minimum;
-	bool confirmTrigger, repeatOnRedo;
+	bool confirmTrigger;
 
 };
 

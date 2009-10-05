@@ -33,6 +33,7 @@ eveMessageFilter::~eveMessageFilter()
 /**
  * \brief receives and handles the next message
  * \param message current message
+ * \return true if the filter condition matched, else false
  *
  * Actual filter method receives the message and compares it to the last message
  * If this is an error message and the last EVEMESSAGEFILTER_LOWLIMIT messages

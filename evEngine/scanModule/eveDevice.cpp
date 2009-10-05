@@ -136,3 +136,12 @@ eveMotor::~eveMotor() {
 	// TODO Auto-generated destructor stub
 }
 
+eveEventDefinition::eveEventDefinition(eveDeviceCommand *dPv, eveEventTypeT evtype, QString dName, QString dId) :
+	eveBaseDevice(dName, dId) {
+	valueCmd = dPv;
+	eventType = evtype;
+}
+
+eveEventDefinition::~eveEventDefinition() {
+	if (valueCmd != NULL) delete valueCmd;
+}

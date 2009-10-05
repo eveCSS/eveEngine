@@ -18,8 +18,10 @@
 #include "eveSMDevice.h"
 #include "eveSMAxis.h"
 #include "eveSMChannel.h"
+#include "eveEventProperty.h"
 
 class eveScanModule;
+class eveScanManager;
 
 /**
  * \brief reads XML and creates all indices, motors, detectors, devices
@@ -41,30 +43,31 @@ public:
 	QList<eveSMDevice*>* getPostScanList(eveScanModule*, int, int);
 	QList<eveSMAxis*>* getAxisList(eveScanModule*, int, int);
 	QList<eveSMChannel*>* getChannelList(eveScanModule*, int, int);
+	QList<eveEventProperty*>* getEventList(eveScanManager*, int, int);
+
+	QString getChainString(int, QString);
 
 private:
 	void sendError(int, int,  QString);
-	void createDetector(QDomNode);
-	void createMotor(QDomNode);
-	void createDevice(QDomNode);
+	void createDetectorDefinition(QDomNode);
+	void createMotorDefinition(QDomNode);
+	void createDeviceDefinition(QDomNode);
+	void createEventDefinition(QDomNode);
 	int getIntValueOfTag(int, int, QString);
 	QList<eveSMDevice*>* getSMDeviceList(eveScanModule*, int, int, QString);
+	eveEventProperty* getEvent(eveScanManager*, QDomElement);
     QDomDocument *domDocument;
 	eveDeviceCommand * createDeviceCommand(QDomNode);
-	eveDetectorChannel * createChannel(QDomNode, eveDeviceCommand *, eveDeviceCommand *);
-	eveMotorAxis * createAxis(QDomNode, eveDeviceCommand *, eveDeviceCommand *);
+	eveDetectorChannel * createChannelDefinition(QDomNode, eveDeviceCommand *, eveDeviceCommand *);
+	eveMotorAxis * createAxisDefinition(QDomNode, eveDeviceCommand *, eveDeviceCommand *);
 	void createOption(QDomNode);
-	eveTransportDef* createTransport(QDomElement node);
+	eveTransportDef* createTransportDefinition(QDomElement node);
 	eveDeviceList *deviceList;
 	eveManager *parent;
 	QHash<int, QDomElement> chainDomIdHash;
 	QHash<int, QHash<int, QDomElement>* > smIdHash;
 	QHash<int, int> rootSMHash; // has id of the root sm in chain
-	//QHash<int, eveScanManager*> scanManagerHash;
-	// for now we don't care about detectors and motors
-	// we are interested in channels and axes only
-	//QHash<QString, eveDetector*> detectorDefinitions;
-	//QHash<QString, eveMotor*> motorDefinitions;
+	eveEventTypeT getEventType(QString);
 
 };
 

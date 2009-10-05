@@ -25,6 +25,7 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveDetectorChannel* defini
 	haveTrigger = false;
 	haveUnit = false;
 	name = definition->getName();
+	xmlId = definition->getId();
 	valueTrans = NULL;
 	stopTrans = NULL;
 	triggerTrans = NULL;
@@ -36,7 +37,7 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveDetectorChannel* defini
 	channelStatus = eveCHANNELINIT;
 	channelType=definition->getChannelType();
 
-	if (definition->getValueCmd() != NULL){
+	if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
 		if (definition->getValueCmd()->getTrans()->getTransType() == eveTRANS_CA){
 			valueTrans = new eveCaTransport(this, name, (eveCaTransportDef*)definition->getValueCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
@@ -47,7 +48,7 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveDetectorChannel* defini
 	else
 		sendError(ERROR, 0, "Unknown Value Transport");
 
-	if (definition->getStopCmd() != NULL){
+	if ((definition->getStopCmd() != NULL) && (definition->getStopCmd()->getTrans()!= NULL)){
 		if (definition->getStopCmd()->getTrans()->getTransType() == eveTRANS_CA){
 			stopTrans = new eveCaTransport(this, name, (eveCaTransportDef*)definition->getStopCmd()->getTrans());
 			stopValue.setType(definition->getStopCmd()->getValueType());
@@ -57,7 +58,7 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveDetectorChannel* defini
 	}
 	if (stopTrans != NULL) haveStop = true;
 
-	if (definition->getTrigCmd() != NULL){
+	if ((definition->getTrigCmd() != NULL) && (definition->getTrigCmd()->getTrans()!= NULL)){
 		if (definition->getTrigCmd()->getTrans()->getTransType() == eveTRANS_CA){
 			triggerTrans = new eveCaTransport(this, name, (eveCaTransportDef*)definition->getTrigCmd()->getTrans());
 			triggerValue.setType(definition->getTrigCmd()->getValueType());
@@ -68,7 +69,10 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveDetectorChannel* defini
 	if (triggerTrans != NULL) haveTrigger = true;
 
 	if (definition->getUnitCmd() != NULL){
-		if (definition->getUnitCmd()->getTrans()->getTransType() == eveTRANS_CA){
+		if (definition->getUnitCmd()->getTrans()== NULL){
+			unit = definition->getUnitCmd()->getValueString();
+		}
+		else if (definition->getUnitCmd()->getTrans()->getTransType() == eveTRANS_CA){
 			unitTrans = new eveCaTransport(this, name, (eveCaTransportDef*)definition->getUnitCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
@@ -100,10 +104,15 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveDetectorChannel* defini
 	if (parameter.contains("confirmtrigger"))
 		confirmTrigger = parameter.value("confirmtrigger").startsWith("true",Qt::CaseInsensitive);
 	if (!ok) sendError(ERROR, 0, "Unable to evaluate confirmtrigger");
+
+	if (parameter.contains("readyeventId"))
+		readyeventId = parameter.value("readyeventId");
+/*
 	repeatOnRedo = false;
 	if (parameter.contains("repeatonredo"))
 		repeatOnRedo = parameter.value("repeatonredo").startsWith("true",Qt::CaseInsensitive);
 	if (!ok) sendError(ERROR, 0, "Unable to evaluate repeatonredo");
+*/
 }
 
 eveSMChannel::~eveSMChannel() {
@@ -231,12 +240,15 @@ void eveSMChannel::transportReady(int status) {
 		}
 	}
 	else if (channelStatus == eveCHANNELREAD){
-		if ((status == 0) && valueTrans->haveData()){
-			if (curValue != NULL) delete curValue;
-			curValue = valueTrans->getData();
-		}
-		if (curValue == NULL)
+		if (curValue != NULL) delete curValue;
+		curValue = valueTrans->getData();
+		if (curValue == NULL) {
 			sendError(ERROR, 0, "unable to read current value");
+		}
+		else {
+			curValue->setXmlId(xmlId);
+			curValue->setName(name);
+		}
 		channelStatus = eveCHANNELIDLE;
 		signalReady();
 	}
@@ -247,7 +259,7 @@ void eveSMChannel::transportReady(int status) {
  */
 void eveSMChannel::signalReady() {
 	ready = true;
-	sendError(INFO, 0, "is done");
+	sendError(DEBUG, 0, "is done");
 	emit channelDone();
 }
 
@@ -357,6 +369,21 @@ eveDataMessage* eveSMChannel::getValueMessage(){
 	eveDataMessage* return_data = curValue;
 	curValue = NULL;
 	return return_data;
+}
+
+/**
+ *
+ * @return pointer to a message with all info about this channel
+ */
+eveDevInfoMessage* eveSMChannel::getDeviceInfo(){
+
+	QStringList* sl;
+	if (haveValue)
+		sl = valueTrans->getInfo();
+	else
+		sl = new QStringList();
+	sl->append(QString("unit: %1").arg(unit));
+	return new eveDevInfoMessage(xmlId, name, sl);
 }
 
 /**

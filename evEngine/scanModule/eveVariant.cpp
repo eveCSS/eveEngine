@@ -10,10 +10,16 @@
 eveVariant::eveVariant() {
 }
 eveVariant::eveVariant(int value) : QVariant(value) {
+	varianttype = eveINT;
 }
 eveVariant::eveVariant(double value) : QVariant(value) {
+	varianttype = eveDOUBLE;
 }
 eveVariant::eveVariant(QString value) : QVariant(value) {
+	varianttype = eveSTRING;
+}
+eveVariant::eveVariant(QVariant value) : QVariant(value) {
+	varianttype = eveUnknownT;
 }
 
 eveVariant::~eveVariant() {
@@ -147,4 +153,10 @@ eveVariant eveVariant::operator* (const eveVariant& other){
 		result.setValue(toInt() * other.toInt());
 	}
 	return result;
+}
+
+quint64 eveVariant::getMangled(unsigned int val1, unsigned int val2){
+	quint64 longval = val1;
+	longval = (longval << 32) + val2;
+	return longval;
 }

@@ -15,6 +15,7 @@
 
 enum pvMethodT {evePUT, eveGET, evePUTCB, eveGETCB, eveGETPUT, eveGETPUTCB};
 enum eveTransportT {eveTRANS_CA, eveTRANS_LOCAL };
+enum eveEventTypeT {eveSCHEDULE, eveMONITOR};
 
 /**
  * \brief base class for transports (CA, etc.)
@@ -184,6 +185,18 @@ public:
 	virtual ~eveMotor();
 private:
 	QList<eveMotorAxis*> axesList;
+};
+
+
+class eveEventDefinition : public eveBaseDevice {
+public:
+	eveEventDefinition(eveDeviceCommand *, eveEventTypeT, QString, QString);
+	virtual ~eveEventDefinition();
+	eveDeviceCommand * getValueCmd(){return valueCmd;};
+
+private:
+	eveDeviceCommand * valueCmd;
+	eveEventTypeT eventType;
 };
 
 

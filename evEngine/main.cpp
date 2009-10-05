@@ -56,13 +56,12 @@ int main(int argc, char *argv[])
 	QGridLayout *mgLayout = new QGridLayout(myCenWid);
 	mgLayout->addWidget(textDisplay, 1, 0);
 
-	mainWin->setWindowTitle("Test");
+	mainWin->setWindowTitle("Debug Window");
 
 	QAction *exitAct = new QAction("E&xit", mainWin);
 	QMenu *fileMenu = mainWin->menuBar()->addMenu("&File");
 	mainWin->menuBar()->addSeparator();
 	fileMenu->addAction(exitAct);
-
 
 	mainWin->resize(600, 800);
 	mainWin->show();

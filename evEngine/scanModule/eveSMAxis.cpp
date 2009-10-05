@@ -23,6 +23,7 @@ eveSMAxis::eveSMAxis(eveScanModule *sm, eveMotorAxis* motorAxisDef, evePosCalc *
 	haveDeadband = false;
 	haveTrigger = false;
 	haveUnit = false;
+	readUnit = false;
 	haveStatus = false;
 	haveStop = false;
 	haveGoto = false;
@@ -36,7 +37,7 @@ eveSMAxis::eveSMAxis(eveScanModule *sm, eveMotorAxis* motorAxisDef, evePosCalc *
 	deadbandTrans = NULL;
 	axisStatus = eveAXISINIT;
 	signalCounter=0;
-	id = axisDef->getId();
+	xmlId = axisDef->getId();
 	name = axisDef->getName();
 	scanModule = sm;
 	ready = true;
@@ -44,7 +45,7 @@ eveSMAxis::eveSMAxis(eveScanModule *sm, eveMotorAxis* motorAxisDef, evePosCalc *
 	axisStop = false;
 	curPosition = NULL;
 
-	if (axisDef->getGotoCmd() != NULL){
+	if ((axisDef->getGotoCmd() != NULL) && (axisDef->getGotoCmd()->getTrans() != NULL)){
 		if (axisDef->getGotoCmd()->getTrans()->getTransType() == eveTRANS_CA){
 			gotoTrans = new eveCaTransport(this, name, (eveCaTransportDef*)axisDef->getGotoCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
@@ -55,7 +56,7 @@ eveSMAxis::eveSMAxis(eveScanModule *sm, eveMotorAxis* motorAxisDef, evePosCalc *
 	else
 		sendError(ERROR, 0, "Unknown GOTO Transport");
 
-	if (axisDef->getPosCmd() != NULL){
+	if ((axisDef->getPosCmd() != NULL) && (axisDef->getPosCmd()->getTrans() != NULL)){
 		if (axisDef->getPosCmd()->getTrans()->getTransType() == eveTRANS_CA){
 			posTrans = new eveCaTransport(this, name, (eveCaTransportDef*)axisDef->getPosCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
@@ -66,7 +67,7 @@ eveSMAxis::eveSMAxis(eveScanModule *sm, eveMotorAxis* motorAxisDef, evePosCalc *
 	else
 		sendError(ERROR, 0, "Unknown Position Transport");
 
-	if (axisDef->getTrigCmd() != NULL){
+	if ((axisDef->getTrigCmd() != NULL) && (axisDef->getTrigCmd()->getTrans() != NULL)){
 		if (axisDef->getTrigCmd()->getTrans()->getTransType() == eveTRANS_CA){
 			triggerTrans = new eveCaTransport(this, name, (eveCaTransportDef*)axisDef->getTrigCmd()->getTrans());
 			triggerValue.setType(axisDef->getTrigCmd()->getValueType());
@@ -77,7 +78,7 @@ eveSMAxis::eveSMAxis(eveScanModule *sm, eveMotorAxis* motorAxisDef, evePosCalc *
 	if (triggerTrans != NULL)
 		haveTrigger = true;
 
-	if (axisDef->getStopCmd() != NULL){
+	if ((axisDef->getStopCmd() != NULL) && (axisDef->getStopCmd()->getTrans() != NULL)){
 		if (axisDef->getStopCmd()->getTrans()->getTransType() == eveTRANS_CA){
 			stopTrans = new eveCaTransport(this, name, (eveCaTransportDef*)axisDef->getStopCmd()->getTrans());
 			stopValue.setType(axisDef->getStopCmd()->getValueType());
@@ -87,7 +88,7 @@ eveSMAxis::eveSMAxis(eveScanModule *sm, eveMotorAxis* motorAxisDef, evePosCalc *
 	}
 	if (stopTrans != NULL) haveStop = true;
 
-	if (axisDef->getStatusCmd() != NULL){
+	if ((axisDef->getStatusCmd() != NULL) && (axisDef->getStatusCmd()->getTrans() != NULL)){
 		if (axisDef->getStatusCmd()->getTrans()->getTransType() == eveTRANS_CA){
 			statusTrans = new eveCaTransport(this, name, (eveCaTransportDef*)axisDef->getStatusCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
@@ -95,7 +96,7 @@ eveSMAxis::eveSMAxis(eveScanModule *sm, eveMotorAxis* motorAxisDef, evePosCalc *
 	}
 	if (statusTrans != NULL) haveStatus = true;
 
-	if (axisDef->getDeadbandCmd() != NULL){
+	if ((axisDef->getDeadbandCmd() != NULL) && (axisDef->getDeadbandCmd()->getTrans() != NULL)){
 		if (axisDef->getDeadbandCmd()->getTrans()->getTransType() == eveTRANS_CA){
 			deadbandTrans = new eveCaTransport(this, name, (eveCaTransportDef*)axisDef->getDeadbandCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
@@ -104,7 +105,10 @@ eveSMAxis::eveSMAxis(eveScanModule *sm, eveMotorAxis* motorAxisDef, evePosCalc *
 	if (deadbandTrans != NULL) haveDeadband = true;
 
 	if (axisDef->getUnitCmd() != NULL){
-		if (axisDef->getUnitCmd()->getTrans()->getTransType() == eveTRANS_CA){
+		if (axisDef->getUnitCmd()->getTrans()== NULL){
+			unit = axisDef->getUnitCmd()->getValueString();
+		}
+		else if (axisDef->getUnitCmd()->getTrans()->getTransType() == eveTRANS_CA){
 			unitTrans = new eveCaTransport(this, name, (eveCaTransportDef*)axisDef->getUnitCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
@@ -241,6 +245,12 @@ void eveSMAxis::transportReady(int status) {
 						sendError(ERROR,0,"error reading retry deadband");
 					++signalCounter;
 				}
+				if (haveUnit){
+					readUnit = true;
+					if (unitTrans->readData(true))
+						sendError(ERROR,0,"error reading unit");
+					++signalCounter;
+				}
 				if (posTrans->readData(false))
 					sendError(ERROR,0,"error reading position");
 			}
@@ -276,6 +286,8 @@ void eveSMAxis::transportReady(int status) {
 			else {
 				if (curPosition != NULL) delete curPosition;
 				curPosition = tmpPosition;
+				curPosition->setXmlId(xmlId);
+				curPosition->setName(name);
 				currentPosition = curPosition->toVariant();
 			}
 			inDeadband = true;
@@ -292,6 +304,19 @@ void eveSMAxis::transportReady(int status) {
 					inDeadband = false;
 					sendError(ERROR, 0, "not within retry deadband");
 				}
+			}
+			if (readUnit){
+				readUnit=false;
+				if (unitTrans->haveData()) {
+					eveDataMessage *unitData = unitTrans->getData();
+					if (unitData == NULL)
+						sendError(ERROR, 0, "unable to read unit");
+					else {
+						unit = unitData->toVariant().toString();
+						delete unitData;
+					}
+				}
+
 			}
 			axisStatus = eveAXISIDLE;
 			signalReady();
@@ -383,12 +408,27 @@ void eveSMAxis::stop() {
 
 /**
  *
- * @return current detector value
+ * @return current position value
  */
 eveDataMessage* eveSMAxis::getPositionMessage(){
 	eveDataMessage* return_data = curPosition;
 	curPosition = NULL;
 	return return_data;
+}
+
+/**
+ *
+ * @return pointer to a message with all info about this axis
+ */
+eveDevInfoMessage* eveSMAxis::getDeviceInfo(){
+
+	QStringList* sl;
+	if (haveGoto)
+		sl = gotoTrans->getInfo();
+	else
+		sl = new QStringList();
+	sl->append(QString("unit: %1").arg(unit));
+	return new eveDevInfoMessage(xmlId, name, sl);
 }
 
 /**

@@ -18,12 +18,14 @@ public:
 	eveVariant(int);
 	eveVariant(double);
 	eveVariant(QString);
+	eveVariant(QVariant);
 	virtual ~eveVariant();
 	void setType(eveType);
 	eveType getType(){return varianttype;};
 	bool setValue(int);
 	bool setValue(double);
 	bool setValue(QString);
+	static quint64 getMangled(unsigned int val1, unsigned int val2);
 	eveVariant abs();
 	eveVariant operator + (const eveVariant&);
 	eveVariant operator - (const eveVariant&);

@@ -2,10 +2,11 @@
 #define EVEMESSAGECHANNEL_H_
 
 // predefined (reserved) Channels
-#define EVECHANNELS_RESERVED 3
+#define EVECHANNELS_RESERVED 4
 #define EVECHANNEL_NET 1
 #define EVECHANNEL_STORAGE 2
 #define EVECHANNEL_MANAGER 3
+#define EVECHANNEL_EVENT 4
 
 #include <QObject>
 #include <QReadWriteLock>
@@ -33,8 +34,11 @@ public:
 	virtual ~eveMessageChannel();
 
 	virtual eveMessage * getMessage();
-	virtual void queueMessage(eveMessage *);
+	virtual bool queueMessage(eveMessage *);
 	virtual void addMessage(eveMessage * message);
+	bool sendQueueIsEmpty();
+	void enableInput(){QWriteLocker locker(&recLock); acceptInput=true;};
+	void disableInput(){QWriteLocker locker(&recLock); acceptInput=false;};
 
 public slots:
 	virtual void newQueuedMessage();
@@ -43,13 +47,16 @@ public slots:
 signals:
 	void messageWaiting(int);
 	void messageArrived();
+	void messageTaken();
 
 protected:
 	virtual void handleMessage(eveMessage*);
+	bool unregisterIfQueueIsEmpty();
 	int channelId;
 
 private:
 	int status;
+	bool acceptInput;
 	QList<eveMessage*> sendMessageList;
 	QList<eveMessage*> receiveMessageList;
 	QList<eveMessage*> receiveFastMessageList;

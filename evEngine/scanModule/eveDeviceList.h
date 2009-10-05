@@ -15,18 +15,21 @@ class eveDeviceList {
 public:
 	eveDeviceList();
 	virtual ~eveDeviceList();
-	void insert(QString, eveMotorAxis*);
-	void insert(QString, eveDetectorChannel*);
-	void insert(QString, eveDevice*);
+	void insert(QString ident, eveMotorAxis* axis){axisDefinitions.insert(ident, axis);};
+	void insert(QString ident, eveDetectorChannel* channel ){channelDefinitions.insert(ident, channel);};
+	void insert(QString ident, eveDevice* device){deviceDefinitions.insert(ident, device);};
+	void insert(QString ident, eveEventDefinition* event){eventDefinitions.insert(ident, event);};
 	eveDevice* getDeviceDef(QString name){return deviceDefinitions.value(name, NULL);};
 	eveDetectorChannel* getChannelDef(QString name){return channelDefinitions.value(name, NULL);};
 	eveMotorAxis* getAxisDef(QString name){return axisDefinitions.value(name, NULL);};
+	eveEventDefinition* getEventDef(QString name){return eventDefinitions.value(name, NULL);};
 	void clearAll();
 
 private:
 	QHash<QString, eveDevice*> deviceDefinitions;
 	QHash<QString, eveDetectorChannel*> channelDefinitions;
 	QHash<QString, eveMotorAxis*> axisDefinitions;
+	QHash<QString, eveEventDefinition*> eventDefinitions;
 
 };
 

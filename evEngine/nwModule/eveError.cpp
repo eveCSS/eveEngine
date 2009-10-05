@@ -31,5 +31,12 @@ void eveError::queueLog(int debug, QString string)
 void eveError::printLogMessage()
 {
 	QWriteLocker locker(&lock);
-	while (!logQueue.isEmpty())textDisplay->append(logQueue.takeFirst());
+	while (!logQueue.isEmpty()){
+		if (lineCount > 1000) {
+			lineCount = 0;
+			textDisplay->clear();
+		}
+		textDisplay->append(logQueue.takeFirst());
+		++lineCount;
+	}
 }

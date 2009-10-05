@@ -24,6 +24,7 @@ public:
 	eveBasicStatusTracker();
 	virtual ~eveBasicStatusTracker();
 	bool setChainStatus(eveChainStatusMessage*);
+	void addStorageId(int id){ storageList.append(id);};
 	virtual eveEngineStatusMessage* getEngineStatusMessage();
 	engineStatusT getEngineStatus(){return engineStatus;};
 
@@ -36,6 +37,7 @@ signals:
 
 protected:
 	QHash<int, chainStatusT> chainStatus;
+	QList<int> storageList;	// all chains with a storage module
 	engineStatusT engineStatus;
 	QString XmlName;
 	bool loadedXML;

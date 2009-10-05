@@ -16,26 +16,12 @@ eveDeviceList::~eveDeviceList() {
 }
 
 void eveDeviceList::clearAll() {
-	printf("deleting devices\n");
+
 	foreach (eveDevice* device, deviceDefinitions) delete device;
-	printf("deleting channels\n");
 	foreach (eveDetectorChannel* channel, channelDefinitions) delete channel;
-	printf("deleting axes\n");
-	foreach (eveMotorAxis* axis, axisDefinitions) {
-//		printf("deleting first axis %x\n", (int)axis);
-		delete axis;
-	}
-	printf("deleting done\n");
+	foreach (eveMotorAxis* axis, axisDefinitions) delete axis;
+	foreach (eveEventDefinition* event, eventDefinitions) delete event;
 }
 
-void eveDeviceList::insert(QString ident, eveMotorAxis* axis){
-	axisDefinitions.insert(ident, axis);
-}
 
-void eveDeviceList::insert(QString ident, eveDetectorChannel* channel ){
-	channelDefinitions.insert(ident, channel);
-}
 
-void eveDeviceList::insert(QString ident, eveDevice* device){
-	deviceDefinitions.insert(ident, device);
-}

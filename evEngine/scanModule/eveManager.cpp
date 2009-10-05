@@ -6,6 +6,8 @@
  */
 
 #include <QTimer>
+#include <QMutex>
+#include <QWaitCondition>
 #include "eveManager.h"
 #include "eveRequestManager.h"
 #include "eveMessageHub.h"
@@ -13,6 +15,7 @@
 #include "eveXMLReader.h"
 #include "eveScanManager.h"
 #include "eveScanThread.h"
+#include "eveStorageThread.h"
 
 /**
  * \brief init and register with messageHub
@@ -114,8 +117,11 @@ void eveManager::handleMessage(eveMessage *message){
 				addMessage(engineStatus->getEngineStatusMessage());
 			}
 			else {
-				sendError(INFO,0,"cannot process STOP command with current engine status");
+				sendError(INFO,0,"cannot process PAUSE command with current engine status");
 			}
+			break;
+		case EVEMESSAGETYPE_STORAGEACK:
+			engineStatus->addStorageId(((eveMessageInt*)message)->getInt());
 			break;
 		case EVEMESSAGETYPE_CHAINSTATUS:
 			if (engineStatus->setChainStatus((eveChainStatusMessage*)message)){
@@ -123,6 +129,7 @@ void eveManager::handleMessage(eveMessage *message){
 			}
 			// load the next entry from playlist, if whole chain is done
 			if (engineStatus->getEngineStatus() == eveEngIDLENOXML) {
+				deviceList->clearAll();
 				if (loadPlayListEntry()){
 					if (engineStatus->getAutoStart())
 						if (!sendStart())
@@ -138,9 +145,18 @@ void eveManager::handleMessage(eveMessage *message){
 	delete message;
 }
 void eveManager::shutdown(){
+
 	eveError::log(1, QString("eveManager: shutdown"));
-	eveMessageHub::getmHub()->unregisterChannel(channelId);
-	QThread::currentThread()->quit();
+	// stop input Queue
+	disableInput();
+	// make sure mHub reads all outstanding messages before closing the channel
+	if (unregisterIfQueueIsEmpty()){
+		QThread::currentThread()->quit();
+	}
+	else {
+		// call us again
+		QTimer::singleShot(500, this, SLOT(shutdown()));
+	}
 }
 
 /**
@@ -186,7 +202,7 @@ bool eveManager::createSMs(QByteArray xmldata) {
     	sendError(INFO,0,"eveManager::createSMs: successfully parsed XML");
     }
     else {
-    	sendError(INFO,0,"eveManager::createSMs: error parsing XML");
+    	sendError(ERROR,0,"eveManager::createSMs: error parsing XML");
     	return false;
     }
 	// create a thread for every chain in the xml-File
@@ -195,16 +211,30 @@ bool eveManager::createSMs(QByteArray xmldata) {
     // TODO might be easier to loop over a QList of chainids, since we dont't need the
     //      domelements any more
 	QHashIterator<int, QDomElement> itera(scmlParser->getChainIdHash());
+	QStringList fileNameList;
 	while (itera.hasNext()) {
 		itera.next();
+		// we start a storage thread, if we have a savefilename and the name is not already on the list
+		QString value = scmlParser->getChainString(itera.key(), "savefilename");
+		if (!value.isEmpty()){
+			if (!fileNameList.contains(value)){
+				fileNameList.append(value);
+				QMutex mutex;
+		        mutex.lock();
+		        QWaitCondition waitRegistration;
+				eveStorageThread *storageThread = new eveStorageThread(value, &waitRegistration, &mutex);
+				storageThread->start();
+				waitRegistration.wait(&mutex);
+				// TODO send a message with xmldata to the storage thread with
+				// savefilename = value, if parameter savescandescription = true
+			}
+		}
+		// start a scanManager for every chain
 		eveScanManager *scanManager = new eveScanManager(this, scmlParser, itera.key());
 		eveScanThread *chainThread = new eveScanThread(scanManager);
 		scanManager->moveToThread(chainThread);
 		scanThreadList.append(chainThread);
 		chainThread->start();
-		// TODO remove prints
-		printf("ScanManager: Current Thread id: %d\n",QThread::currentThread());
-		printf("ScanManager: new Thread id: %d\n", chainThread);
 	}
 	delete scmlParser;
 

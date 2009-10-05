@@ -1,11 +1,13 @@
 
-#include <QThread>
 #include "eveMessageChannel.h"
+#include "eveMessageHub.h"
+#include <QThread>
 #include "eveError.h"
 
 //eveMessageChannel::eveMessageChannel(QObject *parent): QObject(parent)
 eveMessageChannel::eveMessageChannel(QObject *parent)
 {
+	acceptInput = true;
 	connect(this, SIGNAL(messageArrived()), this, SLOT(newQueuedMessage()) ,Qt::QueuedConnection);
 }
 
@@ -25,7 +27,9 @@ eveMessage * eveMessageChannel::getMessage()
 	if (sendMessageList.isEmpty()){
 		return NULL;
 	}
-	return sendMessageList.takeFirst();
+	eveMessage* message = sendMessageList.takeFirst();
+	emit messageTaken();
+	return message;
 }
 
 /**
@@ -42,21 +46,47 @@ void eveMessageChannel::addMessage(eveMessage * message)
 }
 
 /**
+ * \brief is sendqueue empty
+ * \return true if sendqueue is empty, else false
+ */
+bool eveMessageChannel::sendQueueIsEmpty()
+{
+	QWriteLocker locker(&sendLock);
+	return sendMessageList.isEmpty();
+}
+
+bool eveMessageChannel::unregisterIfQueueIsEmpty()
+{
+	QWriteLocker locker(&sendLock);
+	if (sendMessageList.isEmpty()){
+		eveMessageHub::getmHub()->unregisterChannel(channelId);
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+/**
  * \brief put a message into the internal receive queue
  * \param message the message to be queued
+ * \return true if message has been accepted else false
  *
  * called by messageHub to send a message
  *
  */
-void eveMessageChannel::queueMessage(eveMessage * message)
+bool eveMessageChannel::queueMessage(eveMessage * message)
 {
+
 	QWriteLocker locker(&recLock);
+	if (!acceptInput) return false;
 	if (message->getPriority() == EVEMESSAGEPRIO_HIGH)
 		receiveFastMessageList.append(message);
 	else
 		receiveMessageList.append(message);
 
 	emit messageArrived();
+	return true;
 }
 /**
  * \brief signals the arrival of a new message

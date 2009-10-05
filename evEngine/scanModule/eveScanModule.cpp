@@ -80,7 +80,13 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	    connect (channel, SIGNAL(channelDone()), this, SLOT(execStage()), Qt::QueuedConnection);
 	}
 
-    // connect signals
+	QList<eveEventProperty*>* eventList = parser->getEventList(manager, chainId, smId);
+	foreach (eveEventProperty* evprop, *eventList){
+		manager->registerEvent(smid, evprop, false);
+	}
+	delete eventList;
+
+	// connect signals
     connect (this, SIGNAL(sigExecStage()), this, SLOT(execStage()), Qt::QueuedConnection);
 
 }
@@ -202,15 +208,22 @@ void eveScanModule::stgReadPos() {
 		currentStageCounter = 1;
 		signalCounter = 0;
 		foreach (eveSMAxis *axis, *axisList){
+			sendMessage(axis->getDeviceInfo());
 			eveVariant dummy = axis->getPos();
 			sendError(DEBUG, 0, QString("%1 position is %2").arg(axis->getName()).arg(dummy.toDouble()));
+		}
+		foreach (eveSMChannel *channel, *channelList){
+			sendMessage(channel->getDeviceInfo());
+			sendError(INFO,0,QString("testing detector channel %1").arg(channel->getName()));
+			channel->triggerRead(false);
+			++signalCounter;
 		}
 		if (nestedSM != NULL) {
 			nestedSM->readPos();
 			++signalCounter;
 		}
 		if (appendedSM != NULL) {
-			appendedSM->stgReadPos();
+			appendedSM->readPos();
 			++signalCounter;
 		}
 		emit sigExecStage();
@@ -228,6 +241,12 @@ void eveScanModule::stgReadPos() {
 				}
 			}
 			if (ready) {
+				foreach (eveSMAxis *axis, *axisList){
+					sendMessage(axis->getPositionMessage());
+				}
+				foreach (eveSMChannel *channel, *channelList){
+					sendMessage(channel->getValueMessage());
+				}
 				currentStageReady=true;
 				emit SMready();
 				emit sigExecStage();
@@ -256,6 +275,7 @@ void eveScanModule::stgGotoStart() {
 
 	if (currentStageCounter == 0){
 		sendError(DEBUG,0,"stgGotoStart");
+		sendNextPos();
 		currentStageCounter = 1;
 		signalCounter = 0;
 		foreach (eveSMAxis *axis, *axisList){
@@ -282,7 +302,7 @@ void eveScanModule::stgGotoStart() {
 					bool ok = false;
 					double dval = posMesg->toVariant().toDouble(&ok);
 					if (ok) sendError(INFO,0,QString("%1: at position %2").arg(axis->getName()).arg(dval));
-					manager->sendMessage(posMesg);
+					sendMessage(posMesg);
 				}
 			}
 			sendError(DEBUG, 0, "stgGotoStart done");
@@ -343,7 +363,7 @@ void eveScanModule::stgPrescan() {
 /**
  * \brief wait SettleTime
  *
- * -if we have nested Scans, wait the maximum time of all nested scans
+ * every nested scan waits its own settle time
  */
 void eveScanModule::stgSettleTime() {
 
@@ -409,7 +429,7 @@ void eveScanModule::stgTrigRead() {
 			++signalCounter;
 		}
 		if (nestedSM) {
-			nestedSM->startSM(false);
+			nestedSM->start();
 			++signalCounter;
 		}
 		// execute the Transport Queue
@@ -433,7 +453,7 @@ void eveScanModule::stgTrigRead() {
 						bool ok = false;
 						double dval = dmesg->toVariant().toDouble(&ok);
 						if (ok) sendError(DEBUG, 0, QString("%1: value %2").arg(channel->getName()).arg(dval));
-						manager->sendMessage(dmesg);
+						sendMessage(dmesg);
 					}
 				}
 				else {
@@ -486,10 +506,11 @@ void eveScanModule::stgNextPos() {
 			currentStageReady=true;
 		}
 		else {
+			sendNextPos();
 			foreach (eveSMAxis *axis, *axisList){
 				++signalCounter;
 				sendError(INFO, 0, QString("Moving axis %1").arg(axis->getName()));
-				// calling gotoNextPos if axis is at end pos just does nothing
+				// gotoNextPos returns immediately, if axis is already at end pos
 				axis->gotoNextPos(false);
 			}
 		}
@@ -508,7 +529,7 @@ void eveScanModule::stgNextPos() {
 					bool ok = false;
 					double dval = posMesg->toVariant().toDouble(&ok);
 					if (ok) sendError(INFO,0,QString("%1: at position %2").arg(axis->getName()).arg(dval));
-					manager->sendMessage(posMesg);
+					sendMessage(posMesg);
 				}
 			}
 			// go back to stage TRIGREAD
@@ -585,7 +606,7 @@ void eveScanModule::stgFinish() {
 	if (appendedSM && (currentStageCounter == 0)) {
 		++currentStageCounter;
 		smStatus = eveSmAPPEND;
-		appendedSM->startSM(false);
+		appendedSM->start();
 	}
 	else {
 
@@ -638,35 +659,99 @@ void eveScanModule::execStage() {
 	}
 }
 
-/**
- * \brief if this scanmodule is paused, start it and call
- *        its nested SM or check appended scanmodules;
- * \return true if changed from paused to start otherwise false
- *
- * resume executing after a pause
- * walk down the scanmodules and start all nested (appended) paused scans
- *
- */
-bool eveScanModule::resumeSM() {
+void eveScanModule::start() {
 
-	bool success = false;
-	if (nestedSM) success = nestedSM->resumeSM();
-	if (!success && (smStatus == eveSmAPPEND)) {
-		success = appendedSM->resumeSM();
-	}
-	else if (smStatus == eveSmPAUSED){
-		smStatus = smLastStatus;
+	if (smStatus == eveSmNOTSTARTED){
+		sendError(DEBUG, 0, "starting scan");
+		smStatus = eveSmEXECUTING;
 		manager->setStatus(smId, smStatus);
 		emit sigExecStage();
 	}
-	return success;
+    else if (smStatus == eveSmDONE){
+    	sendError(DEBUG, 0, "restarting scan");
+        smStatus = eveSmEXECUTING;
+        currentStage = eveStgGOTOSTART;
+        currentStageReady = false;
+        currentStageCounter = 0;
+        manager->setStatus(smId, smStatus);
+        emit sigExecStage();
+    }
+}
+
+
+/**
+ * \brief walk down until SM with smid is found and resume it, if it is paused
+ *
+ * \return true if SM with smid was found
+ */
+bool eveScanModule::resumeSM(int smid) {
+
+	bool found = false;
+	if (smId == smid){
+		if (smStatus == eveSmPAUSED){
+			smStatus = smLastStatus;
+			manager->setStatus(smId, smStatus);
+			emit sigExecStage();
+		}
+		found = true;
+	}
+	if (!found && nestedSM) found = nestedSM->resumeSM(smid);
+	if (!found && appendedSM) found = appendedSM->resumeSM(smid);
+	return found;
 }
 /**
- * \brief start this scanmodule or resume if paused
- *
- * @param chainSignal if true, is signal from chain to be applied on all scanmodules
+ * \brief walk down the SM-tree and start all paused SMs
+ * \return true if successfully resumed a paused SM
  */
-void eveScanModule::startSM(bool chainSignal) {
+bool eveScanModule::resumeChain() {
+
+	bool success = false;
+
+	if (nestedSM) success = nestedSM->resumeChain();
+	if (!success && (smStatus == eveSmAPPEND)) {
+		success = appendedSM->resumeChain();
+	}
+	if (smStatus == eveSmPAUSED){
+		smStatus = smLastStatus;
+		manager->setStatus(smId, smStatus);
+		emit sigExecStage();
+		success = true;
+	}
+	return success;
+}
+
+/**
+ * \brief start this scanmodule if smid matches and if it has not been started yet
+ *        walk down and start a nested or appended SM with matching smid if its parent
+ *        was already started
+ *
+ * @return true if SM with smid was found
+ */
+bool eveScanModule::startSM(int smid) {
+
+	bool found = false;
+	if (smId == smid){
+		if (smStatus == eveSmNOTSTARTED){
+			sendError(DEBUG, 0, "starting scan");
+			smStatus = eveSmEXECUTING;
+			manager->setStatus(smId, smStatus);
+			emit sigExecStage();
+		}
+		found = true;
+	}
+	else {
+		if (nestedSM && ((smStatus == eveSmEXECUTING)||(smStatus == eveSmTRIGGERWAIT)))
+			found = nestedSM->startSM(smid);
+		if (!found && (smStatus == eveSmAPPEND)) appendedSM->startSM(smid);
+	}
+	return found;
+}
+/**
+ * \brief if this SM has never been started, start it, else we must have been paused
+ * 			and resume. This will only be called in rootSM
+ *
+ */
+void eveScanModule::startChain() {
 
 	sendError(DEBUG, 0, "start signal received");
 	if (smStatus == eveSmNOTSTARTED){
@@ -675,62 +760,78 @@ void eveScanModule::startSM(bool chainSignal) {
 		manager->setStatus(smId, smStatus);
 		emit sigExecStage();
 	}
-	else if (chainSignal) {
-		resumeSM();
-	}
-	else if (smStatus == eveSmPAUSED){
-		smStatus = smLastStatus;
-		manager->setStatus(smId, smStatus);
-		emit sigExecStage();
-	}
-	else if (smStatus == eveSmDONE){
-		sendError(DEBUG, 0, "restarting scan");
-		smStatus = eveSmEXECUTING;
-		currentStage = eveStgGOTOSTART;
-		currentStageReady = false;
-		currentStageCounter = 0;
-		manager->setStatus(smId, smStatus);
-		emit sigExecStage();
+	else {
+		resumeChain();
 	}
 }
 
 /**
- * \brief pause this scanmodule
+ * \brief walk down until the SM with smid is found and pause it,
+ * 			if it is executing
  *
- * @param chainSignal if true, is signal from chain to be applied on all scanmodules
+ * @param smid	smid of the sm to be paused
+ * @return true if SM with smid was found
+ *
  */
-void eveScanModule::pauseSM(bool chainSignal) {
+bool eveScanModule::pauseSM(int smid) {
 
-	if (chainSignal) {
+	bool found = false;
+	if (smId == smid){
 		if ((smStatus == eveSmEXECUTING) || (smStatus == eveSmTRIGGERWAIT)) {
-			if (nestedSM) nestedSM->pauseSM(true);
+			smLastStatus = smStatus;
+			smStatus = eveSmPAUSED;
+			manager->setStatus(smId, smStatus);
+		}
+		found = true;
+	}
+	if (!found && nestedSM) found = nestedSM->pauseSM(smid);
+	if (!found && appendedSM) found = appendedSM->pauseSM(smid);
+	return found;
+}
+/**
+ * \brief walk down tree with executing SMs and pause them
+ */
+void eveScanModule::pauseChain() {
+
+		if ((smStatus == eveSmEXECUTING) || (smStatus == eveSmTRIGGERWAIT)) {
+			if (nestedSM) nestedSM->pauseChain();
+			smLastStatus = smStatus;
+			smStatus = eveSmPAUSED;
+			manager->setStatus(smId, smStatus);
 		}
 		else if (smStatus == eveSmAPPEND){
-			appendedSM->pauseSM(true);
+			appendedSM->pauseChain();
 		}
-	}
-	if ((smStatus == eveSmEXECUTING) || (smStatus == eveSmTRIGGERWAIT)) {
-		smLastStatus = smStatus;
-		smStatus = eveSmPAUSED;
-		manager->setStatus(smId, smStatus);
-	}
+		return;
 }
 
 /**
- * \brief if scanModule is executing, jump forward to stage stgFinish and execute
- * @param chainSignal if true, is signal from chain to be applied to all scanmodules
+ * \brief walk down until the SM with smid is found, call chainStop if SM is executing
+ * 		(a stop signal always stops the whole chain)
  *
- * a stop signal always applies to the whole chain,
- * call the managers stop method which calls us
+ * @param smid	smid of the sm to be stopped
+ * @return true if SM with smid was found
  *
  */
-void eveScanModule::stopSM(bool chainSignal) {
+bool eveScanModule::stopSM(int smid) {
 
-	if (!chainSignal) {
-		manager->smStop();
+	bool found = false;
+	if (smId == smid){
+		if ((smStatus == eveSmEXECUTING) || (smStatus == eveSmTRIGGERWAIT)) manager->smStop();
 	}
-	else {
-		if (nestedSM != NULL) nestedSM->stopSM(true);
+	if (!found && nestedSM) found = nestedSM->stopSM(smid);
+	if (!found && appendedSM) found = appendedSM->stopSM(smid);
+	return found;
+}
+
+/**
+ * \brief find the all executing SMs in the SM-tree; there jump forward to stage stgFinish
+ *
+ *
+ */
+void eveScanModule::stopChain() {
+
+		if (nestedSM != NULL) nestedSM->stopChain();
 		if ((smStatus == eveSmEXECUTING) || (smStatus == eveSmPAUSED)
 			|| (smStatus == eveSmTRIGGERWAIT)) {
 			if (smStatus != eveSmEXECUTING) manager->setStatus(smId, eveSmEXECUTING);
@@ -740,28 +841,40 @@ void eveScanModule::stopSM(bool chainSignal) {
 			currentStageCounter = 1;
 			emit sigExecStage();
 		}
-		else if (smStatus == eveSmAPPEND) appendedSM->stopSM(true);
-	}
+		else if (smStatus == eveSmAPPEND) appendedSM->stopChain();
 }
 
 /**
- * \brief emergency halt: if scanModule is executing, stop running motors,
- * set stage after postscan and execute
- * @param chainSignal if not set, call the managers halt method which calls us
+ * \brief walk down until the SM with smid is found, call chainHalt if SM is executing
+ * 		(a halt signal always halts the whole chain)
  *
+ * @param smid	smid of the sm to be stopped
+ * @return true if SM with smid was found
  *
  */
-void eveScanModule::haltSM(bool chainSignal) {
+bool eveScanModule::haltSM(int smid) {
 
-	if (!chainSignal) {
-		manager->smHalt();
+	bool found = false;
+	if (smId == smid){
+		if ((smStatus == eveSmEXECUTING) || (smStatus == eveSmTRIGGERWAIT)) manager->smHalt();
 	}
-	else {
-		if (nestedSM != NULL) nestedSM->haltSM(true);
+	if (!found && nestedSM) found = nestedSM->haltSM(smid);
+	if (!found && appendedSM) found = appendedSM->haltSM(smid);
+	return found;
+}
+
+/**
+ * \brief find the all executing SMs in the SM-tree; stop running motors,
+ * 		jump forward to stage after postscan
+ */
+void eveScanModule::haltChain() {
+
+		if (nestedSM != NULL) nestedSM->haltChain();
 		if ((smStatus == eveSmEXECUTING) || (smStatus == eveSmPAUSED)
-			|| (smStatus == eveSmTRIGGERWAIT)) {
-			foreach (eveSMAxis *axis, *axisList){
-				axis->stop();
+			|| (smStatus == eveSmTRIGGERWAIT) || (smStatus == eveSmNOTSTARTED)) {
+
+			if ((smStatus == eveSmEXECUTING) || (smStatus == eveSmPAUSED)) {
+				foreach (eveSMAxis *axis, *axisList) axis->stop();
 			}
 			if (smStatus != eveSmEXECUTING) manager->setStatus(smId, eveSmEXECUTING);
 			smStatus = eveSmEXECUTING;
@@ -770,29 +883,44 @@ void eveScanModule::haltSM(bool chainSignal) {
 			currentStageCounter = 1;
 			emit sigExecStage();
 		}
-		else if (smStatus == eveSmAPPEND) appendedSM->haltSM(true);
-	}
+		else if (smStatus == eveSmAPPEND) appendedSM->haltChain();
 }
 
-void eveScanModule::breakSM(bool chainSignal) {
+/**
+ * \brief walk down until the SM with smid is found and end it,
+ * 			if it is executing
+ *
+ * @param smid	smid of the sm to be paused
+ * @return true if SM with smid was found
+ *
+ */
+bool eveScanModule::breakSM(int smid) {
 
-	if (chainSignal) {
-		breakNestedSM();
+	bool found = false;
+	if (smId == smid){
+		if ((smStatus == eveSmEXECUTING) || (smStatus == eveSmPAUSED)
+				|| (smStatus == eveSmTRIGGERWAIT)) {
+			smStatus = eveSmEXECUTING;
+			currentStage = eveStgNEXTPOS;
+			currentStageReady = true;
+			emit sigExecStage();
+		}
+		found = true;
 	}
-	else if ((smStatus == eveSmEXECUTING) || (smStatus == eveSmPAUSED)
-			|| (smStatus == eveSmTRIGGERWAIT)) {
-		smStatus = eveSmEXECUTING;
-		currentStage = eveStgNEXTPOS;
-		currentStageReady = true;
-		emit sigExecStage();
-	}
+	if (!found && nestedSM) found = nestedSM->breakSM(smid);
+	if (!found && (smStatus == eveSmAPPEND)) found = appendedSM->breakSM(smid);
+	return found;
 }
 
-bool eveScanModule::breakNestedSM() {
+/**
+ * \brief find the lowest executing SM in the SM-tree and end it,
+ *
+ */
+bool eveScanModule::breakChain() {
 
 	if ((smStatus == eveSmEXECUTING) || (smStatus == eveSmPAUSED)
 				|| (smStatus == eveSmTRIGGERWAIT)) {
-		if (!((nestedSM) && nestedSM->breakNestedSM())){
+		if (!((nestedSM) && nestedSM->breakChain())){
 			smStatus = eveSmEXECUTING;
 			currentStage = eveStgNEXTPOS;
 			currentStageReady = true;
@@ -801,29 +929,60 @@ bool eveScanModule::breakNestedSM() {
 		return true;
 	}
 	else if (smStatus == eveSmAPPEND) {
-		return appendedSM->breakNestedSM();
+		return appendedSM->breakChain();
 	}
 	return false;
 }
 
-void eveScanModule::redoSM(bool chainSignal) {
+/**
+ * \brief walk down until the SM with smid is found and signal redo,
+ * 			if it is executing
+ *
+ * @param smid	smid of the sm to be paused
+ * @return true if SM with smid was found
+ *
+ */
+bool eveScanModule::redoSM(int smid) {
 
-	if (chainSignal) {
+	bool found = false;
+	if (smId == smid){
 		if ((smStatus == eveSmEXECUTING) || (smStatus == eveSmPAUSED)
-					|| (smStatus == eveSmTRIGGERWAIT)) {
-			if (nestedSM) nestedSM->redoSM(true);
+			|| (smStatus == eveSmTRIGGERWAIT)) {
 			catchedRedo = true;
 			emit sigExecStage();
 		}
-		else if (smStatus == eveSmAPPEND) {
-			appendedSM->redoSM(true);
-		}
 	}
-	else if ((smStatus == eveSmEXECUTING) || (smStatus == eveSmPAUSED)
-			|| (smStatus == eveSmTRIGGERWAIT)) {
+	if (!found && nestedSM) found = nestedSM->redoSM(smid);
+	if (!found && (smStatus == eveSmAPPEND)) found = appendedSM->redoSM(smid);
+	return found;
+}
+
+/**
+ * \brief find the all executing SMs in the SM-tree; signal redo
+ *
+ */
+void eveScanModule::redoChain() {
+
+	if ((smStatus == eveSmEXECUTING) || (smStatus == eveSmPAUSED)
+				|| (smStatus == eveSmTRIGGERWAIT)) {
+		if (nestedSM) nestedSM->redoChain();
 		catchedRedo = true;
 		emit sigExecStage();
 	}
+	else if (smStatus == eveSmAPPEND) {
+		appendedSM->redoChain();
+	}
+}
+
+void eveScanModule::sendMessage(eveBaseDataMessage* message){
+
+	if (message != NULL){
+		message->setChainId(chainId);
+		message->setSmId(smId);
+		manager->sendMessage(message);
+	}
+	else
+		sendError(ERROR, 0, "discarding empty data message");
 }
 
 void eveScanModule::sendError(int severity, int errorType,  QString message){

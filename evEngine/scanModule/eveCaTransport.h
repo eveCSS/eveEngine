@@ -11,6 +11,8 @@
 #include <QObject>
 #include <QStringList>
 #include <QString>
+#include <QTimer>
+#include <QHash>
 
 #include "eveBaseTransport.h"
 #include "eveDevice.h"
@@ -21,7 +23,6 @@ enum eveTransActionT {eveCONNECT, eveREAD, eveWRITE, eveIDLE };
 enum eveTransStatusT {eveCONNECTED, eveNOTCONNECTED, eveTIMEOUT, eveUNDEFINED };
 
 //class eveScanManager;
-
 class eveCaTransport: public eveBaseTransport {
 
 	Q_OBJECT
@@ -33,8 +34,9 @@ public:
 	int writeData(eveVariant, bool queue=false);
 	int connectTrans();
 	bool isConnected();
-	bool haveData(){return haveNewData;};
+	bool haveData(){if (newData == NULL) return false; else return true;};
 	eveDataMessage *getData();
+	QStringList* getInfo();
 	static int execQueue();
 
 	void sendError(int, int,  QString);
@@ -69,7 +71,10 @@ signals:
     void enumReady(QStringList *);
 
 private:
-	void getEnumStrs();
+    static QHash<struct ca_client_context *, int> contextCounter;
+    QTimer *getTimer;
+    QTimer *putTimer;
+    void getEnumStrs();
 	QString getEnumString(int index);
 	QString getName(){return name;};
 	eveTransStatusT transStatus;
@@ -89,7 +94,6 @@ private:
 	void *writeDataPtr;
 	bool needEnums;
 	bool enumsInProgress;
-	bool haveNewData;
 	struct ca_client_context *caThreadContext;
 
 };

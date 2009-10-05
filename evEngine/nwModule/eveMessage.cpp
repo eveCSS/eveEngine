@@ -13,16 +13,28 @@ eveMessage::eveMessage()
  * \brief Constructor
  * \param mtype the messagetype definition
  */
-eveMessage::eveMessage(int mtype, int prio)
+eveMessage::eveMessage(int mtype, int prio, int dest)
 {
 	priority = prio;
+	destination = dest;
 	type = mtype;
+	// TODO remove this assertion
 	assert ((type == EVEMESSAGETYPE_START) ||
 			(type == EVEMESSAGETYPE_HALT) ||
+			(type == EVEMESSAGETYPE_STORAGEACK) ||
+			(type == EVEMESSAGETYPE_STORAGECONFIG) ||
+			(type == EVEMESSAGETYPE_CHAINSTATUS) ||
+			(type == EVEMESSAGETYPE_ENGINESTATUS) ||
+			(type == EVEMESSAGETYPE_DATA) ||
+			(type == EVEMESSAGETYPE_BASEDATA) ||
 			(type == EVEMESSAGETYPE_BREAK) ||
 			(type == EVEMESSAGETYPE_STOP) ||
 			(type == EVEMESSAGETYPE_PAUSE) ||
-			(type == EVEMESSAGETYPE_ENDPROGRAM));
+			(type == EVEMESSAGETYPE_AUTOPLAY) ||
+			(type == EVEMESSAGETYPE_ENDPROGRAM) ||
+			(type == EVEMESSAGETYPE_DEVINFO) ||
+			(type == EVEMESSAGETYPE_EVENTREGISTER) ||
+			(type == EVEMESSAGETYPE_REMOVEFROMPLAYLIST));
 }
 
 eveMessage::~eveMessage()
@@ -36,9 +48,8 @@ eveMessage::~eveMessage()
  */
 bool eveMessage::compare(eveMessage *message)
 {
-	if (!message) return false;
-	if (type != message->getType()) return false;
-	return true;
+	// implement this in childs
+	return false;
 }
 
 
@@ -89,13 +100,14 @@ bool eveMessageTextList::compare(eveMessage *message)
  * \param mtype the type of message
  * \param ival integer value of the message
  */
-eveMessageInt::eveMessageInt(int iType, int ival, int prio)
+eveMessageInt::eveMessageInt(int iType, int ival, int prio, int dest) :
+	eveMessage(iType, prio, dest)
 {
-	priority = prio;
 	value = ival;
-	type = iType;
 	// check the allowed types
-	assert ((type == EVEMESSAGETYPE_AUTOPLAY) || (type == EVEMESSAGETYPE_REMOVEFROMPLAYLIST));
+	assert ((type == EVEMESSAGETYPE_AUTOPLAY) ||
+			(type == EVEMESSAGETYPE_STORAGEACK) ||
+			(type == EVEMESSAGETYPE_REMOVEFROMPLAYLIST));
 }
 /**
  * \brief compare two messages
@@ -219,10 +231,9 @@ eveCurrentXmlMessage::~eveCurrentXmlMessage()
  * \param xmlname Name of currently processing scanmodule
  * \param status status of currently processing scanmodule
  */
-eveEngineStatusMessage::eveEngineStatusMessage(int status, QString xmlname, int prio)
+eveEngineStatusMessage::eveEngineStatusMessage(int status, QString xmlname, int prio, int dest) :
+	eveMessage(EVEMESSAGETYPE_ENGINESTATUS, 0, 0)
 {
-	type = EVEMESSAGETYPE_ENGINESTATUS;
-	priority = prio;
 	XmlId = new QString(xmlname);
 	estatus = status;
 	timestamp = epicsTime::getCurrent();
@@ -259,9 +270,9 @@ bool eveEngineStatusMessage::compare(eveMessage *message)
  * \param sid	scanmodule id
  * \param pc	position counter
  */
-eveChainStatusMessage::eveChainStatusMessage(int status, int cid, int sid, int pc)
+eveChainStatusMessage::eveChainStatusMessage(int status, int cid, int sid, int pc) :
+	eveMessage(EVEMESSAGETYPE_CHAINSTATUS, 0, 0)
 {
-	type = EVEMESSAGETYPE_CHAINSTATUS;
 	cstatus = status;
 	chainId = cid;
 	smId = sid;
@@ -275,10 +286,9 @@ eveChainStatusMessage::eveChainStatusMessage(int status, int cid, int sid, int p
  * \param pc	position counter
  * \param epTime	epicsTime
  */
-eveChainStatusMessage::eveChainStatusMessage(int status, int cid, int sid, int pc, epicsTime epTime, int remTime, int prio)
+eveChainStatusMessage::eveChainStatusMessage(int status, int cid, int sid, int pc, epicsTime epTime, int remTime, int prio, int dest) :
+	eveMessage(EVEMESSAGETYPE_CHAINSTATUS, prio, dest)
 {
-	type = EVEMESSAGETYPE_CHAINSTATUS;
-	priority = prio;
 	cstatus = status;
 	chainId = cid;
 	smId = sid;
@@ -465,6 +475,44 @@ bool eveErrorMessage::compare(eveMessage *message)
 }
 
 /*
+ * Class eveBaseDataMessage
+ */
+/**
+ */
+eveBaseDataMessage::eveBaseDataMessage(int mtype, int cid, int smid, QString xmlid, QString nam, int prio, int dest) :
+	eveMessage(mtype, prio, dest)
+{
+	chainId = cid;
+	smId = smid;
+	name = nam;
+	xmlId = xmlid;
+}
+
+eveBaseDataMessage::eveBaseDataMessage(int mtype, int prio, int dest) :
+	eveMessage(mtype, prio, dest)
+{
+}
+
+eveBaseDataMessage::~eveBaseDataMessage()
+{
+}
+
+/**
+ * \brief return a copy of this message object
+ */
+eveBaseDataMessage* eveBaseDataMessage::clone(){
+
+	return new eveBaseDataMessage(EVEMESSAGETYPE_BASEDATA, chainId, smId, xmlId, name, priority, destination);
+}
+
+/**
+ * \brief compare is not implemented (nor used)
+ */
+bool eveBaseDataMessage::compare(eveBaseDataMessage* with){
+	return false;
+}
+
+/*
  * Class eveDataMessage
  */
 /**
@@ -474,9 +522,9 @@ bool eveErrorMessage::compare(eveMessage *message)
  * \param mtime time of data acquisition
  * \param data integer array data
  */
-eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, epicsTime mtime, QVector<int> data)
+eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, epicsTime mtime, QVector<int> data, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, prio, dest)
 {
-	type = EVEMESSAGETYPE_DATA;
 	ident = Id;
 	dataStatus = stat;
 	dataModifier = dmod;
@@ -484,7 +532,8 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
 	dataArrayInt = QVector<int>(data);
 	arraySize = dataArrayInt.size();
 	timestamp = mtime;
-};
+	posCount = 0;
+}
 /**
  * \param Id id (name) of Device which sent the data
  * \param stat status of the data
@@ -492,8 +541,9 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
  * \param mtime time of data acquisition
  * \param data short array data
  */
-eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, epicsTime mtime, QVector<short> data){
-	type = EVEMESSAGETYPE_DATA;
+eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, epicsTime mtime, QVector<short> data, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, prio, dest)
+{
 	ident = Id;
 	dataStatus = stat;
 	dataModifier = dmod;
@@ -501,7 +551,8 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
 	dataArrayShort = QVector<short>(data);
 	arraySize = dataArrayShort.size();
 	timestamp = mtime;
-};
+	posCount = 0;
+}
 /**
  * \param Id id (name) of Device which sent the data
  * \param stat status of the data
@@ -509,8 +560,9 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
  * \param mtime time of data acquisition
  * \param data char array data
  */
-eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, epicsTime mtime, QVector<signed char> data){
-	type = EVEMESSAGETYPE_DATA;
+eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, epicsTime mtime, QVector<signed char> data, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, prio, dest)
+{
 	ident = Id;
 	dataStatus = stat;
 	dataModifier = dmod;
@@ -518,7 +570,8 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
 	dataArrayChar = QVector<signed char>(data);
 	arraySize = dataArrayChar.size();
 	timestamp = mtime;
-};
+	posCount = 0;
+}
 /**
  * \param Id id (name) of Device which sent the data
  * \param stat status of the data
@@ -526,8 +579,9 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
  * \param mtime time of data acquisition
  * \param data float array data
  */
-eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, epicsTime mtime, QVector<float> data){
-	type = EVEMESSAGETYPE_DATA;
+eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, epicsTime mtime, QVector<float> data, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, prio, dest)
+{
 	ident = Id;
 	dataStatus = stat;
 	dataModifier = dmod;
@@ -535,7 +589,8 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
 	dataArrayFloat = QVector<float>(data);
 	arraySize = dataArrayFloat.size();
 	timestamp = mtime;
-};
+	posCount = 0;
+}
 /**
  * \param Id id (name) of Device which sent the data
  * \param stat status of the data
@@ -543,8 +598,9 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
  * \param mtime time of data acquisition
  * \param data double array data
  */
-eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, epicsTime mtime, QVector<double> data){
-	type = EVEMESSAGETYPE_DATA;
+eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, epicsTime mtime, QVector<double> data, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, prio, dest)
+{
 	ident = Id;
 	dataStatus = stat;
 	dataModifier = dmod;
@@ -552,7 +608,8 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
 	dataArrayDouble = QVector<double>(data);
 	arraySize = dataArrayDouble.size();
 	timestamp = mtime;
-};
+	posCount = 0;
+}
 /**
  * \param Id id (name) of Device which sent the data
  * \param stat status of the data
@@ -560,8 +617,9 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
  * \param mtime time of data acquisition
  * \param data double array data
  */
-eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, epicsTime mtime, QStringList data){
-	type = EVEMESSAGETYPE_DATA;
+eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, epicsTime mtime, QStringList data, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, prio, dest)
+{
 	ident = Id;
 	dataStatus = stat;
 	dataModifier = dmod;
@@ -569,10 +627,11 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
 	dataStrings = QStringList(data);
 	arraySize = dataStrings.size();
 	timestamp = mtime;
-};
+	posCount = 0;
+}
 
 eveDataMessage::~eveDataMessage() {
-};
+}
 
 /**
  * \brief return a copy of this message object
@@ -583,31 +642,35 @@ eveDataMessage* eveDataMessage::clone(){
 
 	switch (dataType) {
 		case epicsInt8T:					/* epicsInt8 */
-			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayChar);
+			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayChar, priority, destination);
 		break;
 		case epicsInt16T:					/* epicsInt16 */
-			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayShort);
+			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayShort, priority, destination);
 		break;
 		case epicsInt32T:					/* epicsInt32 */
-			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayInt);
+			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayInt, priority, destination);
 		break;
 		case epicsFloat32T:					/* epicsFloat32 */
-			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayFloat);
+			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayFloat, priority, destination);
 		break;
 		case epicsFloat64T:					/* epicsFloat64 */
-			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayDouble);
+			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayDouble, priority, destination);
 		break;
 		case epicsStringT:					/* epicsString */
-			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataStrings);
+			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataStrings, priority, destination);
 		break;
 		default:
 			eveError::log(4,"eveDataMessage unknown data type");
 			assert(true);
 		break;
 	}
-	message->setPriority(this->getPriority());
+	message->setChainId(chainId);
+	message->setSmId(smId);
+	message->setXmlId(xmlId);
+	message->setName(name);
+	message->setPositionCount(posCount);
 	return message;
-};
+}
 
 eveVariant eveDataMessage::toVariant(){
 	eveVariant result;
@@ -644,20 +707,57 @@ eveVariant eveDataMessage::toVariant(){
 	return result;
 }
 
+eveDevInfoMessage::eveDevInfoMessage(int cid, int sid, QString xmlid, QString name, eveType dtype, bool arr, QStringList* info, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DEVINFO, cid, sid, xmlid, name, prio, dest)
+{
+	dataType = dtype;
+	isarray = arr;
+	infoList = info;
+}
+eveDevInfoMessage::eveDevInfoMessage(QString xmlid, QString name, QStringList* info, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DEVINFO, 0, 0, xmlid, name, prio, dest)
+{
+	infoList = info;
+}
+eveDevInfoMessage::eveDevInfoMessage(QStringList* info, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DEVINFO, 0, 0, QString(), QString(), prio, dest)
+{
+	infoList = info;
+}
+
+eveDevInfoMessage::~eveDevInfoMessage() {
+	if (infoList != NULL) {
+		infoList->clear();
+		delete infoList;
+	}
+}
+
+eveDevInfoMessage* eveDevInfoMessage::clone() {
+	return new eveDevInfoMessage(chainId, smId, xmlId, name, dataType, isarray, infoList, priority, destination);
+}
+
+/**
+ * \brief compare is not implemented (nor used)
+ */
+bool eveDevInfoMessage::compare(eveDevInfoMessage* with){
+	return false;
+}
+
 /*
  * Class evePlayListMessage
  */
 /**
  * \param playlist current playlist
  */
-evePlayListMessage::evePlayListMessage(const QList<evePlayListEntry> playlist)
+evePlayListMessage::evePlayListMessage(const QList<evePlayListEntry> playlist, int prio)
 {
 	type = EVEMESSAGETYPE_PLAYLIST;
+	priority = prio;
 	plList = new QList<evePlayListEntry>(playlist);
 }
 evePlayListMessage::~evePlayListMessage() {
 	delete plList;
-};
+}
 
 /**
  * \brief compare two messages
@@ -673,6 +773,14 @@ bool evePlayListMessage::compare(eveMessage *message)
 	return false;
 }
 /**
+ * \brief clone a messages
+ * \return identical eveStorageMessage Pointer
+ */
+evePlayListMessage* evePlayListMessage::clone()
+{
+	return new evePlayListMessage(*plList, priority);
+}
+/**
  * \brief get playlist entry at specified index
  * \param index index
  * \return entry at index, returns an entry with pid=-1, if index is out of range
@@ -685,3 +793,48 @@ evePlayListEntry & evePlayListMessage::getEntry(int index){
 	return entry;
 }
 
+/*
+ * Class eveStorageMessage
+ */
+/**
+ * \param playlist current playlist
+ */
+eveStorageMessage::eveStorageMessage(int chid, int channel, QString fname, QString ftype, QString fplugin, QString fpath, int prio, int dest) :
+	eveMessage(EVEMESSAGETYPE_STORAGECONFIG, prio, dest)
+{
+	chainId = chid;
+	channelId = channel;
+	fileName = fname;
+	fileType = ftype;
+	pluginName = fplugin;
+	pluginPath = fpath;
+}
+eveStorageMessage::~eveStorageMessage() {
+}
+
+/**
+ * \brief compare two messages
+ * \param message a pointer to the message to compare with
+ * \return true if messages are identical else false
+ */
+bool eveStorageMessage::compare(eveMessage *message)
+{
+	if (!message) return false;
+	if (type != message->getType()) return false;
+	if ((((eveStorageMessage*)message)->getChainId() == chainId ) &&
+		(((eveStorageMessage*)message)->getChannelId() == chainId ) &&
+		(((eveStorageMessage*)message)->getFileName() == fileName ) &&
+		(((eveStorageMessage*)message)->getFileType() == fileType ) &&
+		(((eveStorageMessage*)message)->getPluginName() == pluginName ) &&
+		(((eveStorageMessage*)message)->getPluginPath() == pluginPath )) return true;
+	return false;
+}
+
+/**
+ * \brief clone a messages
+ * \return identical eveStorageMessage Pointer
+ */
+eveStorageMessage* eveStorageMessage::clone()
+{
+	return new eveStorageMessage(chainId, channelId, fileName, fileType, fileType, pluginPath, priority, destination);
+}

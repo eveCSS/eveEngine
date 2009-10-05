@@ -3,11 +3,11 @@
 
 #include <QObject>
 #include <QHash>
+#include <QList>
 #include <QString>
+#include <QThread>
 #include <QReadWriteLock>
 #include "eveMessageChannel.h"
-#include "eveNwThread.h"
-#include "eveManagerThread.h"
 
 class eveRequestManager;
 
@@ -39,13 +39,17 @@ signals:
 
 private:
 	void addError(int, int,  QString);
+	bool sendToStorage(eveMessage*);
+	bool haveStorage(){return !storageChannelList.isEmpty();};
 	int scanChannelCounter;
 	int nextChannel;
-	eveNwThread *nwThread;
-	eveManagerThread * mThread;
+	QThread* nwThread;
+	QThread* managerThread;
+	QThread* eventThread;
 	eveMessageChannel * netChannel;
 	QHash<int, eveMessageChannel * > mChanHash;
 //	QList<eveMessageChannel> scanChannels;
+	QList<int> storageChannelList;
 	static eveMessageHub* mHub;
 	int engineStatus;
 	QString currentXmlId;

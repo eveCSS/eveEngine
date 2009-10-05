@@ -30,6 +30,7 @@ private:
 	QTextEdit * textDisplay;
 	QStringList logQueue;
 	QReadWriteLock lock;
+	int lineCount;
 };
 
 #endif /*EVEERROR_H_*/

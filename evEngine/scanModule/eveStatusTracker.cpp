@@ -48,9 +48,13 @@ bool eveBasicStatusTracker::setChainStatus(eveChainStatusMessage* message) {
 			}
 			break;
 		case eveChainDONE:
+		case eveChainSTORAGEDONE:
 			foreach (int cid, chainStatus.keys()){
-				if (cid == chainId) continue;
-				if (chainStatus.value(cid) != eveChainDONE) AllDone = false;
+				//if (cid == chainId) continue;
+				chainStatusT endStatus = eveChainDONE;
+				if (storageList.contains(cid))
+					endStatus = eveChainSTORAGEDONE;
+				if (chainStatus.value(cid) != endStatus) AllDone = false;
 			}
 			if (AllDone){
 				if (engineStatus != eveEngIDLENOXML){
@@ -59,6 +63,7 @@ bool eveBasicStatusTracker::setChainStatus(eveChainStatusMessage* message) {
 					loadedXML = false;
 					XmlName.clear();
 					chainStatus.clear();
+					storageList.clear();
 					emit engineIdle();
 				}
 			}
@@ -164,8 +169,8 @@ bool eveManagerStatusTracker::setLoadingXML(QString xmlname) {
 	return false;
 }
 /**
- * \brief tell tracker that loading of XML was successfull / unsuccessful
- * \param status true if loading of XML was successfull, else false
+ * \brief tell tracker that loading of XML was successful / unsuccessful
+ * \param status true if loading of XML was successful, else false
  * \return true if command may be set, else false
  */
 bool eveManagerStatusTracker::setXMLLoaded(bool status) {

@@ -14,6 +14,9 @@
 #include "db_access.h"
 //#include "eveScanManager.h"
 
+QHash<struct ca_client_context *, int> eveCaTransport::contextCounter = QHash<struct ca_client_context *, int>();
+
+
 /**
  * \brief init connection to EPICS PV
  * \param transdef definition of EPICS PV related properties
@@ -30,11 +33,20 @@ eveCaTransport::eveCaTransport(QObject *parent, QString devname, eveCaTransportD
 	chanChid = 0;
 	dataPtr = NULL;
 	writeDataPtr = NULL;
-	haveNewData = false;
 	name = devname;
+	newData = NULL;
 	pvname = transDef->getName();
 	//scanManager = NULL; 	// TODO set this to send errors
 	timeOut = (int)(transDef->getTimeout()*1000.0);			// TODO get timeout from transdef, keep a low limit of 1 s
+
+	getTimer = new QTimer(this);
+	getTimer->setSingleShot(true);
+	getTimer->setInterval(timeOut);
+	connect(getTimer, SIGNAL(timeout()), this, SLOT(getTimeout()));
+	putTimer = new QTimer(this);
+	putTimer->setSingleShot(true);
+	putTimer->setInterval(timeOut);
+	connect(putTimer, SIGNAL(timeout()), this, SLOT(putTimeout()));
 
 	connect (this, SIGNAL(connectChange(int)), this, SLOT(setCnctStatus(int)), Qt::QueuedConnection);
 	connect (this, SIGNAL(dataReady(eveDataMessage *)), this, SLOT(readDone(eveDataMessage *)), Qt::QueuedConnection);
@@ -47,6 +59,21 @@ eveCaTransport::~eveCaTransport(){
 
 	ca_clear_channel(chanChid);
 	caflush();
+	if (contextCounter.contains(caThreadContext)){
+		int tmp = contextCounter.value(caThreadContext);
+		--tmp;
+		sendError(DEBUG, 0, QString("CATransport Destr.: %1 (%2) channels remaining").arg(tmp).arg((int)caThreadContext));
+		if (tmp > 0){
+			contextCounter.insert(caThreadContext, tmp);
+		}
+		else {
+			sendError(DEBUG, 0, "destroy CA Context");
+			//ca_context_destroy();
+			contextCounter.remove(caThreadContext);
+		}
+	}
+
+
 }
 
 /**
@@ -61,10 +88,16 @@ int eveCaTransport::connectTrans(){
 	if (caThreadContext == NULL) {
 		sendError(INFO, 0, "creating CA Context");
 		status = ca_context_create (ca_enable_preemptive_callback);
+		caThreadContext = ca_current_context();
 		if (status != ECA_NORMAL) sendError(ERROR, 0, "Error creating CA Context");
+		contextCounter.insert(caThreadContext, 0);
 //		caThreadContext = ca_current_context();
 //		printf("Assigned context: %d\n",caThreadContext);
 	}
+	int tmp = contextCounter.value(caThreadContext);
+	contextCounter.insert(caThreadContext, ++tmp);
+	sendError(DEBUG, 0, QString("CaTransport ContextCount: %1 (%2)").arg(tmp).arg((int)caThreadContext));
+
 //	printf("Thread context: %d\n",caThreadContext);
 //	printf("Thread id: %d\n",QThread::currentThread());
 	if (transStatus != eveUNDEFINED) return false;
@@ -252,7 +285,7 @@ bool eveCaTransport::getCB(bool flush)
 	}
 	if (flush) caflush();
 
-	QTimer::singleShot(timeOut, this, SLOT(getTimeout()));
+	getTimer->start();
 	return retstatus;
 }
 
@@ -264,7 +297,7 @@ bool eveCaTransport::getCB(bool flush)
 void eveCaTransport::eveCaTransportGetCB(struct event_handler_args arg){
 
 	//void *newdata = arg.usr;
-	eveDataMessage *newdata;
+	eveDataMessage *newdata = NULL;;
 	eveCaTransport *pv = (eveCaTransport *) ca_puser(arg.chid);
 
 	if ((arg.status == ECA_NORMAL) && (arg.count == pv->getElemCnt())
@@ -328,34 +361,22 @@ void eveCaTransport::eveCaTransportGetCB(struct event_handler_args arg){
 			}
 			newdata = new eveDataMessage(id, dStatus, dataMod, etime, qsl);
 		}
-		else {
-			newdata = NULL;
-		}
 	}
-   	else {
-		newdata = NULL;
-   	}
+	// newdata may be NULL
 	emit pv->dataReady(newdata);
 }
 
 /** \brief is called if data has been received
  *
- *	if haveNewData is true, the previous data has not been fetched, delete it
  */
 void eveCaTransport::readDone(eveDataMessage *data) {
 
 	if (currentAction == eveREAD){
+		getTimer->stop();
 		currentAction = eveIDLE;
-		disconnect(this, SLOT(getTimeout()));
-		if (data == NULL) {
-			emit done(1);
-		}
-		else {
-			if (haveNewData) delete newData;
-			newData=data;
-			haveNewData = true;
-			emit done(0);
-		}
+		if (newData != NULL) delete newData;
+		newData=data;
+		emit done(0);
 	}
 	else {
 		sendError(MINOR, 0, QString("read callback called, but current action was: %1").arg((int)currentAction));
@@ -363,12 +384,13 @@ void eveCaTransport::readDone(eveDataMessage *data) {
 }
 
 /**
- * \brief get the internal data, mark the data as fetched
- * @return last read data
+ * \brief get the data, may be a pointer to NULL
+ * @return eveDataMessage or NULL
  */
 eveDataMessage *eveCaTransport::getData(){
-	haveNewData = false;
-	return newData;
+	eveDataMessage *return_data = newData;
+	newData = NULL;
+	return return_data;
 };
 
 void eveCaTransport::getTimeout() {
@@ -412,7 +434,7 @@ bool eveCaTransport::putCB(eveType datatype, int elemCount, void* data, bool exe
 		retstatus = false;
 	}
 	if (execute) caflush();
-	QTimer::singleShot(timeOut, this, SLOT(putTimeout()));
+	putTimer->start();
 	return retstatus;
 }
 
@@ -437,7 +459,7 @@ void eveCaTransport::eveCaTransportPutCB(struct event_handler_args arg){
 void eveCaTransport::writeDone(int status) {
 
 	if (currentAction == eveWRITE){
-		disconnect(this, SLOT(putTimeout()));
+		putTimer->stop();
 		emit done(status);
 		currentAction = eveIDLE;
 	}
@@ -504,6 +526,7 @@ void eveCaTransport::sendError(int severity, int errorType,  QString message){
 
 	// for now we write output to local console too
 	eveError::log(severity, QString("PV %1(%2): %3").arg(name).arg(pvname).arg(message));
+	printf("CaTranport: %d, %s\n", severity, qPrintable(QString("PV %1(%2): %3").arg(name).arg(pvname).arg(message)));
 //	if (scanManager != NULL)
 //		scanManager->sendError(severity, EVEMESSAGEFACILITY_CATRANSPORT, errorType,  QString("PV %1: %2").arg(pvname).arg(message));
 }
@@ -575,6 +598,15 @@ int eveCaTransport::writeData(eveVariant writedata, bool queue){
 		return 1;
 }
 
+/**
+ *
+ * @return a QStringHash with PV=Value
+ */
+QStringList* eveCaTransport::getInfo(){
+	QStringList *sl = new QStringList();
+	sl->append(QString("PV: %1").arg(pvname));
+	return sl;
+}
 /**
  * start executing previously queued commands
  */

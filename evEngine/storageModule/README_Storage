@@ -5,7 +5,7 @@ Es gibt einen StorageThread pro Datenfile:
    	Adresse mitgeteilt werden. Da geht so:
    	eveManager erzeugt einen StorageManager in eigenem StorageThread
    	für jeden Dateinamen.
-   	ScanManager schickt ein Initialisierungspaket (StoarageConfig)
+   	ScanManager schickt ein Initialisierungspaket (StorageConfig)
    	und registriert sich dabei beim StorageManager für seinen
    	Datenfilenamen. Der entsprechende StorageManager schickt eine
    	StorageInfo-Nachricht zurück und teilt seine ChannelID mit.
@@ -15,4 +15,46 @@ Es gibt einen StorageThread pro Datenfile:
    	Falls die Input-Queue des Storage -Threads überläuft,
    	kann er gezielt die richtigen Chains abbremsen.
    		
-   		
+	Daten-messages werden von der Chain an den Storagethread des
+	passenden Dateinamens geschickt. Dort werden sie entsprechend
+	ihrer Chain-Id an unterschiedliche DataCollectoren weitergereicht,
+	die dann an eine FileWriter-Instanz weiterreichen.
+	
+	Nach jedem Messpunkt wird die formatspezifische addData-Routine
+	für alle abzuspeichernde Geräte (Motoren und Detektoren) aufgerufen.
+	
+	Anschließend wird die formatspezifische nextPosition()-Methode
+	aufgerufen.
+	
+	Formatspezifisches FileWriter Interface:
+		Reihenfolge ist wichtig: init, dann setRow, dann open etc.
+	
+	int init(setId, QString paralist)
+		paralist	parameterliste aus plugin definition
+		return 		error severity;
+		
+		may be called more than once
+	int setCols(int setId, rowId, name, info);
+		return 		error severity;
+
+	int open(int setId)
+		setId: Id des Datensets (chain-ID)
+		fileName: absoluter Filename inkl. Nummer (immer mit /)
+		return error severity;
+		öffnet File / Datasets etc.
+
+		may be called more than once:
+	int addData(setId, dataMessage)
+	
+	nextPosition is obsolete, we deliver a positionCounter
+	in the data message
+	//void nextPosition(setId, index)
+		
+	int close(setId)
+		return error severity;
+
+	QString error(int setId);
+		returns a string describing the last error
+
+	
+	

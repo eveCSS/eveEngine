@@ -31,7 +31,7 @@ eveSMDevice::eveSMDevice(eveScanModule* scanmodule, eveDevice* definition, eveVa
 	deviceOK = false;
 	valueTrans = NULL;
 
-	if (definition->getValueCmd() != NULL){
+	if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
 		if (definition->getValueCmd()->getTrans()->getTransType() == eveTRANS_CA){
 			valueTrans = new eveCaTransport(this, name, (eveCaTransportDef*)definition->getValueCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);

@@ -37,22 +37,30 @@ public:
 	eveScanModule(eveScanManager *, eveXMLReader *, int, int);
 	virtual ~eveScanModule();
 	bool isDone(){return (smStatus==eveSmDONE)?true:false;}
-	bool resumeSM();
-	bool breakNestedSM();
 	void initialize();
 	void sendError(int, int, int, QString);
 	void gotoStart();
 	void readPos();
+	void start();
+
+	bool startSM(int);
+	bool stopSM(int);
+	bool breakSM(int);
+	bool pauseSM(int);
+	bool resumeSM(int);
+	bool haltSM(int);
+	bool redoSM(int);
+
+	void startChain();
+	void stopChain();
+	bool breakChain();
+	void pauseChain();
+	bool resumeChain();
+	void haltChain();
+	void redoChain();
 
 public slots:
 	void execStage();
-
-	void startSM(bool);
-	void stopSM(bool);
-	void breakSM(bool);
-	void pauseSM(bool);
-	void haltSM(bool);
-	void redoSM(bool);
 
 signals:
 	void sigExecStage();
@@ -70,6 +78,8 @@ private:
 	void stgEndPos();
 	void stgFinish();
 	void sendError(int, int, QString);
+	void sendMessage(eveBaseDataMessage*);
+	void sendNextPos(){manager->nextPos();};
 	int chainId;
 	int smId;
 	smStatusT smStatus, smLastStatus;

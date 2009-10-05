@@ -43,7 +43,9 @@ public:
 	void init();
 	bool isDone(){return ready;};
 	QString getName(){return name;};
+	QString getxmlId(){return xmlId;};
 	QString getUnit(){return unit;};
+	eveDevInfoMessage* getDeviceInfo();
 	eveDataMessage* getPositionMessage();
 
 public slots:
@@ -59,7 +61,7 @@ private:
 	bool ready;
 	bool inDeadband;
 	bool axisStop;
-	QString id;
+	QString xmlId;
 	QString name;
 	QString unit;
 	eveVariant currentPosition;
@@ -89,6 +91,7 @@ private:
 	bool havePos;
 	bool haveGoto;
 	bool axisOK;
+	bool readUnit;
 };
 
 #endif /* EVESMAXIS_H_ */

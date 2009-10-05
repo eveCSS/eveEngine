@@ -33,6 +33,7 @@
 #define EVEMESSAGETYPE_ENGINESTATUS 0x0102
 #define EVEMESSAGETYPE_CHAINSTATUS 0x0103
 #define EVEMESSAGETYPE_DATA 0x0104
+#define EVEMESSAGETYPE_BASEDATA 0x0105
 #define EVEMESSAGETYPE_REQUEST 0x0108
 #define EVEMESSAGETYPE_REQUESTCANCEL 0x0109
 #define EVEMESSAGETYPE_CURRENTXML 0x0110
@@ -42,6 +43,10 @@
 #define EVEMESSAGETYPE_ADDTOPLAYLIST 0x0201
 #define EVEMESSAGETYPE_REMOVEFROMPLAYLIST 0x0202
 #define EVEMESSAGETYPE_REORDERPLAYLIST 0x0203
+#define EVEMESSAGETYPE_STORAGECONFIG 0x1000
+#define EVEMESSAGETYPE_STORAGEACK 0x1001
+#define EVEMESSAGETYPE_DEVINFO 0x1002
+#define EVEMESSAGETYPE_EVENTREGISTER 0x1003
 
 #define EVEREQUESTTYPE_YESNO 0x00
 #define EVEREQUESTTYPE_OKCANCEL 0x01
@@ -59,6 +64,7 @@
 #define EVEMESSAGESEVERITY_ERROR 0x04
 #define EVEMESSAGESEVERITY_FATAL 0x05
 
+#define SUCCESS 0x00
 #define DEBUG EVEMESSAGESEVERITY_DEBUG
 #define INFO EVEMESSAGESEVERITY_INFO
 #define MINOR EVEMESSAGESEVERITY_MINOR
@@ -76,6 +82,8 @@
 #define EVEMESSAGEFACILITY_SMDEVICE 0x12
 #define EVEMESSAGEFACILITY_CATRANSPORT 0x13
 #define EVEMESSAGEFACILITY_SCANMODULE 0x14
+#define EVEMESSAGEFACILITY_STORAGE 0x15
+#define EVEMESSAGEFACILITY_EVENT 0x16
 
 #define EVEERROR_TIMEOUT 0x0009
 
@@ -100,22 +108,30 @@ struct evePlayListEntry {
 
 enum eveDataModType {DMTunmodified, DMTcenter, DMTedge, DMTmin, DMTmax, DMTfwhm, DMTmean, DMTstandarddev};
 
+// TODO
+// remove all the clone() stuff and use explicit copy constructors where needed
+
+
 /**
  * \brief base class for errorMessage, engineStatus, chainStatus, dataMessage ...
  */
+// TODO modify all constructors to init priority and destination properly
 class eveMessage
 {
 public:
 	eveMessage();
-	eveMessage(int, int prio=0);
+	eveMessage(int, int prio=0, int dest = 0);
 	virtual ~eveMessage();
 
 	int getType(){return type;};
 	int getPriority(){return priority;};
 	void setPriority(int prio){priority = prio;};
+	int getDestination(){return destination;};
+	void setDestination(int channel){destination = channel;};
 	virtual bool compare(eveMessage *);
-	virtual eveMessage* clone(){return new eveMessage(type, priority);};
+	virtual eveMessage* clone(){return new eveMessage(type, priority, destination);};
 protected:
+	int destination;
 	int type;
 	int priority;
 };
@@ -158,18 +174,18 @@ private:
 class eveMessageInt : public eveMessage
 {
 public:
-	eveMessageInt(int, int, int prio=0);
+	eveMessageInt(int, int, int prio=0, int dest=0);
 	virtual ~eveMessageInt(){};
 	int getInt(){return value;};
 	bool compare(eveMessage *);
-	eveMessageInt* clone(){return new eveMessageInt(type,value, priority);}
+	eveMessageInt* clone(){return new eveMessageInt(type,value, priority, destination);}
 
 private:
 	int value;
 };
 
 /**
- * \brief a message containing an array of integers
+ * \brief a message containing an array of integers ( two integers for now)
  *
  */
 class eveMessageIntList : public eveMessage
@@ -235,13 +251,13 @@ enum engineStatusT {eveEngIDLENOXML=1, eveEngIDLEXML, eveEngLOADINGXML, eveEngEX
 class eveEngineStatusMessage : public eveMessage
 {
 public:
-	eveEngineStatusMessage(int, QString, int prio=0);
+	eveEngineStatusMessage(int, QString, int prio=0, int dest=0);
 	virtual ~eveEngineStatusMessage();
 	int getStatus(){return estatus;};
 	QString * getXmlId(){return XmlId;};
 	epicsTime getTime(){return timestamp;};
 	bool compare(eveMessage *);
-	eveEngineStatusMessage* clone(){return new eveEngineStatusMessage(estatus, *XmlId, priority);};
+	eveEngineStatusMessage* clone(){return new eveEngineStatusMessage(estatus, *XmlId, priority, destination);};
 
 private:
 	epicsTime timestamp;
@@ -249,7 +265,7 @@ private:
 	QString * XmlId;
 };
 
-enum chainStatusT {eveChainSmIDLE=1, eveChainSmINITIALIZING, eveChainSmEXECUTING, eveChainSmPAUSED, eveChainSmTRIGGERWAIT, eveChainSmDONE, eveChainDONE};
+enum chainStatusT {eveChainSmIDLE=1, eveChainSmINITIALIZING, eveChainSmEXECUTING, eveChainSmPAUSED, eveChainSmTRIGGERWAIT, eveChainSmDONE, eveChainDONE, eveChainSTORAGEDONE};
 /**
  * \brief a message containing the status of the currently processing chain
  *
@@ -266,16 +282,17 @@ class eveChainStatusMessage : public eveMessage
 {
 public:
 	eveChainStatusMessage(int, int, int, int);
-	eveChainStatusMessage(int, int, int, int, epicsTime, int, int prio=0);
+	eveChainStatusMessage(int, int, int, int, epicsTime, int, int prio=0, int dest=0);
 	virtual ~eveChainStatusMessage();
 	int getStatus(){return cstatus;};
+	void setStatus(int stat){cstatus=stat;};
 	int getChainId(){return chainId;};
 	int getSmId(){return smId;};
 	int getPosCnt(){return posCounter;};
 	epicsTime getTime(){return timestamp;};
 	int getRemainingTime(){return remainingTime;};
 	bool compare(eveMessage *);
-	eveChainStatusMessage* clone(){return new eveChainStatusMessage(cstatus, chainId, smId, posCounter, timestamp, remainingTime, priority);};
+	eveChainStatusMessage* clone(){return new eveChainStatusMessage(cstatus, chainId, smId, posCounter, timestamp, remainingTime, priority, destination);};
 
 private:
 	epicsTime timestamp;
@@ -374,18 +391,46 @@ private:
 };
 
 /**
- * \brief message containing measured compound data
+ * \brief base class for data / devinfo message
  */
-class eveDataMessage : public eveMessage
+class eveBaseDataMessage : public eveMessage
 {
 public:
-	eveDataMessage(QString, eveDataStatus);
-	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<int> );
-	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<short> );
-	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<signed char> );
-	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<float> );
-	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<double> );
-	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QStringList );
+	eveBaseDataMessage(int, int prio=0, int dest=0);
+	eveBaseDataMessage(int, int, int, QString, QString, int prio=0, int dest=0);
+	virtual ~eveBaseDataMessage();
+	virtual eveBaseDataMessage* clone();
+	virtual bool compare(eveBaseDataMessage *);
+
+	int getChainId(){return chainId;};
+	void setChainId(int id){chainId = id;};
+	int getSmId(){return smId;};
+	void setSmId(int id){smId = id;};
+	QString getXmlId(){return xmlId;};
+	void setXmlId(QString id){xmlId = id;};
+	QString getName(){return name;};
+	void setName(QString id){name = id;};
+
+protected:
+	int chainId;
+	int smId;
+	QString name;
+	QString xmlId;
+};
+
+/**
+ * \brief message containing measured compound data
+ */
+class eveDataMessage : public eveBaseDataMessage
+{
+public:
+//	eveDataMessage(QString, eveDataStatus, int prio=0, int dest=0);
+	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<int>, int prio=0, int dest=0 );
+	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<short>, int prio=0, int dest=0 );
+	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<signed char>, int prio=0, int dest=0 );
+	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<float>, int prio=0, int dest=0 );
+	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<double>, int prio=0, int dest=0 );
+	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QStringList, int prio=0, int dest=0 );
 	virtual ~eveDataMessage();
 
 	const QVector<int>& getIntArray(){return dataArrayInt;};
@@ -401,10 +446,13 @@ public:
 	epicsTime getDataTimeStamp(){return timestamp;};
 	bool isEmpty(){return !(arraySize);};
 	int getArraySize(){return arraySize;};
+	int getPositionCount(){return posCount;};
+	void setPositionCount(int pc){posCount = pc;};
 	eveDataMessage* clone();
 	eveVariant toVariant();
 
 private:
+	int posCount;
 	QString ident;
 	epicsTime timestamp;
 	quint32 arraySize;
@@ -419,6 +467,27 @@ private:
 	QStringList dataStrings;
 };
 
+/**
+ * \brief device info message
+ */
+class eveDevInfoMessage : public eveBaseDataMessage
+{
+public:
+	eveDevInfoMessage(QStringList*, int prio=0, int dest=0);
+	eveDevInfoMessage(int, int, QString, QString, eveType, bool, QStringList*, int prio=0, int dest=0);
+	eveDevInfoMessage(QString, QString, QStringList*, int prio=0, int dest=0);
+	virtual ~eveDevInfoMessage();
+	QStringList* getText(){return infoList;};
+	bool isArray(){return isarray;};
+	eveType getType(){return dataType;};
+	eveDevInfoMessage* clone();
+	bool compare(eveDevInfoMessage*);
+
+private:
+	QStringList *infoList;
+	eveType dataType;
+	bool isarray;
+};
 
 /**
  * \brief message containing the current playlist
@@ -426,15 +495,42 @@ private:
 class evePlayListMessage : public eveMessage
 {
 public:
-	evePlayListMessage(const QList<evePlayListEntry>);
+	evePlayListMessage(const QList<evePlayListEntry> , int prio=0);
 	~evePlayListMessage();
 	int getCount(){return plList->size();};
 	evePlayListEntry & getEntry(int);
 	bool compare(eveMessage *);
+	evePlayListMessage* clone();
 
 private:
 	QList<evePlayListEntry> *plList;
 	evePlayListEntry entry;
+};
+
+/**
+ * \brief message containing storage parameters (will change in future)
+ */
+class eveStorageMessage : public eveMessage
+{
+public:
+	eveStorageMessage(int, int, QString, QString, QString, QString, int prio=0, int dest=0);
+	~eveStorageMessage();
+	bool compare(eveMessage *);
+	eveStorageMessage* clone();
+	int getChainId(){return chainId;};
+	int getChannelId(){return channelId;};
+	QString getFileName(){return fileName;};
+	QString getFileType(){return fileType;};
+	QString getPluginName(){return fileType;};
+	QString getPluginPath(){return pluginPath;};
+
+private:
+	int chainId;
+	int channelId;
+	QString fileName;
+	QString fileType;
+	QString pluginName;
+	QString pluginPath;
 };
 
 

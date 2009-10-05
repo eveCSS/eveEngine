@@ -29,7 +29,10 @@ enum chainStatusT {
 	eveChainSmTRIGGERWAIT:	scanmodule is waiting for a trigger
 	eveChainSmDONE:			scanmodul is ready
 	eveChainDONE:			the chain and all scanmodules are done
-
+	eveChainSTORAGEDONE		the corresponding storageModule is done
+							if this has been signaled for all chains
+							engine is done and new XML may be loaded.
+							This will never be sent, if we have no storage!
 ---------------------------------------------------------
 ScanModul Status:
 	eveSmNOTSTARTED: only at the very beginning
@@ -65,7 +68,8 @@ ScanModul Stages:
  * - if called they check if their group action is finished
  *   and set currentStageReady and emit execStage.
  * - execStage decides which stage comes next.
- 
+ * - execStage is called by events and cannot be used to signal that a 
+ 	 stage/substage  is ready
  
 ======================
 
@@ -82,8 +86,8 @@ ScanThread:
 
 Events:
 	- Beim Umschalten der Pausen ist das exakte Mitzählen von 
-	  sigExecStage-Signalen aufgegeben ScanModule muss nach jeder stage
-	  slebst testen ob weitergegengen werden darf, nicht auf 
+	  sigExecStage-Signalen aufgegeben. ScanModule muss nach jeder stage
+	  selbst testen ob weitergegangen werden darf, nicht auf 
 	  signalCounter verlassen 
 	- können von GUI oder monitor kommen => Signal an ScanManager
 	   ruft über den rootSM-Baum die xxxxSM-Methode mit id=0 auf
@@ -94,6 +98,8 @@ Events:
 	- beendet pause status, egal von wem gesetzt
 	- starten eines nested scans im Zustand eveSmDone erfolgt durch 
 	  Aufruf der startNestedSM-Methode vom Parent SM
+	  
+	 - Braucht man einen restart, wenn der Scan fertig ist?
 	
 	Wenn SMStatus == eveSmNOTSTARTED
 		dann wird dieser Scan gestartet
@@ -148,8 +154,75 @@ Events:
 	redo:
 		redo-Flag im SM setzen
 
-
+=================
+noch mehr Events:
 	
+	Redo-Event Chain: = wie  Redo-Event SM in allen SMs
+				ausgeführt über ein Signal an ScanMannager,
+				der rekursiv alle redo-Slots der ScanModule
+				aufruft mit einem chain-Marker.
+	Redo-Event SM: redo-Slot des SM wird ohne chain-Marker aufgerufen
+				setzt catchedRedo, muss von SM in der trigger-/read-Phase
+				gelesen und zurückgesetzt werden.
+				
+	Break-Event Chain: wie Break-Event SM in allen SMs
+				ausgeführt über ein Signal an ScanMannager,
+				der rekursiv alle break-Slots der ScanModule
+				aufruft mit einem chain-Marker.
+				Angehalten wird nur der innerste gerade laufende Scan 
+	Break-Event SM: falls im status exec, dann abbrechen
+				Break kann auch während Pause gesendet werden und
+				bricht dann den inneren Scan ab und macht weiter mit
+				Pause
+	
+	Pause-Event Chain: es werden rekursiv alle pause Slots
+				der SMs aufgerufen und alle SMs auf Pause gesetzt.
+				Anders als bei Break, wird die Pause in allen SMs
+				gesetzt und nicht nur im innersten Laufenden.
+				So kann ein Break-Signal auch innerhalb einer Pause
+				kommen, dass den innersten Scan dann sofort beendet 
+				und im nächst höheren Scan wieder auf eine Pause
+				stösst. 
+				Nachteil: Eine Chain-Pause kann nicht durch eine
+				SM-Pause aufgehoben werden.
+	Pause-Event SM: Nur der aktuelle SM wird auf PAUSE gesetzt.
+				Pausen werden nicht gespeichert, d.h. ein Pause-Event
+				wird ignoriert, wenn das SM gerade nicht ausgeführt wird.
+
+	Monitor-Events:
+	Die SMs registrieren sich bei einem EventManager.
+	Bei der Registrierung schicken die SMs oder der ScanManager eine Message
+	an den EventManager.
+	geben die SMs den auszulösenden Slot mit oder der Monitor-Manager
+	schickt eine Monitor-Nachricht. Das ist noch nicht entschieden.
+	Weiterhin parst das SM den XML-Text und gibt alle notwendigen Infos
+	an den Monitor weiter. SM muss sich unbedingt auch wieder abmelden,
+	sonst wird evtl. ein Slot aufgerufen, der schon nicht mehr existiert.
+	Gefährlich!, besser mit Messages. 
+	=> registrieren und event auslösen über messages
+	Aber: Scan-Manager ruft Events auch über Signale auf, die
+	unregistrieren sich auch vernünftig. Der Mechanismus sollte
+	der gleiche für Event-Manager und Scan-Manager sein.
+	Also: der scanManager registriert ein Event über eine eventRegisterMessage
+		und gibt seine Adresse mit, damit sein Slot aufgerufen werden kann.
+		Er vergibt eine eventId, die zusammen mit seiner ChannelId einduetig ist.
+		Ein Event erzeugt beim registrieren ein actionObject z.B vom Typ Pause,
+		dessen Signal mit dem entsprechenden scanManager::smPause -slot
+		verbunden wird. Das Signal wird dann mit der entsprechenden
+		event-ID aufgerufen.
+	
+	
+	Der Scanmanager müsste dann entsprechend den Monitor für die
+	gesamte Chain abonnieren.
+	
+	
+	Event-Source: die Quelle des Events, z.B der Monitor, der einen
+				Wert überschreitet.
+	Event-Target: Das Eventziel, z.B. ein Detektor zu triggern, eine
+				Chain zu starten etc.
+				
+	TODO:
+	- Wie wird die Pause (bei Monitor-Event) wieder abgeschaltet
 	
 
 

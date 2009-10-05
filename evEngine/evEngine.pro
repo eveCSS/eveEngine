@@ -4,7 +4,18 @@ QT += core \
     network \
     gui \
     xml
-HEADERS += scanModule/eveSMChannel.h \
+HEADERS += eventModule/eveEventRegisterMessage.h \
+    eventModule/eveEventProperty.h \
+    eventModule/eveEventManager.h \
+    eventModule/eveEventThread.h \
+    storageModule/eveFileTest.h \
+    storageModule/eveAsciiFileWriter.h \
+    storageModule/eveFileWriter.h \
+    storageModule/eveDeviceDataCollector.h \
+    storageModule/eveDataCollector.h \
+    storageModule/eveStorageManager.h \
+    storageModule/eveStorageThread.h \
+    scanModule/eveSMChannel.h \
     scanModule/eveSMDevice.h \
     scanModule/eveVariant.h \
     scanModule/eveSetValue.h \
@@ -35,7 +46,18 @@ HEADERS += scanModule/eveSMChannel.h \
     nwModule/eveMessageHub.h \
     nwModule/eveNwThread.h \
     nwModule/evePlaylistManager.h
-SOURCES += scanModule/eveSMChannel.cpp \
+SOURCES += eventModule/eveEventRegisterMessage.cpp \
+    eventModule/eveEventProperty.cpp \
+    eventModule/eveEventManager.cpp \
+    eventModule/eveEventThread.cpp \
+    storageModule/eveFileTest.cpp \
+    storageModule/eveAsciiFileWriter.cpp \
+    storageModule/eveFileWriter.cpp \
+    storageModule/eveDeviceDataCollector.cpp \
+    storageModule/eveDataCollector.cpp \
+    storageModule/eveStorageManager.cpp \
+    storageModule/eveStorageThread.cpp \
+    scanModule/eveSMChannel.cpp \
     scanModule/eveSMDevice.cpp \
     scanModule/eveVariant.cpp \
     scanModule/eveSetValue.cpp \
@@ -67,20 +89,20 @@ SOURCES += scanModule/eveSMChannel.cpp \
     main.cpp \
     nwModule/evePlayListManager.cpp
 INCLUDEPATH += nwModule \
+    scanModule \
+    storageModule \
     /soft/epics/base-3.14.10/include \
     /soft/epics/base-3.14.10/include/os/Linux \
-    scanModule
-unix:
+    eventModule
 unix:LIBS += -L/opt/epics/base-3.14.10/lib/linux-x86 \
     -lca \
-    -lCom \
-    -L/opt/test
-win32:INCLUDEPATH += nwModule \
-    J:\epics\3.14\windows\base-3.14.10\include \
-    J:\epics\3.14\windows\base-3.14.10\include\os\WIN32 \
-    scanModule
-win32:LIBS += J:\epics\3.14\windows\base-3.14.10\lib\win32-x86-mingw\ca.lib \
-    J:\epics\3.14\windows\base-3.14.10\lib\win32-x86-mingw\Com.lib \
-    -lws2_32
+    -lCom
+win32 { 
+    INCLUDEPATH += J:\epics\3.14\windows\base-3.14.10\include \
+        J:\epics\3.14\windows\base-3.14.10\include\os\WIN32
+    LIBS += J:\epics\3.14\windows\base-3.14.10\lib\win32-x86-mingw\ca.lib \
+        J:\epics\3.14\windows\base-3.14.10\lib\win32-x86-mingw\Com.lib \
+        -lws2_32
+}
 FORMS += 
 RESOURCES += 
