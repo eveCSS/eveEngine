@@ -59,10 +59,9 @@ public slots:
 
 private:
 	void sendStatus(int, chainStatusT);
-	void unregisterEvent(eveEventProperty*);
-	eveStorageMessage* getStorageMessage();
-	void addToChainHash(QString, eveXMLReader*);
+	void addToHash(QHash<QString, QString>*, QString, eveXMLReader*);
 	QHash<QString, QString> chainHash;
+	QHash<QString, QString>* savePluginHash;
 	QList<eveEventProperty*> eventPropList;
 	int nextEventId;
 	int chainId;

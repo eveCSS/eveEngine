@@ -13,6 +13,7 @@
 #include "eveSetValue.h"
 #include "evePosCalc.h"
 #include "eveCaTransport.h"
+#include "eveSMBaseDevice.h"
 
 /**
  * \brief motor axis for a specific SM
@@ -23,7 +24,7 @@ enum eveAxisStatusT {eveAXISINIT, eveAXISIDLE, eveAXISWRITEPOS, eveAXISREADPOS, 
 
 class eveScanManager;
 
-class eveSMAxis: public QObject {
+class eveSMAxis: public eveSMBaseDevice {
 
 	Q_OBJECT
 
@@ -34,6 +35,7 @@ public:
 	void gotoNextPos(bool);
 	void gotoPos(eveVariant, bool);
 	eveVariant getPos(){return currentPosition;};
+	eveVariant getTargetPos(){return targetPosition;};
 	// bool isAtNextPos();
 	void stop();
 	bool isAtEndPos(){return posCalc->isAtEndPos();};
@@ -47,6 +49,7 @@ public:
 	QString getUnit(){return unit;};
 	eveDevInfoMessage* getDeviceInfo();
 	eveDataMessage* getPositionMessage();
+	void sendError(int, int, int, QString);
 
 public slots:
 	void transportReady(int);
@@ -58,6 +61,7 @@ private:
 	void sendError(int, int, QString);
 	void initAll();
 	void signalReady();
+	bool isTimer;
 	bool ready;
 	bool inDeadband;
 	bool axisStop;
@@ -75,7 +79,6 @@ private:
 	eveAxisStatusT axisStatus;
 	eveScanModule* scanModule;
 	evePosCalc *posCalc;
-	eveMotorAxis *axisDef;
 	eveBaseTransport* gotoTrans;
 	eveBaseTransport* posTrans;
 	eveBaseTransport* stopTrans;

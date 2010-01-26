@@ -9,7 +9,8 @@
 #define EVEVARIANT_H_
 
 #include <QVariant>
-#include <QString>
+#include <QDateTime>
+#include <QVariant>
 #include "eveTypes.h"
 
 class eveVariant : public QVariant {
@@ -21,10 +22,11 @@ public:
 	eveVariant(QVariant);
 	virtual ~eveVariant();
 	void setType(eveType);
-	eveType getType(){return varianttype;};
+	eveType getType() const {return varianttype;};
 	bool setValue(int);
 	bool setValue(double);
 	bool setValue(QString);
+	bool setValue(QDateTime);
 	static quint64 getMangled(unsigned int val1, unsigned int val2);
 	eveVariant abs();
 	eveVariant operator + (const eveVariant&);

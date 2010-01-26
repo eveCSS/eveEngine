@@ -31,6 +31,9 @@ eveXMLReader::~eveXMLReader() {
 	if (domDocument != NULL) delete domDocument;
 }
 
+#define EVE_VERSION        0
+#define EVE_REVISION       3
+#define EVE_MODIFICATION   2
 
 /** \brief read XML-Data and create all device definitions and various hashes etc.
  * \param xmldata XML text data
@@ -55,8 +58,14 @@ bool eveXMLReader::read(QByteArray xmldata, eveDeviceList *devList)
         return false;
     }
     QDomElement version = root.firstChildElement("version");
-    if (version.text() != "0.2.4") {
-		sendError(ERROR,0,QString("eveXMLReader::read: incompatible xml version: %1").arg(version.text()));
+    if (version.isNull()){
+		sendError(ERROR,0,QString("eveXMLReader::read: no version tag found %1"));
+        return false;
+    }
+    QString thisVersion = QString("%1.%2.%3").arg((int)EVE_VERSION).arg((int)EVE_REVISION).arg((int)EVE_MODIFICATION);
+    QStringList versions = version.text().split(".");
+    if (versions[1].toInt() != EVE_REVISION) {
+		sendError(ERROR,0,QString("eveXMLReader::read: incompatible xml versions file: %1, application: %2").arg(version.text()).arg(thisVersion));
         return false;
     }
     // build indices
@@ -104,9 +113,9 @@ bool eveXMLReader::read(QByteArray xmldata, eveDeviceList *devList)
     QDomNodeList deviceNodeList = domElem.childNodes();
     for (unsigned int i=0; i < deviceNodeList.length(); ++i) createDeviceDefinition(deviceNodeList.item(i));
 
-    domElem = root.firstChildElement("events");
-    QDomNodeList eventNodeList = domElem.childNodes();
-    for (unsigned int i=0; i < eventNodeList.length(); ++i) createEventDefinition(eventNodeList.item(i));
+//    domElem = root.firstChildElement("events");
+//    QDomNodeList eventNodeList = domElem.childNodes();
+//    for (unsigned int i=0; i < eventNodeList.length(); ++i) createEventDefinition(eventNodeList.item(i));
 
     return true;
 }
@@ -174,19 +183,21 @@ void eveXMLReader::createDetectorDefinition(QDomNode detector){
 /** \brief create a Transport from XML
  * \param node the <access> DomNode
  */
-eveTransportDef * eveXMLReader::createTransportDefinition(QDomElement node)
+eveBaseTransportDef * eveXMLReader::createTransportDefinition(QDomElement node)
 {
 	QString typeString, transportString, timeoutString;
 	QString methodString;
 	double timeout = 5.0;
 	eveType accesstype = eveInt8T;
-	pvMethodT accessMethod= eveGET;
+	eveTransportT transport = eveTRANS_CA;
+	transMethodT accessMethod= eveGET;
 
 	if (node.hasAttribute("type")) {
 		typeString = node.attribute("type");
 		if (typeString == "int") accesstype = eveInt32T;
 		else if (typeString == "double") accesstype = eveFloat64T;
 		else if (typeString == "string") accesstype = eveStringT;
+		else if (typeString == "datetime") accesstype = eveDateTimeT;
 		else {
 			sendError(ERROR,0,QString("eveXMLReader::createTransport: unknown data type: %1").arg(typeString));
 		}
@@ -199,10 +210,15 @@ eveTransportDef * eveXMLReader::createTransportDefinition(QDomElement node)
 		else if (methodString == "GETCB") accessMethod = eveGETCB;
 		else if (methodString == "PUTCB") accessMethod = evePUTCB;
 		else if (methodString == "GETPUTCB") accessMethod = eveGETPUTCB;
+		else if (methodString == "monitor") accessMethod = eveMONITOR;
 		else {
 			sendError(ERROR,0,QString("eveXMLReader::createTransport: unknown method: %1").arg(methodString));
 		}
 	}
+	else {
+		sendError(ERROR, 0, "eveXMLReader::createTransport: method attribute is missing");
+	}
+
 	if (node.hasAttribute("timeout")) {
 		bool ok;
 		double tmpdouble;
@@ -216,11 +232,10 @@ eveTransportDef * eveXMLReader::createTransportDefinition(QDomElement node)
 	}
 	if (node.hasAttribute("transport")) {
 		transportString = node.attribute("transport");
-		if (transportString == "local")
-			return new eveLocalTransportDef(accesstype, accessMethod, node.text());
+		if (transportString == "local") transport = eveTRANS_LOCAL;
 	}
 	// return default transport
-	return new eveCaTransportDef(accesstype, accessMethod, timeout, node.text());
+	return new eveTransportDef(transport, accesstype, accessMethod, timeout, node.text());
 
 }
 
@@ -277,8 +292,8 @@ eveDetectorChannel * eveXMLReader::createChannelDefinition(QDomNode channel, eve
     	}
     }
     else { // every device needs its private copy of default unit
-    	// TODO define a copyConstructor which allocates a new eveTransportDef
-    	// every device command needs its own eveTransportDef
+    	// TODO define a copyConstructor which allocates a new eveBaseTransportDef
+    	// every device command needs its own eveBaseTransportDef
     	// do not use the default copy constructor or leave clone method
     	//    	if (unit != NULL) unit = new eveDeviceCommand(*unit);
     	if (unit != NULL) unit = unit->clone();
@@ -447,7 +462,7 @@ eveMotorAxis * eveXMLReader::createAxisDefinition(QDomNode axis, eveDeviceComman
  *
  */
 eveDeviceCommand * eveXMLReader::createDeviceCommand(QDomNode node){
-	eveTransportDef *access=NULL;
+	eveBaseTransportDef *access=NULL;
 	QString valueString="";
 	eveType valuetype=eveUnknownT;
 
@@ -464,6 +479,7 @@ eveDeviceCommand * eveXMLReader::createDeviceCommand(QDomNode node){
      		QString typeString = domElement.attribute("type");
      		if (typeString == "int") valuetype = eveInt32T;
      		else if (typeString == "double") valuetype = eveFloat64T;
+     		else if (typeString == "datetime") valuetype = eveDateTimeT;
      		else if (typeString == "string") valuetype = eveStringT;
      		else if (typeString == "OpenClose") valuetype = eveStringT;
      		else if (typeString == "OnOff") valuetype = eveStringT;
@@ -537,6 +553,7 @@ void eveXMLReader::createDeviceDefinition(QDomNode device){
 /** \brief parse XML for event definitions
  * \param node the <event> DomNode
  */
+/*
 void eveXMLReader::createEventDefinition(QDomNode event){
 
 	QString name;
@@ -578,7 +595,7 @@ void eveXMLReader::createEventDefinition(QDomNode event){
 	}
 	eventType = getEventType(eventElem.attribute("type"));
 
-	if (eventType != eveMONITOR){
+	if (eventType != eveEventMONITOR){
 		sendError(ERROR,0,QString("eveXMLReader::createEventDefinition: only monitor events are supported, please correct %1").arg(name));
 		return;
 	}
@@ -594,6 +611,7 @@ void eveXMLReader::createEventDefinition(QDomNode event){
 	// TODO remove this
     sendError(DEBUG,0,QString("eveXMLReader::createEventDefinition: Found id: %1, name: %2").arg(id).arg(name));
 }
+*/
 
 /**
  *
@@ -667,6 +685,56 @@ QString eveXMLReader::getChainString(int chain, QString tagname){
 		return domElement.text();
 	}
 	return empty;
+}
+
+QHash<QString, QString>* eveXMLReader::getChainPlugin(int chain, QString tagname){
+
+	QHash<QString, QString>* pluginHash = new QHash<QString, QString>;
+	if (chainDomIdHash.contains(chain)) {
+		QDomElement domElement = chainDomIdHash.value(chain);
+		domElement = domElement.firstChildElement(tagname);
+		if (!domElement.isNull()){
+			getPluginData(domElement, pluginHash);
+		}
+	}
+	return pluginHash;
+}
+
+QHash<QString, QString>* eveXMLReader::getPositioningPlugin(int chain, int smid, QString tagname){
+
+	QHash<QString, QString>* pluginHash = new QHash<QString, QString>;
+	if (smIdHash.contains(chain)){
+		QDomElement domSMRoot = smIdHash.value(chain)->value(smid);
+		QDomElement	domElement = domSMRoot.firstChildElement("positioning");
+		if (!domElement.isNull()){
+			QDomElement	domParam = domElement.firstChildElement("axis_id");
+			if (!domParam.isNull()) pluginHash->insert("axis_id", domParam.text().trimmed());
+			domParam = domElement.firstChildElement("channel_id");
+			if (!domParam.isNull()) pluginHash->insert("channel_id", domParam.text().trimmed());
+			domParam = domElement.firstChildElement("normalize_id");
+			if (!domParam.isNull()) pluginHash->insert("normalize_id", domParam.text().trimmed());
+			QDomElement	domPlugin = domElement.firstChildElement("plugin");
+			if (!domPlugin.isNull()){
+				getPluginData(domPlugin, pluginHash);
+			}
+		}
+	}
+	return pluginHash;
+}
+
+void eveXMLReader::getPluginData(QDomElement domPlugin, QHash<QString, QString>* pluginHash){
+
+	if (domPlugin.hasAttribute("name")) {
+		pluginHash->insert("pluginname", domPlugin.attribute("name").trimmed());
+	}
+	QDomElement domElement = domPlugin.firstChildElement("parameter");
+	while (!domElement.isNull()) {
+		if (domElement.hasAttribute("name")) {
+			pluginHash->insert(domElement.attribute("name").trimmed(), domElement.text().trimmed());
+		}
+		domElement = domElement.nextSiblingElement("parameter");
+	}
+
 }
 
 /**
@@ -765,8 +833,9 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 	{
 	if (!smIdHash.contains(chain)) return axislist;
 	QDomElement domElement = smIdHash.value(chain)->value(smid);
-	domElement = domElement.firstChildElement("smmotor");
+	domElement = domElement.firstChildElement("smaxis");
 	while (!domElement.isNull()) {
+		bool prependElement=true;
 		eveVariant startvalue;
 		QString stepfunction = "none";
 		QDomElement domId = domElement.firstChildElement("axisid");
@@ -778,12 +847,17 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 		eveType axisType=axisDefinition->getAxisType();
 		QDomElement domstepf = domElement.firstChildElement("stepfunction");
 		if (!domstepf.isNull()) stepfunction = domstepf.text();
-//		if (!scanManagerHash.contains(chain))
-//			sendError(ERROR,0,"Could not find scanmanager for chain");
-		evePosCalc *poscalc = new evePosCalc(scanmodule, stepfunction, axisType);
-
-		// TODO relative or absolute position values
-		// TODO stepamount,ismainaxis
+		QDomElement domPosMode = domElement.firstChildElement("positionmode");
+		bool absolute = true;
+		if (!domPosMode.isNull()){
+			if (domPosMode.text() == "absolute")
+				absolute=true;
+			else if (domPosMode.text() == "relative")
+				absolute = false;
+			else
+				sendError(MINOR, 0, QString("invalid positionmode string in XML %1").arg(domPosMode.text()));
+		}
+		evePosCalc *poscalc = new evePosCalc(scanmodule, stepfunction, absolute, axisType);
 
 		if (!domElement.firstChildElement("start").isNull()) {
 			poscalc->setStartPos(domElement.firstChildElement("start").text());
@@ -796,22 +870,27 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 		else if (!domElement.firstChildElement("positionlist").isNull()) {
 			poscalc->setPositionList(domElement.firstChildElement("positionlist").text());
 		}
-		else if (!domElement.firstChildElement("controller").isNull()) {
-			QDomElement domContr = domElement.firstChildElement("controller");
-			poscalc->setStepPlugin(domContr.attribute("plugin"));
-			QDomElement domParam = domContr.firstChildElement("parameter");
-			while (!domParam.isNull()){
-				QDomNamedNodeMap attribMap = domParam.attributes();
-				for (int i= 0; i < attribMap.count(); ++i)
-					poscalc->setStepPara(attribMap.item(i).nodeValue(), domParam.text());
-				domParam = domParam.nextSiblingElement("parameter");
-			}
+		else if (!domElement.firstChildElement("plugin").isNull()) {
+			prependElement=false;
+			QHash<QString, QString> paraHash;
+			QDomElement domContr = domElement.firstChildElement("plugin");
+			getPluginData(domContr, &paraHash);
+			if (domContr.attribute("name").trimmed().length() > 1)
+				poscalc->setStepPlugin(domContr.attribute("name"), paraHash);
+			else
+				sendError(ERROR,0,"Step Plugin: invalid name");
 		}
 		else
 			sendError(ERROR,0,"No values found in XML to calculate motor positions");
 
-		axislist->append(new eveSMAxis(scanmodule, axisDefinition, poscalc));
-		domElement = domElement.nextSiblingElement("smmotor");
+		// order is important, since we must make sure all axes with step plugins
+		// which might use reference axes must be called after their reference axes
+		if (prependElement)
+			axislist->prepend(new eveSMAxis(scanmodule, axisDefinition, poscalc));
+		else
+			axislist->append(new eveSMAxis(scanmodule, axisDefinition, poscalc));
+
+		domElement = domElement.nextSiblingElement("smaxis");
 	}
 	}
 	catch (std::exception& e)
@@ -836,7 +915,7 @@ QList<eveSMChannel*>* eveXMLReader::getChannelList(eveScanModule* scanmodule, in
 	{
 	if (!smIdHash.contains(chain)) return channellist;
 	QDomElement domElement = smIdHash.value(chain)->value(smid);
-	domElement = domElement.firstChildElement("smdetector");
+	domElement = domElement.firstChildElement("smchannel");
 	while (!domElement.isNull()) {
 		QHash<QString, QString> paraHash;
 		QDomElement domId = domElement.firstChildElement("channelid");
@@ -845,19 +924,22 @@ QList<eveSMChannel*>* eveXMLReader::getChannelList(eveScanModule* scanmodule, in
 			sendError(ERROR,0,QString("no channeldefinition found for %1").arg(domId.text()));
 			return channellist;
 		}
+		QList<eveEventProperty* > *eventList = new QList<eveEventProperty* >;
 		domId = domElement.firstChildElement();
 		while (!domId.isNull()){
 			if (domId.nodeName() == "redoevent"){
 				// TODO get event
+				eveEventProperty* event = getEvent(eveEventProperty::REDO, domId);
+				if (event != NULL ) eventList->append(event);
 			}
 			else {
-				paraHash.insert(domId.nodeName(), domId.text());
+				paraHash.insert(domId.nodeName(), domId.text().trimmed());
 				domId = domId.nextSiblingElement();
 			}
 		}
 
-		channellist->append(new eveSMChannel(scanmodule, channelDefinition, paraHash));
-		domElement = domElement.nextSiblingElement("smdetector");
+		channellist->append(new eveSMChannel(scanmodule, channelDefinition, paraHash, eventList));
+		domElement = domElement.nextSiblingElement("smchannel");
 	}
 	}
 	catch (std::exception& e)
@@ -868,61 +950,116 @@ QList<eveSMChannel*>* eveXMLReader::getChannelList(eveScanModule* scanmodule, in
 	return channellist;
 }
 
-QList<eveEventProperty*>* eveXMLReader::getEventList(eveScanManager* manager, int chain, int smid){
+QList<eveEventProperty*>* eveXMLReader::getSMEventList(int chain, int smid){
 
 	QList<eveEventProperty* > *eventList = new QList<eveEventProperty* >;
 
 	try
 	{
-	if (!smIdHash.contains(chain)) return eventList;
-	QDomElement domElement = smIdHash.value(chain)->value(smid);
-	domElement = domElement.firstChildElement("startevent");
-	while (!domElement.isNull()) {
-		eveEventProperty* event = getEvent(manager, domElement);
-		if (event != NULL ) eventList->append(event);
-		domElement = domElement.nextSiblingElement("startevent");
-	}
-	domElement = domElement.firstChildElement("redoevent");
-	while (!domElement.isNull()) {
-		eveEventProperty* event = getEvent(manager, domElement);
-		if (event != NULL ) eventList->append(event);
-		domElement = domElement.nextSiblingElement("redoevent");
-	}
-	domElement = domElement.firstChildElement("breakevent");
-	while (!domElement.isNull()) {
-		eveEventProperty* event = getEvent(manager, domElement);
-		if (event != NULL ) eventList->append(event);
-		domElement = domElement.nextSiblingElement("breakevent");
-	}
-	domElement = domElement.firstChildElement("stopevent");
-	while (!domElement.isNull()) {
-		eveEventProperty* event = getEvent(manager, domElement);
-		if (event != NULL ) eventList->append(event);
-		domElement = domElement.nextSiblingElement("stopevent");
-	}
-	domElement = domElement.firstChildElement("pauseevent");
-	while (!domElement.isNull()) {
-		eveEventProperty* event = getEvent(manager, domElement);
-		if (event != NULL ) eventList->append(event);
-		domElement = domElement.nextSiblingElement("pauseevent");
-	}
+		if (!smIdHash.contains(chain)) return eventList;
+		QDomElement domElement = smIdHash.value(chain)->value(smid);
+		QDomElement domEvent = domElement.firstChildElement("redoevent");
+		while (!domEvent.isNull()) {
+			eveEventProperty* event = getEvent(eveEventProperty::REDO, domEvent);
+			if (event != NULL ) eventList->append(event);
+			domEvent = domEvent.nextSiblingElement("redoevent");
+		}
+		domEvent = domElement.firstChildElement("breakevent");
+		while (!domEvent.isNull()) {
+			eveEventProperty* event = getEvent(eveEventProperty::BREAK, domEvent);
+			if (event != NULL ) eventList->append(event);
+			domEvent = domEvent.nextSiblingElement("breakevent");
+		}
+		domEvent = domElement.firstChildElement("triggerevent");
+		while (!domEvent.isNull()) {
+			eveEventProperty* event = getEvent(eveEventProperty::TRIGGER, domEvent);
+			if (event != NULL ) eventList->append(event);
+			domEvent = domEvent.nextSiblingElement("triggerevent");
+		}
+		domEvent = domElement.firstChildElement("pauseevent");
+		while (!domEvent.isNull()) {
+			eveEventProperty* event = getEvent(eveEventProperty::PAUSE, domEvent);
+			QDomElement signalOffToo = domElement.firstChildElement("continue_if_false");
+			if (!signalOffToo.isNull()){
+				bool signalOff = false;
+				if (signalOffToo.text() == "true") signalOff = true;
+				event->setSignalOff(signalOff);
+			}
+			if (event != NULL ) eventList->append(event);
+			domEvent = domEvent.nextSiblingElement("pauseevent");
+		}
 	}
 	catch (std::exception& e)
 	{
 		printf("C++ Exception %s\n",e.what());
-		sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getEventList").arg(e.what()));
+		sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getSMEventList").arg(e.what()));
 	}
 	return eventList;
 }
 
-eveEventTypeT eveXMLReader::getEventType(QString evtype){
-	if (evtype == "monitor")
-		return eveMONITOR;
-	else
-		return eveSCHEDULE;
+QList<eveEventProperty*>* eveXMLReader::getChainEventList(int chain){
+
+	QList<eveEventProperty* > *eventList = new QList<eveEventProperty* >;
+
+	try
+	{
+		if (!chainDomIdHash.contains(chain)) return eventList;
+		QDomElement domElement = chainDomIdHash.value(chain);
+		QDomElement domEvent = domElement.firstChildElement("startevent");
+		while (!domEvent.isNull()) {
+			eveEventProperty* event = getEvent(eveEventProperty::START, domEvent);
+			if (event != NULL ) eventList->append(event);
+			domEvent = domEvent.nextSiblingElement("startevent");
+		}
+		domEvent = domElement.firstChildElement("redoevent");
+		while (!domEvent.isNull()) {
+			eveEventProperty* event = getEvent(eveEventProperty::REDO, domEvent);
+			if (event != NULL ) eventList->append(event);
+			domEvent = domEvent.nextSiblingElement("redoevent");
+		}
+		domEvent = domElement.firstChildElement("breakevent");
+		while (!domEvent.isNull()) {
+			eveEventProperty* event = getEvent(eveEventProperty::BREAK, domEvent);
+			if (event != NULL ) eventList->append(event);
+			domEvent = domEvent.nextSiblingElement("breakevent");
+		}
+		domEvent = domElement.firstChildElement("stopevent");
+		while (!domEvent.isNull()) {
+			eveEventProperty* event = getEvent(eveEventProperty::STOP, domEvent);
+			if (event != NULL ) eventList->append(event);
+			domEvent = domEvent.nextSiblingElement("stopevent");
+		}
+		domEvent = domElement.firstChildElement("pauseevent");
+		while (!domEvent.isNull()) {
+			eveEventProperty* event = getEvent(eveEventProperty::PAUSE, domEvent);
+			QDomElement signalOffToo = domElement.firstChildElement("continue_if_false");
+			if (!signalOffToo.isNull()){
+				bool signalOff = false;
+				if (signalOffToo.text() == "true") signalOff = true;
+				event->setSignalOff(signalOff);
+			}
+			if (event != NULL ) eventList->append(event);
+			domEvent = domEvent.nextSiblingElement("pauseevent");
+		}
+	}
+	catch (std::exception& e)
+	{
+		printf("C++ Exception %s\n",e.what());
+		sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getChainEventList").arg(e.what()));
+	}
+	return eventList;
 }
 
-eveEventProperty* eveXMLReader::getEvent(eveScanManager* manager, QDomElement domElement){
+//eveEventTypeT eveXMLReader::getEventType(QString evtype){
+//	if (evtype == "monitor")
+//		return eveEventMONITOR;
+//	else if (evtype == "detector")
+//		return eveEventDetector;
+//	else
+//		return eveEventSCHEDULE;
+//}
+
+eveEventProperty* eveXMLReader::getEvent(eveEventProperty::actionTypeT action, QDomElement domElement){
 
  	if (!domElement.hasAttribute("type")){
 		sendError(ERROR, 0, "getEvent: event tags must have an attribute type");
@@ -931,10 +1068,10 @@ eveEventProperty* eveXMLReader::getEvent(eveScanManager* manager, QDomElement do
 
  	if (domElement.attribute("type") == "schedule"){
 		eventTypeT eventType = eveEventTypeSCHEDULE;
-		incidentTypeT incident = eveIncidentTypeEND;
+		incidentTypeT incident = eveIncidentEND;
 		int chid=0, smid=0;
 		QDomElement domIncident = domElement.firstChildElement("incident");
-		if ((!domIncident.isNull()) && (domIncident.text() == "Start")) incident = eveIncidentTypeSTART;
+		if ((!domIncident.isNull()) && (domIncident.text() == "Start")) incident = eveIncidentSTART;
 		QDomElement domChainid = domElement.firstChildElement("chainid");
 		QDomElement domSmid = domElement.firstChildElement("smid");
 		if (domChainid.isNull() || domSmid.isNull()){
@@ -948,7 +1085,42 @@ eveEventProperty* eveXMLReader::getEvent(eveScanManager* manager, QDomElement do
 			sendError(ERROR, 0, "getEvent: error converting chainid or smid");
 			return NULL;
 		}
-		return new eveEventProperty(manager, eveVariant(QVariant(eveVariant::getMangled(chid,smid))), eventType);
+		sendError(DEBUG, 0, QString("found schedule event definition, chid %1, smid %2").arg(chid).arg(smid));
+		return new eveEventProperty("", "", eveVariant(QVariant(eveVariant::getMangled(chid,smid))), eventType, incident, action, NULL);
+	}
+ 	if (domElement.attribute("type") == "detector"){
+		eventTypeT eventType = eveEventTypeDETECTOR;
+
+		QDomElement domId = domElement.firstChildElement("id");
+		if (domId.isNull()){
+			sendError(ERROR, 0, "getEvent: need <id> tag for detector event");
+			return NULL;
+		}
+
+		QString eventId = domId.text().trimmed();
+		QRegExp regex = QRegExp("^D-\\d+-\\d+-(\\w+)$");
+		if (!(eventId.trimmed().contains(regex) && (regex.numCaptures() > 2))){
+			sendError(ERROR, 0, QString("get Detector Event: invalid detector id").arg(eventId));
+			return NULL;
+		}
+
+		int chid=0, smid=0;
+		bool cok, sok;
+		chid = regex.capturedTexts().at(0).toInt(&cok);
+		smid = regex.capturedTexts().at(1).toInt(&sok);
+		if (!cok || !sok){
+			sendError(ERROR, 0, "getEvent: error extracting chainid or smid from detector event id");
+			return NULL;
+		}
+		QString devname = regex.capturedTexts().at(2);
+		eveDevice* deviceDef = deviceList->getDeviceDef(devname);
+		if ((deviceDef == NULL) || (deviceDef->getValueCmd() == NULL)){
+			sendError(ERROR, 0, QString("get Detector event: no or invalid device definition found for %1").arg(eventId));
+			return NULL;
+		}
+
+		sendError(DEBUG, 0, QString("found detector event definition for %1").arg(eventId));
+		return new eveEventProperty(eventId, devname, eveVariant(QVariant(eveVariant::getMangled(chid,smid))), eventType, eveIncidentNONE, action, NULL);
 	}
 	else if (domElement.attribute("type") == "monitor"){
 	 	eventTypeT eventType = eveEventTypeMONITOR;
@@ -959,9 +1131,9 @@ eveEventProperty* eveXMLReader::getEvent(eveScanManager* manager, QDomElement do
 			return NULL;
 		}
 
-	 	eveEventDefinition* eventDefinition = deviceList->getEventDef(domId.text());
-		if (eventDefinition == NULL){
-			sendError(ERROR,0,QString("no event definition found for %1").arg(domId.text()));
+	 	eveDevice* deviceDef = deviceList->getDeviceDef(domId.text());
+		if ((deviceDef == NULL) || (deviceDef->getValueCmd() == NULL)){
+			sendError(ERROR, 0, QString("getEvent: no or invalid device definition found for %1").arg(domId.text()));
 			return NULL;
 		}
 
@@ -977,6 +1149,10 @@ eveEventProperty* eveXMLReader::getEvent(eveScanManager* manager, QDomElement do
 
 		eveVariant limitVal;
 		bool ok = true;
+		QString name = deviceDef->getName();
+
+		QString comparison = domLimit.attribute("comparison");
+
 		QString typeString = domLimit.attribute("type");
 		if (typeString == "int"){
 			limitVal.setType(eveINT);
@@ -990,9 +1166,10 @@ eveEventProperty* eveXMLReader::getEvent(eveScanManager* manager, QDomElement do
 			limitVal.setType(eveSTRING);
 			limitVal.setValue(domLimit.text());
 		}
-		if (!ok) sendError(ERROR, 0, QString("getEvent: error converting <limit> tag of event with id %1").arg(domId.text()));
+		if (!ok) sendError(ERROR, 0, QString("getEvent: error converting type attribute of <limit> tag of event with id %1").arg(domId.text()));
 
-		return new eveEventProperty(manager, limitVal, eventType);
+		sendError(DEBUG, 0, QString("found monitor event definition for %1").arg(name));
+		return new eveEventProperty(name, comparison, limitVal, eventType, eveIncidentNONE, action, deviceDef->getValueCmd()->clone());
 	}
 	else{
 		sendError(ERROR, 0, "getEvent: invalid attribute type");

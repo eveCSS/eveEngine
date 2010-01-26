@@ -13,6 +13,7 @@
 #include "eveMessageChannel.h"
 #include "eveEventProperty.h"
 #include "eveEventRegisterMessage.h"
+#include "eveDeviceMonitor.h"
 
 /*
  *
@@ -28,8 +29,10 @@ public:
 private:
 	bool shutdownPending;
 	void registerEvent(eveEventRegisterMessage*);
-	void triggerSchedule(int, int);
+	void triggerSchedule(int, int, eveChainStatusMessage*);
 	QHash<quint64, eveEventProperty* > scheduleHash;
+	QHash<QString, eveEventProperty* > detectorHash;
+	QHash<eveEventProperty*, eveDeviceMonitor* > monitorHash;
 
 };
 

@@ -6,6 +6,7 @@
  */
 
 #include "eveSMChannel.h"
+#include "eveEventRegisterMessage.h"
 #include "eveError.h"
 #include "eveScanModule.h"
 
@@ -15,8 +16,8 @@
  * @param definition corresponding detectorchannel definition
  * @return
  */
-eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveDetectorChannel* definition, QHash<QString, QString> parameter)  :
-	QObject(scanmodule) {
+eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveDetectorChannel* definition, QHash<QString, QString> parameter, QList<eveEventProperty* >* eventlist)  :
+eveSMBaseDevice(scanmodule) {
 
 	scanModule = scanmodule;
 	signalCounter=0;
@@ -36,10 +37,11 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveDetectorChannel* defini
 	curValue = NULL;
 	channelStatus = eveCHANNELINIT;
 	channelType=definition->getChannelType();
+	eventList = eventlist;
 
 	if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
 		if (definition->getValueCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			valueTrans = new eveCaTransport(this, name, (eveCaTransportDef*)definition->getValueCmd()->getTrans());
+			valueTrans = new eveCaTransport(this, name, (eveTransportDef*)definition->getValueCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}
@@ -50,7 +52,7 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveDetectorChannel* defini
 
 	if ((definition->getStopCmd() != NULL) && (definition->getStopCmd()->getTrans()!= NULL)){
 		if (definition->getStopCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			stopTrans = new eveCaTransport(this, name, (eveCaTransportDef*)definition->getStopCmd()->getTrans());
+			stopTrans = new eveCaTransport(this, name, (eveTransportDef*)definition->getStopCmd()->getTrans());
 			stopValue.setType(definition->getStopCmd()->getValueType());
 			stopValue.setValue(definition->getStopCmd()->getValueString());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
@@ -60,7 +62,7 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveDetectorChannel* defini
 
 	if ((definition->getTrigCmd() != NULL) && (definition->getTrigCmd()->getTrans()!= NULL)){
 		if (definition->getTrigCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			triggerTrans = new eveCaTransport(this, name, (eveCaTransportDef*)definition->getTrigCmd()->getTrans());
+			triggerTrans = new eveCaTransport(this, name, (eveTransportDef*)definition->getTrigCmd()->getTrans());
 			triggerValue.setType(definition->getTrigCmd()->getValueType());
 			triggerValue.setValue(definition->getTrigCmd()->getValueString());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
@@ -73,7 +75,7 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveDetectorChannel* defini
 			unit = definition->getUnitCmd()->getValueString();
 		}
 		else if (definition->getUnitCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			unitTrans = new eveCaTransport(this, name, (eveCaTransportDef*)definition->getUnitCmd()->getTrans());
+			unitTrans = new eveCaTransport(this, name, (eveTransportDef*)definition->getUnitCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}
@@ -104,9 +106,8 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveDetectorChannel* defini
 	if (parameter.contains("confirmtrigger"))
 		confirmTrigger = parameter.value("confirmtrigger").startsWith("true",Qt::CaseInsensitive);
 	if (!ok) sendError(ERROR, 0, "Unable to evaluate confirmtrigger");
-
-	if (parameter.contains("readyeventId"))
-		readyeventId = parameter.value("readyeventId");
+	if (parameter.contains("sendreadyevent"))
+		sendreadyevent = (parameter.value("sendreadyevent").toLower() == "true");
 /*
 	repeatOnRedo = false;
 	if (parameter.contains("repeatonredo"))
@@ -122,6 +123,13 @@ eveSMChannel::~eveSMChannel() {
 		if (haveStop) delete stopTrans;
 		if (haveTrigger) delete triggerTrans;
 		if (haveUnit) delete unitTrans;
+
+		foreach (eveEventProperty* evprop, *eventList){
+			disconnect(evprop, SIGNAL(signalEvent(eveEventProperty*)), this, SLOT(newEvent(eveEventProperty*)));
+			eveEventRegisterMessage* regmessage = new eveEventRegisterMessage(false, evprop);
+			scanModule->sendMessage(regmessage);
+		}
+		delete eventList;
 	}
 	catch (std::exception& e)
 	{
@@ -158,6 +166,14 @@ void eveSMChannel::init() {
 		++signalCounter;
 		unitTrans->connectTrans();
 	}
+
+	foreach (eveEventProperty* evprop, *eventList){
+		sendError(DEBUG, 0, QString("registering detector event").arg(evprop->getName()));
+		connect(evprop, SIGNAL(signalEvent(eveEventProperty*)), this, SLOT(newEvent(eveEventProperty*)), Qt::QueuedConnection);
+		eveEventRegisterMessage* regmessage = new eveEventRegisterMessage(true, evprop);
+		scanModule->sendMessage(regmessage);
+	}
+
 }
 
 /**
@@ -249,8 +265,19 @@ void eveSMChannel::transportReady(int status) {
 			curValue->setXmlId(xmlId);
 			curValue->setName(name);
 		}
+
 		channelStatus = eveCHANNELIDLE;
-		signalReady();
+
+		if (redo){
+			if (curValue != NULL) {
+				delete curValue;
+				curValue = NULL;
+			}
+			triggerRead(false);
+		}
+		else {
+			signalReady();
+		}
 	}
 }
 
@@ -264,33 +291,33 @@ void eveSMChannel::signalReady() {
 }
 
 /**
- * \brief trigger detector if it has a trigger command, else read
+ * \brief trigger detector if it has a trigger command
  * @param queue if true queue the request, if false send it immediately
  *
  * if detector has a trigger this method only triggers the detector,
- *   read must be called explicitly
+ * read must be called explicitly
  * deviceDone is always signaled
  */
-void eveSMChannel::trigger(bool queue) {
-
-	if (channelOK) {
-		ready = false;
-		if (haveTrigger){
-			channelStatus = eveCHANNELTRIGGER;
-			if (triggerTrans->writeData(triggerValue, queue)) {
-				sendError(ERROR,0,"error triggering");
-				transportReady(1);
-			}
-		}
-		else {
-			read(queue);
-		}
-	}
-	else {
-		sendError(ERROR,0,"not operational");
-		signalReady();
-	}
-}
+//void eveSMChannel::trigger(bool queue) {
+//
+//	if (channelOK) {
+//		ready = false;
+//		if (haveTrigger){
+//			channelStatus = eveCHANNELTRIGGER;
+//			if (triggerTrans->writeData(triggerValue, queue)) {
+//				sendError(ERROR,0,"error triggering");
+//				transportReady(1);
+//			}
+//		}
+//		else {
+//			signalReady();
+//		}
+//	}
+//	else {
+//		sendError(ERROR,0,"not operational");
+//		signalReady();
+//	}
+//}
 
 /**
  * \brief combined trigger and read sequence
@@ -304,7 +331,8 @@ void eveSMChannel::trigger(bool queue) {
 void eveSMChannel::triggerRead(bool queue) {
 
 	ready = false;
-	if (channelOK) {
+	if (channelOK && (channelStatus == eveCHANNELIDLE)) {
+		redo = false;
 		if (haveTrigger){
 			channelStatus = eveCHANNELTRIGGERREAD;
 			if (triggerTrans->writeData(triggerValue, queue)) {
@@ -326,7 +354,9 @@ void eveSMChannel::triggerRead(bool queue) {
  * \brief read detector value
  * @param queue if true queue the request, if false send it immediately
  *
- * deviceDone is always signaled
+ * deviceDone is always signaled,
+ * method is private since redo is done properly only by triggerRead
+ *
  */
 void eveSMChannel::read(bool queue) {
 
@@ -386,6 +416,19 @@ eveDevInfoMessage* eveSMChannel::getDeviceInfo(){
 	return new eveDevInfoMessage(xmlId, name, sl);
 }
 
+void eveSMChannel::newEvent(eveEventProperty* evprop) {
+
+	if (evprop == NULL){
+		sendError(ERROR,0,"invalid event property");
+		return;
+	}
+
+	if (evprop->getActionType() == eveEventProperty::REDO){
+		sendError(DEBUG, 0, "received redo event");
+		redo = true;
+	}
+}
+
 /**
  * \brief send an error message to display
  * @param severity
@@ -396,4 +439,8 @@ void eveSMChannel::sendError(int severity, int errorType,  QString message){
 
 	scanModule->sendError(severity, EVEMESSAGEFACILITY_SMDEVICE,
 							errorType,  QString("DetectorChannel %1: %2").arg(name).arg(message));
+}
+
+void eveSMChannel::sendError(int severity, int facility, int errorType, QString message){
+	scanModule->sendError(severity, facility, errorType, message);
 }

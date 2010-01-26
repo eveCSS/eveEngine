@@ -26,6 +26,7 @@ typedef enum {
                 eveFloat32T,
                 eveFloat64T,
                 eveStringT,
+                eveDateTimeT,
                 eveUnknownT
 }eveType;
 

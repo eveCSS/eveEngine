@@ -18,7 +18,7 @@
  * @return
  */
 eveSMDevice::eveSMDevice(eveScanModule* scanmodule, eveDevice* definition, eveVariant writeval, bool resetPrevious)  :
-	QObject(scanmodule) {
+	eveSMBaseDevice(scanmodule) {
 
 	setPrevious = resetPrevious;
 	value = writeval;
@@ -33,7 +33,7 @@ eveSMDevice::eveSMDevice(eveScanModule* scanmodule, eveDevice* definition, eveVa
 
 	if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
 		if (definition->getValueCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			valueTrans = new eveCaTransport(this, name, (eveCaTransportDef*)definition->getValueCmd()->getTrans());
+			valueTrans = new eveCaTransport(this, name, (eveTransportDef*)definition->getValueCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}
@@ -102,6 +102,9 @@ void eveSMDevice::transportReady(int status) {
 		deviceStatus = eveDEVICEIDLE;
 		emit deviceDone();
 	}
+	else{
+		sendError(MINOR, 0, "transport signaled ready to idle device");
+	}
 }
 
 /**
@@ -117,7 +120,7 @@ void eveSMDevice::readValue(bool queue) {
 			ready = false;
 			deviceStatus = eveDEVICEREAD;
 			// trigger read of current value first
-			if (valueTrans->readData(false)){
+			if (valueTrans->readData(queue)){
 				sendError(ERROR,0,"error reading current value");
 				transportReady(1);
 			}
@@ -142,17 +145,25 @@ void eveSMDevice::readValue(bool queue) {
 void eveSMDevice::writeValue(bool queue) {
 
 	if (haveValue){
-		if (value.isValid()) {
-			deviceStatus = eveDEVICEWRITE;
-			ready = false;
-			if (valueTrans->writeData(value, queue)){
-				sendError(ERROR, 0, "error resetting to original value");
-				transportReady(1);
+		if (deviceStatus == eveDEVICEIDLE){
+			if (value.isValid()) {
+				deviceStatus = eveDEVICEWRITE;
+				ready = false;
+				if (valueTrans->writeData(value, queue)){
+					sendError(ERROR, 0, "error resetting to original value");
+					transportReady(1);
+				}
+			}
+			else {
+				bool ok = false;
+				double newValue = value.toDouble(&ok);
+				sendError(ERROR, 0, QString("invalid set value: %1 (%2)").arg(newValue).arg(ok));
+				emit deviceDone();
 			}
 		}
 		else {
-			sendError(ERROR, 0, "invalid set value");
-			transportReady(1);
+			sendError(ERROR, 0, "unable to write, device is busy");
+			emit deviceDone();
 		}
 	}
 	else {
@@ -169,6 +180,10 @@ void eveSMDevice::writeValue(bool queue) {
  */
 void eveSMDevice::sendError(int severity, int errorType,  QString message){
 
-	scanModule->sendError(severity, EVEMESSAGEFACILITY_SMDEVICE,
-							errorType,  QString("Device %1: %2").arg(name).arg(message));
+	sendError(severity, EVEMESSAGEFACILITY_SMDEVICE,
+			errorType,  QString("Device %1: %2").arg(name).arg(message));
+}
+
+void eveSMDevice::sendError(int severity, int facility, int errorType, QString message){
+	scanModule->sendError(severity, facility, errorType, message);
 }

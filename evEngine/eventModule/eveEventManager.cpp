@@ -33,7 +33,7 @@ void eveEventManager::handleMessage(eveMessage *message){
 		{
 			int chainId = ((eveChainStatusMessage*)message)->getChainId();
 			int smId = ((eveChainStatusMessage*)message)->getSmId();
-			if (scheduleHash.contains(eveVariant::getMangled(chainId,smId))) triggerSchedule(chainId, smId);
+			if (scheduleHash.contains(eveVariant::getMangled(chainId,smId))) triggerSchedule(chainId, smId, (eveChainStatusMessage*)message);
 			break;
 		}
 	default:
@@ -49,6 +49,8 @@ void eveEventManager::handleMessage(eveMessage *message){
  */
 void eveEventManager::registerEvent(eveEventRegisterMessage* message){
 
+	if (shutdownPending) return;
+
 	eveEventProperty* event = message->takeEventProperty();
 	if (event == NULL){
 		sendError(ERROR, 0, "unable to register; invalid event property");
@@ -60,13 +62,21 @@ void eveEventManager::registerEvent(eveEventRegisterMessage* message){
 		if (event->getEventType() == eveEventTypeSCHEDULE){
 			bool ok;
 			quint64 id = event->getLimit().toULongLong(&ok);
-			if (ok)
-				scheduleHash.insert(id, event);
+			if (ok) scheduleHash.insert(id, event);
+			sendError(DEBUG, 0, QString("registering schedule event id: %1").arg(id));
 		}
-		else {
+		else if (event->getEventType() == eveEventTypeDETECTOR){
+			detectorHash.insert(event->getName(), event);
+			sendError(DEBUG, 0, QString("registering detector event: %1").arg(event->getName()));
+		}
+		else if (event->getEventType() == eveEventTypeMONITOR){
 			// monitor event
-			// TODO
+			sendError(DEBUG, 0, "registering monitor event");
+			eveDeviceMonitor* devMon = new eveDeviceMonitor(this, event);
+			monitorHash.insert(event, devMon);
 		}
+		else
+			sendError(DEBUG, 0, QString("unable to register event: %1, unknown event type").arg(event->getName()));
 	}
 	else {
 		// unregister
@@ -77,18 +87,34 @@ void eveEventManager::registerEvent(eveEventRegisterMessage* message){
 				scheduleHash.remove(id);
 			}
 		}
-		else {
-			// monitor event
-			// TODO
+		else if (event->getEventType() == eveEventTypeDETECTOR){
+			if (detectorHash.contains(event->getName())){
+				detectorHash.remove(event->getName());
+				sendError(DEBUG, 0, QString("unregistering detector event: %1").arg(event->getName()));
+				delete event;
+			}
 		}
+		else if (event->getEventType() == eveEventTypeMONITOR) {
+			if (monitorHash.contains(event)){
+				eveDeviceMonitor* devMon = monitorHash.take(event);
+				delete event;
+				delete devMon;
+			}
+		}
+		else
+			sendError(DEBUG, 0, QString("unable to unregister event: %1, unknown event type").arg(event->getName()));
 	}
 }
 
-void eveEventManager::triggerSchedule(int chainid, int smid){
+void eveEventManager::triggerSchedule(int chainid, int smid, eveChainStatusMessage* message){
 
 	eveEventProperty* event = scheduleHash.value(eveVariant::getMangled(chainid,smid));
-	event->setValue(event->getLimit());
-	event->fireEvent();
+	if (((event->getIncident() == eveIncidentEND) && (message->getStatus() == eveChainSmDONE)) ||
+			((event->getIncident() == eveIncidentSTART) && (message->getStatus() == eveChainSmEXECUTING))){
+		event->setValue(event->getLimit());
+		event->fireEvent();
+		sendError(DEBUG, 0, QString("fired a schedule event (%1/%2)").arg(chainid).arg(smid));
+	}
 }
 
 /**
@@ -113,8 +139,15 @@ void eveEventManager::shutdown(){
 
 		// stop input Queue
 		disableInput();
-
 		// delete all events
+		foreach (eveEventProperty* event, scheduleHash){
+			delete event;
+		}
+		scheduleHash.clear();
+		foreach (eveEventProperty* monevent, monitorHash.keys()){
+			delete monitorHash.take(monevent);
+			delete monevent;
+		}
 	}
 
 	// make sure mHub reads all outstanding messages before closing the channel

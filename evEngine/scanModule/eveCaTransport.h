@@ -13,14 +13,14 @@
 #include <QString>
 #include <QTimer>
 #include <QHash>
+#include <QReadWriteLock>
 
 #include "eveBaseTransport.h"
+#include "eveSMBaseDevice.h"
 #include "eveDevice.h"
 #include "cadef.h"
-#include "eveData.h"
+//#include "eveData.h"
 
-enum eveTransActionT {eveCONNECT, eveREAD, eveWRITE, eveIDLE };
-enum eveTransStatusT {eveCONNECTED, eveNOTCONNECTED, eveTIMEOUT, eveUNDEFINED };
 
 //class eveScanManager;
 class eveCaTransport: public eveBaseTransport {
@@ -28,11 +28,12 @@ class eveCaTransport: public eveBaseTransport {
 	Q_OBJECT
 
 public:
-	eveCaTransport(QObject *parent, QString, eveCaTransportDef*);
+	eveCaTransport(eveSMBaseDevice *parent, QString, eveTransportDef*);
 	virtual ~eveCaTransport();
 	int readData(bool queue=false);
 	int writeData(eveVariant, bool queue=false);
 	int connectTrans();
+	int monitorTrans();
 	bool isConnected();
 	bool haveData(){if (newData == NULL) return false; else return true;};
 	eveDataMessage *getData();
@@ -52,6 +53,8 @@ public:
 	static void eveCaTransportGetCB(struct event_handler_args arg);
 	static void eveCaTransportPutCB(struct event_handler_args arg);
 	static void eveCaTransportEnumCB(struct event_handler_args arg);
+	static void eveCaTransportMonitorCB(struct event_handler_args arg);
+	static eveDataMessage* getDataMessage(struct event_handler_args arg);
 	static epicsType convertEveToEpicsType(eveType intype){return (epicsType) intype;};
 	static int convertEpicsToDBR(epicsType type){return epicsTypeToDBR_XXXX[type];};
 
@@ -63,6 +66,7 @@ public slots:
     void connectTimeout();
     void getTimeout();
     void putTimeout();
+    void createMonitor(int);
 
 signals:
 	void writeReady(int);
@@ -72,6 +76,7 @@ signals:
 
 private:
     static QHash<struct ca_client_context *, int> contextCounter;
+	static QReadWriteLock contextLock;
     QTimer *getTimer;
     QTimer *putTimer;
     void getEnumStrs();
@@ -83,17 +88,20 @@ private:
 	int timeOut;
 	QString name;
 	QString pvname;
-	eveCaTransportDef *transDef;
+	transMethodT method;
+	eveType dataType;
 	QStringList *enumStringList;
-	//eveScanManager* scanManager;
+	eveSMBaseDevice *baseDevice;
 	chid chanChid;
 	chtype elementType;
 	chtype requestType;
 	void *dataPtr;
+	void *monitorDataPtr;
 	void *enumData;
 	void *writeDataPtr;
 	bool needEnums;
 	bool enumsInProgress;
+	bool haveMonitor;
 	struct ca_client_context *caThreadContext;
 
 };

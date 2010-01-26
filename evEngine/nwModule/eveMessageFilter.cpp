@@ -125,7 +125,7 @@ void eveMessageFilter::queueMessage(eveMessage *message)
 		case EVEMESSAGETYPE_DATA:
 			// no data caching yet
 		default:
-			if (message) delete message;
+			delete message;
 			break;
 	}
 }
@@ -141,12 +141,12 @@ void eveMessageFilter::timeout()
 {
 	if (skippedMessageCount){
 		if (messageCount >= EVEMESSAGEFILTER_HIGHLIMIT) {
-			netObject->sendMessage(new eveErrorMessage(MINOR, 0x09, 0x0007,
-					QString("Messagefilter HighLimit: skipped %1 messages").arg(skippedMessageCount)));
+			netObject->sendMessage(new eveErrorMessage(MINOR, EVEMESSAGEFACILITY_MFILTER, 0x0007,
+					QString("HighLimit: skipped %1 messages").arg(skippedMessageCount)));
 		}
 		else {
-			netObject->sendMessage(new eveErrorMessage(MINOR, 0x09, 0x0006,
-					QString("Messagefilter LowLimit: skipped %1 equal messages").arg(skippedMessageCount)));
+			netObject->sendMessage(new eveErrorMessage(MINOR, EVEMESSAGEFACILITY_MFILTER, 0x0006,
+					QString("LowLimit: skipped %1 equal messages").arg(skippedMessageCount)));
 		}
 	}
 	messageCount = 0;

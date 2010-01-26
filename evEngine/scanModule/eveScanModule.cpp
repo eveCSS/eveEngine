@@ -28,6 +28,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     chainId = chainid;
     triggerDelay = 0.0;
 	catchedRedo = false;
+	catchedTrigger=false;
 
 	stageHash.insert(eveStgINIT, &eveScanModule::stgInit);
 	stageHash.insert(eveStgREADPOS, &eveScanModule::stgReadPos);
@@ -80,11 +81,9 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	    connect (channel, SIGNAL(channelDone()), this, SLOT(execStage()), Qt::QueuedConnection);
 	}
 
-	QList<eveEventProperty*>* eventList = parser->getEventList(manager, chainId, smId);
-	foreach (eveEventProperty* evprop, *eventList){
-		manager->registerEvent(smid, evprop, false);
-	}
-	delete eventList;
+	eventList = parser->getSMEventList(chainId, smId);
+
+	postPosPlugin = parser->getPositioningPlugin(chainId, smId, "positioning");
 
 	// connect signals
     connect (this, SIGNAL(sigExecStage()), this, SLOT(execStage()), Qt::QueuedConnection);
@@ -122,7 +121,6 @@ eveScanModule::~eveScanModule() {
  * initialization:
  */
 void eveScanModule::initialize() {
-	// TODO we don't need this any more, call stgInit() instead
 	sendError(DEBUG, 0, "initialize");
 	(this->*stageHash.value(eveStgINIT))();
 }
@@ -165,6 +163,13 @@ void eveScanModule::stgInit() {
 			channel->init();
 			++signalCounter;
 		}
+		// init events
+		foreach (eveEventProperty* evprop, *eventList){
+			sendError(DEBUG, 0, QString("registering event for ..."));
+			manager->registerEvent(smId, evprop, false);
+		}
+		delete eventList;
+		eventList = NULL;
 
 		if (nestedSM != NULL) {
 			nestedSM->initialize();
@@ -339,6 +344,7 @@ void eveScanModule::stgPrescan() {
 		if (!signalCounter) emit sigExecStage();
 	}
 	else if (currentStageCounter == 1){
+		// TODO shouldn't we loop over device->isDone() here, to be sure?
 		sendError(INFO,0,"stgPrescan write");
 		currentStageCounter=2;
 		signalCounter = 0;
@@ -353,6 +359,7 @@ void eveScanModule::stgPrescan() {
 			--signalCounter;
 		}
 		else {
+			// TODO shouldn't we loop over device->isDone() here, to be sure?
 			sendError(INFO,0,"stgPrescan Done");
 			currentStageReady=true;
 			emit sigExecStage();
@@ -527,8 +534,10 @@ void eveScanModule::stgNextPos() {
 					sendError(ERROR,0,QString("%1: no position data available").arg(axis->getName()));
 				else {
 					bool ok = false;
+					bool iok = false;
 					double dval = posMesg->toVariant().toDouble(&ok);
-					if (ok) sendError(INFO,0,QString("%1: at position %2").arg(axis->getName()).arg(dval));
+					int ival = posMesg->toVariant().toInt(&iok);
+					if (ok && iok) sendError(INFO,0,QString("%1: at position %2 (%3)").arg(axis->getName()).arg(dval).arg(ival));
 					sendMessage(posMesg);
 				}
 			}
@@ -935,6 +944,29 @@ bool eveScanModule::breakChain() {
 }
 
 /**
+ * \brief walk down until the SM with smid is found and signal trigger,
+ * 			if it is waiting for a trigger
+ *
+ * @param smid	smid of the sm to be triggered
+ * @return true if SM with smid was found
+ *
+ */
+bool eveScanModule::triggerSM(int smid) {
+
+	bool found = false;
+	if (smId == smid){
+		found = true;
+		if (smStatus == eveSmTRIGGERWAIT) {
+			catchedTrigger=true;
+			emit sigExecStage();
+		}
+	}
+	if (!found && nestedSM) found = nestedSM->redoSM(smid);
+	if (!found && (smStatus == eveSmAPPEND)) found = appendedSM->redoSM(smid);
+	return found;
+}
+
+/**
  * \brief walk down until the SM with smid is found and signal redo,
  * 			if it is executing
  *
@@ -946,6 +978,7 @@ bool eveScanModule::redoSM(int smid) {
 
 	bool found = false;
 	if (smId == smid){
+		found = true;
 		if ((smStatus == eveSmEXECUTING) || (smStatus == eveSmPAUSED)
 			|| (smStatus == eveSmTRIGGERWAIT)) {
 			catchedRedo = true;
@@ -974,16 +1007,30 @@ void eveScanModule::redoChain() {
 	}
 }
 
-void eveScanModule::sendMessage(eveBaseDataMessage* message){
+void eveScanModule::sendMessage(eveMessage* message){
 
 	if (message != NULL){
-		message->setChainId(chainId);
-		message->setSmId(smId);
+		if ((message->getType() == EVEMESSAGETYPE_DEVINFO) ||
+				(message->getType() == EVEMESSAGETYPE_DATA)){
+			((eveBaseDataMessage*)message)->setChainId(chainId);
+			((eveBaseDataMessage*)message)->setSmId(smId);
+
+		}
 		manager->sendMessage(message);
 	}
 	else
-		sendError(ERROR, 0, "discarding empty data message");
+		sendError(ERROR, 0, "discarding empty message");
 }
+
+eveSMAxis* eveScanModule::findAxis(QString axisid){
+
+	foreach (eveSMAxis *axis, *axisList){
+		if (axis->getxmlId() == axisid)
+		return axis;
+	}
+	return NULL;
+}
+
 
 void eveScanModule::sendError(int severity, int errorType,  QString message){
 

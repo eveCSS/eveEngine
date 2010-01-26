@@ -9,13 +9,12 @@
 #define EVEEVENTPROPERTY_H_
 
 #include <QObject>
+#include <QString>
 #include "eveVariant.h"
+#include "eveDevice.h"
 
-class eveScanManager;
-
-enum actionTypeT {eveEventActionNONE, eveEventActionSTART, eveEventActionPAUSE, eveEventActionHALT, eveEventActionBREAK, eveEventActionSTOP, eveEventActionREDO} ;
-enum eventTypeT {eveEventTypeMONITOR=1, eveEventTypeSCHEDULE} ;
-enum incidentTypeT {eveIncidentTypeSTART, eveIncidentTypeEND} ;
+enum eventTypeT {eveEventTypeMONITOR=1, eveEventTypeSCHEDULE, eveEventTypeDETECTOR} ;
+enum incidentTypeT {eveIncidentNONE, eveIncidentSTART, eveIncidentEND} ;
 
 /*
  *
@@ -25,12 +24,13 @@ class eveEventProperty : public QObject {
 	Q_OBJECT
 
 public:
-	eveEventProperty(QObject*, eveVariant limit, eventTypeT);
+	enum actionTypeT {NONE, START, PAUSE, HALT, BREAK, STOP, REDO, TRIGGER} ;
+
+	eveEventProperty(QString, QString, eveVariant limit, eventTypeT, incidentTypeT, actionTypeT, eveDeviceCommand*);
 	virtual ~eveEventProperty();
 	void setOn(bool state){onstate = state;};
 	bool getOn(){return onstate;};
 	void sendEvent(){emit signalEvent(this);};
-	bool connectEvent(eveScanManager*);
 	eventTypeT getEventType(){return eventType;};
 	actionTypeT getActionType(){return actionType;};
 	void setValue(const eveVariant& value){eventValue = value;};
@@ -43,7 +43,12 @@ public:
 	int getEventId(){return eventId;};
 	void setEventId(int id){eventId = id;};
 	void fireEvent(){emit signalEvent(this);};
-
+	void setSignalOff(bool doOffToo){signalOff=doOffToo;};
+	bool getSignalOff(){return signalOff;};
+	eveDeviceCommand* getDevCommand(){return devCommand;};
+	QString getCompareOperator(){return comparison;};
+	QString getName(){return name;};
+	incidentTypeT getIncident(){return incidentType;};
 
 signals:
 	void signalEvent(eveEventProperty*);
@@ -54,11 +59,14 @@ private:
 	bool isConnected;
 	int eventId;
 	int smId;
+	QString name;
 	eveVariant eventValue;
 	eveVariant eventLimit;
 	actionTypeT actionType;
 	eventTypeT eventType;
+	incidentTypeT incidentType;
 	QString comparison;
+	eveDeviceCommand* devCommand;;
 	// call eventAction too, if eventSource changes from true to false
 	bool signalOff;
 };

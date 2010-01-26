@@ -27,7 +27,7 @@ Es gibt einen StorageThread pro Datenfile:
 	aufgerufen.
 	
 	Formatspezifisches FileWriter Interface:
-		Reihenfolge ist wichtig: init, dann setRow, dann open etc.
+		Reihenfolge ist wichtig: init, dann setCols, dann open etc.
 	
 	int init(setId, QString paralist)
 		paralist	parameterliste aus plugin definition

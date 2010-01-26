@@ -13,58 +13,76 @@
 #include <QStringList>
 #include "eveTypes.h"
 
-enum pvMethodT {evePUT, eveGET, evePUTCB, eveGETCB, eveGETPUT, eveGETPUTCB};
+enum transMethodT {evePUT, eveGET, evePUTCB, eveGETCB, eveGETPUT, eveGETPUTCB, eveMONITOR};
 enum eveTransportT {eveTRANS_CA, eveTRANS_LOCAL };
-enum eveEventTypeT {eveSCHEDULE, eveMONITOR};
+// enum eveEventTypeT {eveEventSCHEDULE, eveEventMONITOR};
 
 /**
  * \brief base class for transports (CA, etc.)
  */
-class eveTransportDef {
+class eveBaseTransportDef {
 public:
-	eveTransportDef(eveType);
-	virtual ~eveTransportDef();
-	virtual eveTransportDef* clone()=0;
+	eveBaseTransportDef(eveType);
+	virtual ~eveBaseTransportDef();
+	virtual eveBaseTransportDef* clone()=0;
 	eveType getDataType(){return dataType;};
-	eveTransportT getTransType(){return transtype;};
+	eveTransportT getTransType(){return transType;};
 protected:
 	eveType dataType;
-	eveTransportT transtype;
+	eveTransportT transType;
 };
 
 /**
- * \brief EPICS CA transport
+ * \brief Common transport
  */
-class eveCaTransportDef : public eveTransportDef{
+class eveTransportDef : public eveBaseTransportDef{
 public:
-	eveCaTransportDef(eveType, pvMethodT, double, QString );
-	virtual ~eveCaTransportDef();
-	eveCaTransportDef* clone();
-	QString getName(){return pV;};
-	pvMethodT getMethod(){return method;};
+	eveTransportDef(eveTransportT, eveType, transMethodT, double, QString );
+	virtual ~eveTransportDef();
+	eveTransportDef* clone();
+	QString getName(){return accessName;};
+	transMethodT getMethod(){return method;};
 	double getTimeout(){return timeout;};
 
 private:
-	QString pV;
-	pvMethodT method;
+	QString accessName;
+	transMethodT method;
 	double timeout;
 };
 
-/**
- * \brief Local transport
- */
-class eveLocalTransportDef : public eveTransportDef{
-public:
-	eveLocalTransportDef(eveType, pvMethodT, QString );
-	virtual ~eveLocalTransportDef();
-	eveLocalTransportDef* clone();
-	QString getName(){return accessDescription;};
-	pvMethodT getMethod(){return method;};
-
-private:
-	QString accessDescription;
-	pvMethodT method;
-};
+///**
+// * \brief EPICS CA transport
+// */
+//class eveCaTransportDef : public eveBaseTransportDef{
+//public:
+//	eveCaTransportDef(eveType, transMethodT, double, QString );
+//	virtual ~eveCaTransportDef();
+//	eveCaTransportDef* clone();
+//	QString getName(){return pV;};
+//	transMethodT getMethod(){return method;};
+//	double getTimeout(){return timeout;};
+//
+//private:
+//	QString pV;
+//	transMethodT method;
+//	double timeout;
+//};
+//
+///**
+// * \brief Local transport
+// */
+//class eveLocalTransportDef : public eveBaseTransportDef{
+//public:
+//	eveLocalTransportDef(eveType, transMethodT, QString );
+//	virtual ~eveLocalTransportDef();
+//	eveLocalTransportDef* clone();
+//	QString getName(){return accessDescription;};
+//	transMethodT getMethod(){return method;};
+//
+//private:
+//	QString accessDescription;
+//	transMethodT method;
+//};
 
 /**
  * \brief trigger or unit command
@@ -72,15 +90,16 @@ private:
  */
 class eveDeviceCommand {
 public:
-	eveDeviceCommand(eveTransportDef *, QString, eveType);
+	eveDeviceCommand(eveBaseTransportDef *, QString, eveType);
+	eveDeviceCommand(const eveDeviceCommand&);
 	virtual ~eveDeviceCommand();
 	eveDeviceCommand* clone();
 	eveType getValueType() {return valueType;};
 	QString getValueString() {return valueString;};
-	eveTransportDef* getTrans() {return transDef;};
+	eveBaseTransportDef* getTrans() {return transDef;};
 
 private:
-	eveTransportDef *transDef;
+	eveBaseTransportDef *transDef;
 	QString	valueString;
 	eveType valueType;
 };
@@ -188,6 +207,7 @@ private:
 };
 
 
+/*
 class eveEventDefinition : public eveBaseDevice {
 public:
 	eveEventDefinition(eveDeviceCommand *, eveEventTypeT, QString, QString);
@@ -199,5 +219,6 @@ private:
 	eveEventTypeT eventType;
 };
 
+*/
 
 #endif /* EVEDEVICE_H_ */

@@ -152,6 +152,11 @@ void eveMessageHub::newMessage(int messageSource)
 					eveMessage *mclone = message->clone();
 					if(!mChanHash.value(EVECHANNEL_NET)->queueMessage(mclone)) delete mclone;
 				}
+				/* send chainstatus to eventManager (we always have one)*/
+				if (mChanHash.contains(EVECHANNEL_EVENT)){
+					eveMessage *mclone = message->clone();
+					if(!mChanHash.value(EVECHANNEL_EVENT)->queueMessage(mclone)) delete mclone;
+				}
 				/* send chainstatus to manager (we always have one)*/
 				if (mChanHash.contains(EVECHANNEL_MANAGER)){
 					if (mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(message))message = NULL;
@@ -280,6 +285,11 @@ void eveMessageHub::newMessage(int messageSource)
 					if (sendToStorage(message)) message = NULL;
 				}
 				break;
+			case EVEMESSAGETYPE_EVENTREGISTER:
+				if (mChanHash.contains(EVECHANNEL_EVENT)){
+					if (mChanHash.value(EVECHANNEL_EVENT)->queueMessage(message)) message = NULL;
+				}
+				break;
 			default:
 				addError(ERROR, 0, "newMessage: unknown message type");
 				break;
@@ -350,9 +360,9 @@ bool eveMessageHub::sendToStorage(eveMessage* message)
 	eveMessage* clone;
 	bool retval = false;
 	int channel = message->getDestination();
-	int count = storageChannelList.count();
 	// channel EVECHANNEL_STORAGE means: send it to all storageChannels
 	if ( channel == EVECHANNEL_STORAGE ){
+		int count = storageChannelList.count();
 		foreach (int chan, storageChannelList) {
 			if (count > 1)
 				clone = message->clone();

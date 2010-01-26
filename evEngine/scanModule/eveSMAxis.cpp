@@ -10,16 +10,17 @@
 #include "eveSMAxis.h"
 #include "eveError.h"
 #include "eveScanModule.h"
+#include "eveTimer.h"
+#include "eveCounter.h"
 
 // TODO
 // trigger axis after setting new position if a trigger is available
 // read unit string
 
 eveSMAxis::eveSMAxis(eveScanModule *sm, eveMotorAxis* motorAxisDef, evePosCalc *poscalc) :
-	QObject(sm){
+eveSMBaseDevice(sm){
 
 	posCalc = poscalc;
-	axisDef = motorAxisDef;
 	haveDeadband = false;
 	haveTrigger = false;
 	haveUnit = false;
@@ -29,26 +30,40 @@ eveSMAxis::eveSMAxis(eveScanModule *sm, eveMotorAxis* motorAxisDef, evePosCalc *
 	haveGoto = false;
 	havePos = false;
 	inDeadband = true;
+	isTimer=false;
 	gotoTrans = NULL;
 	posTrans = NULL;
 	stopTrans = NULL;
 	statusTrans = NULL;
 	triggerTrans = NULL;
 	deadbandTrans = NULL;
+	unitTrans = NULL;
 	axisStatus = eveAXISINIT;
 	signalCounter=0;
-	xmlId = axisDef->getId();
-	name = axisDef->getName();
+	xmlId = motorAxisDef->getId();
+	name = motorAxisDef->getName();
 	scanModule = sm;
 	ready = true;
 	axisOK = false;
 	axisStop = false;
 	curPosition = NULL;
 
-	if ((axisDef->getGotoCmd() != NULL) && (axisDef->getGotoCmd()->getTrans() != NULL)){
-		if (axisDef->getGotoCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			gotoTrans = new eveCaTransport(this, name, (eveCaTransportDef*)axisDef->getGotoCmd()->getTrans());
+	if ((motorAxisDef->getGotoCmd() != NULL) && (motorAxisDef->getGotoCmd()->getTrans() != NULL)){
+		eveTransportDef* transdef = (eveTransportDef*)motorAxisDef->getGotoCmd()->getTrans();
+		if (transdef->getTransType() == eveTRANS_CA){
+			gotoTrans = new eveCaTransport(this, name, transdef);
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
+		}
+		else if (transdef->getTransType() == eveTRANS_LOCAL){
+			if (transdef->getName() == "Timer"){
+				gotoTrans = new eveTimer(this, name, transdef);
+				posTrans = gotoTrans;
+				isTimer = true;
+			}
+			else if (transdef->getName() == "Counter"){
+				gotoTrans = new eveCounter(this, name, transdef);
+				posTrans = gotoTrans;
+			}
 		}
 	}
 	if (gotoTrans != NULL)
@@ -56,9 +71,9 @@ eveSMAxis::eveSMAxis(eveScanModule *sm, eveMotorAxis* motorAxisDef, evePosCalc *
 	else
 		sendError(ERROR, 0, "Unknown GOTO Transport");
 
-	if ((axisDef->getPosCmd() != NULL) && (axisDef->getPosCmd()->getTrans() != NULL)){
-		if (axisDef->getPosCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			posTrans = new eveCaTransport(this, name, (eveCaTransportDef*)axisDef->getPosCmd()->getTrans());
+	if ((motorAxisDef->getPosCmd() != NULL) && (motorAxisDef->getPosCmd()->getTrans() != NULL)){
+		if (motorAxisDef->getPosCmd()->getTrans()->getTransType() == eveTRANS_CA){
+			posTrans = new eveCaTransport(this, name, (eveTransportDef*)motorAxisDef->getPosCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}
@@ -67,49 +82,49 @@ eveSMAxis::eveSMAxis(eveScanModule *sm, eveMotorAxis* motorAxisDef, evePosCalc *
 	else
 		sendError(ERROR, 0, "Unknown Position Transport");
 
-	if ((axisDef->getTrigCmd() != NULL) && (axisDef->getTrigCmd()->getTrans() != NULL)){
-		if (axisDef->getTrigCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			triggerTrans = new eveCaTransport(this, name, (eveCaTransportDef*)axisDef->getTrigCmd()->getTrans());
-			triggerValue.setType(axisDef->getTrigCmd()->getValueType());
-			triggerValue.setValue(axisDef->getTrigCmd()->getValueString());
+	if ((motorAxisDef->getTrigCmd() != NULL) && (motorAxisDef->getTrigCmd()->getTrans() != NULL)){
+		if (motorAxisDef->getTrigCmd()->getTrans()->getTransType() == eveTRANS_CA){
+			triggerTrans = new eveCaTransport(this, name, (eveTransportDef*)motorAxisDef->getTrigCmd()->getTrans());
+			triggerValue.setType(motorAxisDef->getTrigCmd()->getValueType());
+			triggerValue.setValue(motorAxisDef->getTrigCmd()->getValueString());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}
 	if (triggerTrans != NULL)
 		haveTrigger = true;
 
-	if ((axisDef->getStopCmd() != NULL) && (axisDef->getStopCmd()->getTrans() != NULL)){
-		if (axisDef->getStopCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			stopTrans = new eveCaTransport(this, name, (eveCaTransportDef*)axisDef->getStopCmd()->getTrans());
-			stopValue.setType(axisDef->getStopCmd()->getValueType());
-			stopValue.setValue(axisDef->getStopCmd()->getValueString());
+	if ((motorAxisDef->getStopCmd() != NULL) && (motorAxisDef->getStopCmd()->getTrans() != NULL)){
+		if (motorAxisDef->getStopCmd()->getTrans()->getTransType() == eveTRANS_CA){
+			stopTrans = new eveCaTransport(this, name, (eveTransportDef*)motorAxisDef->getStopCmd()->getTrans());
+			stopValue.setType(motorAxisDef->getStopCmd()->getValueType());
+			stopValue.setValue(motorAxisDef->getStopCmd()->getValueString());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}
 	if (stopTrans != NULL) haveStop = true;
 
-	if ((axisDef->getStatusCmd() != NULL) && (axisDef->getStatusCmd()->getTrans() != NULL)){
-		if (axisDef->getStatusCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			statusTrans = new eveCaTransport(this, name, (eveCaTransportDef*)axisDef->getStatusCmd()->getTrans());
+	if ((motorAxisDef->getStatusCmd() != NULL) && (motorAxisDef->getStatusCmd()->getTrans() != NULL)){
+		if (motorAxisDef->getStatusCmd()->getTrans()->getTransType() == eveTRANS_CA){
+			statusTrans = new eveCaTransport(this, name, (eveTransportDef*)motorAxisDef->getStatusCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}
 	if (statusTrans != NULL) haveStatus = true;
 
-	if ((axisDef->getDeadbandCmd() != NULL) && (axisDef->getDeadbandCmd()->getTrans() != NULL)){
-		if (axisDef->getDeadbandCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			deadbandTrans = new eveCaTransport(this, name, (eveCaTransportDef*)axisDef->getDeadbandCmd()->getTrans());
+	if ((motorAxisDef->getDeadbandCmd() != NULL) && (motorAxisDef->getDeadbandCmd()->getTrans() != NULL)){
+		if (motorAxisDef->getDeadbandCmd()->getTrans()->getTransType() == eveTRANS_CA){
+			deadbandTrans = new eveCaTransport(this, name, (eveTransportDef*)motorAxisDef->getDeadbandCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}
 	if (deadbandTrans != NULL) haveDeadband = true;
 
-	if (axisDef->getUnitCmd() != NULL){
-		if (axisDef->getUnitCmd()->getTrans()== NULL){
-			unit = axisDef->getUnitCmd()->getValueString();
+	if (motorAxisDef->getUnitCmd() != NULL){
+		if (motorAxisDef->getUnitCmd()->getTrans()== NULL){
+			unit = motorAxisDef->getUnitCmd()->getValueString();
 		}
-		else if (axisDef->getUnitCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			unitTrans = new eveCaTransport(this, name, (eveCaTransportDef*)axisDef->getUnitCmd()->getTrans());
+		else if (motorAxisDef->getUnitCmd()->getTrans()->getTransType() == eveTRANS_CA){
+			unitTrans = new eveCaTransport(this, name, (eveTransportDef*)motorAxisDef->getUnitCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}
@@ -120,6 +135,7 @@ eveSMAxis::eveSMAxis(eveScanModule *sm, eveMotorAxis* motorAxisDef, evePosCalc *
 eveSMAxis::~eveSMAxis() {
 	try
 	{
+		if (gotoTrans == posTrans) havePos = false;
 		if (haveGoto) delete gotoTrans;
 		if (havePos) delete posTrans;
 		if (haveStop) delete stopTrans;
@@ -340,8 +356,13 @@ void eveSMAxis::signalReady() {
 void eveSMAxis::gotoStartPos(bool queue) {
 
 	ready = false;
+	// currentPosition does not change for motors, but must be fetched
+	// for timer
+	if (isTimer) currentPosition.setValue(QDateTime::currentDateTime());
+	posCalc->setOffset(currentPosition);
 	posCalc->reset();
 	gotoPos(posCalc->getStartPos(), queue);
+	sendError(INFO, 0, QString("SMAxis to Start Pos at %1").arg(QTime::currentTime().toString()));
 }
 
 /**
@@ -392,13 +413,13 @@ void eveSMAxis::stop() {
 
 	ready = false;
 	if (!haveStop) {
-		sendError(ERROR, 0, "Stop Command not operational");
+		sendError(INFO, 0, "Stop Command not operational");
 		signalReady();
 		return;
 	}
 	else {
 		if (stopTrans->writeData(stopValue, false)) {
-			sendError(ERROR,0,"error writing stop command");
+			sendError(ERROR, 0, "error writing stop command");
 			signalReady();
 		}
 		else
@@ -446,6 +467,11 @@ void eveSMAxis::execQueue() {
  */
 void eveSMAxis::sendError(int severity, int errorType,  QString message){
 
-	scanModule->sendError(severity, EVEMESSAGEFACILITY_SMDEVICE,
+	sendError(severity, EVEMESSAGEFACILITY_SMDEVICE,
 							errorType,  QString("Axis %1: %2").arg(name).arg(message));
 }
+
+void eveSMAxis::sendError(int severity, int facility, int errorType, QString message){
+	scanModule->sendError(severity, facility, errorType, message);
+}
+

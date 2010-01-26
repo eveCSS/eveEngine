@@ -39,6 +39,8 @@ public:
 	bool isDone(){return (smStatus==eveSmDONE)?true:false;}
 	void initialize();
 	void sendError(int, int, int, QString);
+	void sendMessage(eveMessage*);
+	eveSMAxis* findAxis(QString);
 	void gotoStart();
 	void readPos();
 	void start();
@@ -49,6 +51,7 @@ public:
 	bool pauseSM(int);
 	bool resumeSM(int);
 	bool haltSM(int);
+	bool triggerSM(int);
 	bool redoSM(int);
 
 	void startChain();
@@ -78,7 +81,6 @@ private:
 	void stgEndPos();
 	void stgFinish();
 	void sendError(int, int, QString);
-	void sendMessage(eveBaseDataMessage*);
 	void sendNextPos(){manager->nextPos();};
 	int chainId;
 	int smId;
@@ -90,16 +92,18 @@ private:
 	int signalCounter;
 	bool isRoot;
 	bool catchedRedo;
+	bool catchedTrigger;
 	double triggerDelay;
 	QHash<stageT, void(eveScanModule::*)()> stageHash;
 	eveScanManager* manager;
 	eveScanModule* nestedSM;
 	eveScanModule* appendedSM;
+	QHash<QString, QString>* postPosPlugin;
 	QList<eveSMDevice *> *preScanList;
 	QList<eveSMDevice *> *postScanList;
 	QList<eveSMAxis *> *axisList;
 	QList<eveSMChannel *> *channelList;
-
+	QList<eveEventProperty*>* eventList;
 };
 
 #endif /* EVESCANMODULE_H_ */

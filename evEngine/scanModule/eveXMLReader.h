@@ -43,31 +43,34 @@ public:
 	QList<eveSMDevice*>* getPostScanList(eveScanModule*, int, int);
 	QList<eveSMAxis*>* getAxisList(eveScanModule*, int, int);
 	QList<eveSMChannel*>* getChannelList(eveScanModule*, int, int);
-	QList<eveEventProperty*>* getEventList(eveScanManager*, int, int);
-
+	QList<eveEventProperty*>* getSMEventList(int, int);
+	QList<eveEventProperty*>* getChainEventList(int);
 	QString getChainString(int, QString);
+	QHash<QString, QString>* getChainPlugin(int, QString);
+	QHash<QString, QString>* getPositioningPlugin(int, int, QString);
 
 private:
 	void sendError(int, int,  QString);
 	void createDetectorDefinition(QDomNode);
 	void createMotorDefinition(QDomNode);
 	void createDeviceDefinition(QDomNode);
-	void createEventDefinition(QDomNode);
+	//void createEventDefinition(QDomNode);
 	int getIntValueOfTag(int, int, QString);
 	QList<eveSMDevice*>* getSMDeviceList(eveScanModule*, int, int, QString);
-	eveEventProperty* getEvent(eveScanManager*, QDomElement);
+	eveEventProperty* getEvent(eveEventProperty::actionTypeT, QDomElement);
     QDomDocument *domDocument;
 	eveDeviceCommand * createDeviceCommand(QDomNode);
 	eveDetectorChannel * createChannelDefinition(QDomNode, eveDeviceCommand *, eveDeviceCommand *);
 	eveMotorAxis * createAxisDefinition(QDomNode, eveDeviceCommand *, eveDeviceCommand *);
 	void createOption(QDomNode);
-	eveTransportDef* createTransportDefinition(QDomElement node);
+	eveBaseTransportDef* createTransportDefinition(QDomElement node);
+	void getPluginData(QDomElement, QHash<QString, QString>*);
 	eveDeviceList *deviceList;
 	eveManager *parent;
 	QHash<int, QDomElement> chainDomIdHash;
 	QHash<int, QHash<int, QDomElement>* > smIdHash;
 	QHash<int, int> rootSMHash; // has id of the root sm in chain
-	eveEventTypeT getEventType(QString);
+	//eveEventTypeT getEventType(QString);
 
 };
 

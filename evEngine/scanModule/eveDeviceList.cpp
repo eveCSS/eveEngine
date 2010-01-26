@@ -5,6 +5,7 @@
  *      Author: eden
  */
 
+#include <exception>
 #include "eveDeviceList.h"
 
 eveDeviceList::eveDeviceList() {
@@ -17,10 +18,20 @@ eveDeviceList::~eveDeviceList() {
 
 void eveDeviceList::clearAll() {
 
-	foreach (eveDevice* device, deviceDefinitions) delete device;
-	foreach (eveDetectorChannel* channel, channelDefinitions) delete channel;
-	foreach (eveMotorAxis* axis, axisDefinitions) delete axis;
-	foreach (eveEventDefinition* event, eventDefinitions) delete event;
+	try
+	{
+		foreach (eveDevice* device, deviceDefinitions) delete device;
+		deviceDefinitions.clear();
+		foreach (eveDetectorChannel* channel, channelDefinitions) delete channel;
+		channelDefinitions.clear();
+		foreach (eveMotorAxis* axis, axisDefinitions) delete axis;
+		axisDefinitions.clear();
+	}
+	catch (std::exception& e)
+	{
+		printf("C++ Exception in eveDeviceList::clearAll %s\n",e.what());
+	}
+
 }
 
 

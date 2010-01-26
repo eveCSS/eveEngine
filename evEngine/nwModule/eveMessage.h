@@ -2,11 +2,13 @@
 #define EVEMESSAGE_H_
 
 #include <QString>
+#include <QHash>
+#include <QDateTime>
 #include <QStringList>
 #include <QVector>
 #include <QByteArray>
-#include <epicsTime.h>
-#include <epicsTypes.h>
+#include <eveTime.h>
+#include <eveTypes.h>
 #include <alarm.h>
 #include "eveVariant.h"
 
@@ -71,6 +73,7 @@
 #define ERROR EVEMESSAGESEVERITY_ERROR
 #define FATAL EVEMESSAGESEVERITY_FATAL
 
+#define EVEMESSAGEFACILITY_MFILTER 0x09
 #define EVEMESSAGEFACILITY_CPARSER 0x0a
 #define EVEMESSAGEFACILITY_NETWORK 0x0b
 #define EVEMESSAGEFACILITY_MHUB 0x0c
@@ -84,6 +87,7 @@
 #define EVEMESSAGEFACILITY_SCANMODULE 0x14
 #define EVEMESSAGEFACILITY_STORAGE 0x15
 #define EVEMESSAGEFACILITY_EVENT 0x16
+#define EVEMESSAGEFACILITY_LOCALTIMER 0x17
 
 #define EVEERROR_TIMEOUT 0x0009
 
@@ -109,7 +113,7 @@ struct evePlayListEntry {
 enum eveDataModType {DMTunmodified, DMTcenter, DMTedge, DMTmin, DMTmax, DMTfwhm, DMTmean, DMTstandarddev};
 
 // TODO
-// remove all the clone() stuff and use explicit copy constructors where needed
+// remove all the clone() stuff except where virtual constructors are needed and use explicit copy constructors where needed
 
 
 /**
@@ -255,12 +259,12 @@ public:
 	virtual ~eveEngineStatusMessage();
 	int getStatus(){return estatus;};
 	QString * getXmlId(){return XmlId;};
-	epicsTime getTime(){return timestamp;};
+	eveTime getTime(){return timestamp;};
 	bool compare(eveMessage *);
 	eveEngineStatusMessage* clone(){return new eveEngineStatusMessage(estatus, *XmlId, priority, destination);};
 
 private:
-	epicsTime timestamp;
+	eveTime timestamp;
 	int estatus;
 	QString * XmlId;
 };
@@ -281,22 +285,22 @@ enum chainStatusT {eveChainSmIDLE=1, eveChainSmINITIALIZING, eveChainSmEXECUTING
 class eveChainStatusMessage : public eveMessage
 {
 public:
-	eveChainStatusMessage(int, int, int, int);
-	eveChainStatusMessage(int, int, int, int, epicsTime, int, int prio=0, int dest=0);
+	eveChainStatusMessage(chainStatusT, int, int, int);
+	eveChainStatusMessage(chainStatusT, int, int, int, eveTime, int, int prio=0, int dest=0);
 	virtual ~eveChainStatusMessage();
-	int getStatus(){return cstatus;};
-	void setStatus(int stat){cstatus=stat;};
+	chainStatusT getStatus(){return cstatus;};
+	void setStatus(chainStatusT stat){cstatus=stat;};
 	int getChainId(){return chainId;};
 	int getSmId(){return smId;};
 	int getPosCnt(){return posCounter;};
-	epicsTime getTime(){return timestamp;};
+	eveTime getTime(){return timestamp;};
 	int getRemainingTime(){return remainingTime;};
 	bool compare(eveMessage *);
 	eveChainStatusMessage* clone(){return new eveChainStatusMessage(cstatus, chainId, smId, posCounter, timestamp, remainingTime, priority, destination);};
 
 private:
-	epicsTime timestamp;
-	int cstatus;
+	eveTime timestamp;
+	chainStatusT cstatus;
 	int chainId;
 	int smId;
 	int posCounter;
@@ -377,17 +381,17 @@ public:
 	int getSeverity(){return severity;};
 	int getFacility(){return facility;};
 	int getErrorType(){return errorType;};
-	epicsTime getTime(){return timestamp;};
-	QString * getErrorText(){return errorString;};
+	eveTime getTime(){return timestamp;};
+	QString getErrorText(){return errorString;};
 	bool compare(eveMessage *);
-	eveErrorMessage* clone(){return new eveErrorMessage(severity, facility, errorType, *errorString, priority);};
+	eveErrorMessage* clone(){return new eveErrorMessage(severity, facility, errorType, errorString, priority);};
 
 private:
 	int severity;
 	int facility;
 	int errorType;
-	epicsTime timestamp;
-	QString *errorString;
+	eveTime timestamp;
+	QString errorString;
 };
 
 /**
@@ -421,16 +425,18 @@ protected:
 /**
  * \brief message containing measured compound data
  */
+// TODO ident is name ?? ==> redundant!
 class eveDataMessage : public eveBaseDataMessage
 {
 public:
 //	eveDataMessage(QString, eveDataStatus, int prio=0, int dest=0);
-	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<int>, int prio=0, int dest=0 );
-	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<short>, int prio=0, int dest=0 );
-	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<signed char>, int prio=0, int dest=0 );
-	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<float>, int prio=0, int dest=0 );
-	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QVector<double>, int prio=0, int dest=0 );
-	eveDataMessage(QString, eveDataStatus, eveDataModType, epicsTime, QStringList, int prio=0, int dest=0 );
+	eveDataMessage(QString, eveDataStatus, eveDataModType, eveTime, QVector<int>, int prio=0, int dest=0 );
+	eveDataMessage(QString, eveDataStatus, eveDataModType, eveTime, QVector<short>, int prio=0, int dest=0 );
+	eveDataMessage(QString, eveDataStatus, eveDataModType, eveTime, QVector<signed char>, int prio=0, int dest=0 );
+	eveDataMessage(QString, eveDataStatus, eveDataModType, eveTime, QVector<float>, int prio=0, int dest=0 );
+	eveDataMessage(QString, eveDataStatus, eveDataModType, eveTime, QVector<double>, int prio=0, int dest=0 );
+	eveDataMessage(QString, eveDataStatus, eveDataModType, eveTime, QStringList, int prio=0, int dest=0 );
+	eveDataMessage(QString, eveDataStatus, eveDataModType, eveTime, QDateTime, int prio=0, int dest=0 );
 	virtual ~eveDataMessage();
 
 	const QVector<int>& getIntArray(){return dataArrayInt;};
@@ -441,9 +447,10 @@ public:
 	const QStringList& getStringArray(){return dataStrings;};
 	QString getId(){return ident;};
 	eveDataStatus getDataStatus(){return dataStatus;};
-	epicsType getDataType(){return dataType;};
+	eveType getDataType(){return dataType;};
 	eveDataModType getDataMod(){return dataModifier;};
-	epicsTime getDataTimeStamp(){return timestamp;};
+	eveTime getDataTimeStamp(){return timestamp;};
+	eveTime getDateTime(){return eveTime::eveTimeFromDateTime(dateTime);};
 	bool isEmpty(){return !(arraySize);};
 	int getArraySize(){return arraySize;};
 	int getPositionCount(){return posCount;};
@@ -454,10 +461,10 @@ public:
 private:
 	int posCount;
 	QString ident;
-	epicsTime timestamp;
+	eveTime timestamp;
 	quint32 arraySize;
 	eveDataStatus dataStatus;				// epicsSeverity, SeverityCondition, AcquisitionStatus
-	epicsType dataType;
+	eveType dataType;
 	eveDataModType dataModifier;
 	QVector<int> dataArrayInt;
 	QVector<short> dataArrayShort;
@@ -465,6 +472,7 @@ private:
 	QVector<float> dataArrayFloat;
 	QVector<double> dataArrayDouble;
 	QStringList dataStrings;
+	QDateTime dateTime;
 };
 
 /**
@@ -479,7 +487,7 @@ public:
 	virtual ~eveDevInfoMessage();
 	QStringList* getText(){return infoList;};
 	bool isArray(){return isarray;};
-	eveType getType(){return dataType;};
+	eveType getDataType(){return dataType;};
 	eveDevInfoMessage* clone();
 	bool compare(eveDevInfoMessage*);
 
@@ -513,24 +521,20 @@ private:
 class eveStorageMessage : public eveMessage
 {
 public:
-	eveStorageMessage(int, int, QString, QString, QString, QString, int prio=0, int dest=0);
+	eveStorageMessage(int, int, QHash<QString, QString>*, int prio=0, int dest=0);
 	~eveStorageMessage();
 	bool compare(eveMessage *);
 	eveStorageMessage* clone();
 	int getChainId(){return chainId;};
 	int getChannelId(){return channelId;};
-	QString getFileName(){return fileName;};
-	QString getFileType(){return fileType;};
-	QString getPluginName(){return fileType;};
-	QString getPluginPath(){return pluginPath;};
+	QString getFileName(){return filename;};
+	QHash<QString, QString>* takeHash();
 
 private:
 	int chainId;
 	int channelId;
-	QString fileName;
-	QString fileType;
-	QString pluginName;
-	QString pluginPath;
+	QString filename;
+	QHash<QString, QString>* paraHash;
 };
 
 

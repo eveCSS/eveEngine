@@ -10,6 +10,7 @@
 
 #include <QObject>
 #include <QList>
+#include "eveSMBaseDevice.h"
 #include "eveDevice.h"
 #include "eveVariant.h"
 #include "eveCaTransport.h"
@@ -21,7 +22,7 @@ enum eveDeviceStatusT {eveDEVICEINIT, eveDEVICEIDLE, eveDEVICEWRITE, eveDEVICERE
 /**
  * \brief device in a scanModule
  */
-class eveSMDevice : public QObject {
+class eveSMDevice : public eveSMBaseDevice {
 
 	Q_OBJECT
 
@@ -35,6 +36,8 @@ public:
 	bool isDone(){return ready;};
 	bool isOK(){return deviceOK;};
 	QString getName(){return name;};
+	void sendError(int, int, int, QString);
+
 
 public slots:
 	void transportReady(int status);

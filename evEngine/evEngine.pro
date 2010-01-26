@@ -4,7 +4,12 @@ QT += core \
     network \
     gui \
     xml
-HEADERS += eventModule/eveEventRegisterMessage.h \
+HEADERS += scanModule/eveSMBaseDevice.h \
+    scanModule/eveCounter.h \
+    scanModule/eveTime.h \
+    scanModule/eveTimer.h \
+    eventModule/eveDeviceMonitor.h \
+    eventModule/eveEventRegisterMessage.h \
     eventModule/eveEventProperty.h \
     eventModule/eveEventManager.h \
     eventModule/eveEventThread.h \
@@ -19,7 +24,6 @@ HEADERS += eventModule/eveEventRegisterMessage.h \
     scanModule/eveSMDevice.h \
     scanModule/eveVariant.h \
     scanModule/eveSetValue.h \
-    scanModule/eveData.h \
     scanModule/eveCaTransport.h \
     scanModule/eveBaseTransport.h \
     scanModule/evePosCalc.h \
@@ -46,7 +50,12 @@ HEADERS += eventModule/eveEventRegisterMessage.h \
     nwModule/eveMessageHub.h \
     nwModule/eveNwThread.h \
     nwModule/evePlaylistManager.h
-SOURCES += eventModule/eveEventRegisterMessage.cpp \
+SOURCES += scanModule/eveSMBaseDevice.cpp \
+    scanModule/eveCounter.cpp \
+    scanModule/eveTime.cpp \
+    scanModule/eveTimer.cpp \
+    eventModule/eveDeviceMonitor.cpp \
+    eventModule/eveEventRegisterMessage.cpp \
     eventModule/eveEventProperty.cpp \
     eventModule/eveEventManager.cpp \
     eventModule/eveEventThread.cpp \
@@ -61,7 +70,6 @@ SOURCES += eventModule/eveEventRegisterMessage.cpp \
     scanModule/eveSMDevice.cpp \
     scanModule/eveVariant.cpp \
     scanModule/eveSetValue.cpp \
-    scanModule/eveData.cpp \
     scanModule/eveCaTransport.cpp \
     scanModule/eveBaseTransport.cpp \
     scanModule/evePosCalc.cpp \

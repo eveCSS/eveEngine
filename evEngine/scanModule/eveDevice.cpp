@@ -7,42 +7,55 @@
 
 #include "eveDevice.h"
 
-eveTransportDef::eveTransportDef(eveType eptype) {
+eveBaseTransportDef::eveBaseTransportDef(eveType eptype) {
 	dataType=eptype;
+}
+eveBaseTransportDef::~eveBaseTransportDef() {
+	// TODO Auto-generated destructor stub
+}
+
+//eveLocalTransportDef::eveLocalTransportDef(eveType etype, transMethodT accessMethod ,QString accessname) :
+//	eveBaseTransportDef::eveBaseTransportDef(etype) {
+//	accessDescription = accessname;
+//	method = accessMethod;
+//	transType = eveTRANS_LOCAL;
+//}
+//eveLocalTransportDef::~eveLocalTransportDef() {
+//	// TODO Auto-generated destructor stub
+//}
+//eveLocalTransportDef* eveLocalTransportDef::clone() {
+//	return new eveLocalTransportDef(dataType, method, accessDescription );
+//}
+//
+//eveCaTransportDef::eveCaTransportDef(eveType etype, transMethodT caMethod, double timeo, QString pvname) :
+//	eveBaseTransportDef::eveBaseTransportDef(etype) {
+//	timeout = timeo;
+//	pV = pvname;
+//	method = caMethod;
+//	transType = eveTRANS_CA;
+//}
+//eveCaTransportDef::~eveCaTransportDef() {
+//	// TODO Auto-generated destructor stub
+//}
+//eveCaTransportDef* eveCaTransportDef::clone() {
+//	return new eveCaTransportDef(dataType, method, timeout, pV );
+//}
+
+eveTransportDef::eveTransportDef(eveTransportT ttype, eveType etype, transMethodT transMethod, double timeo, QString accname) :
+	eveBaseTransportDef::eveBaseTransportDef(etype) {
+	timeout = timeo;
+	accessName = accname;
+	method = transMethod;
+	transType = ttype;
 }
 eveTransportDef::~eveTransportDef() {
 	// TODO Auto-generated destructor stub
 }
-
-
-eveLocalTransportDef::eveLocalTransportDef(eveType etype, pvMethodT accessMethod ,QString accessname) :
-	eveTransportDef::eveTransportDef(etype) {
-	accessDescription = accessname;
-	method = accessMethod;
-	transtype = eveTRANS_LOCAL;
-}
-eveLocalTransportDef::~eveLocalTransportDef() {
-	// TODO Auto-generated destructor stub
-}
-eveLocalTransportDef* eveLocalTransportDef::clone() {
-	return new eveLocalTransportDef(dataType, method, accessDescription );
+eveTransportDef* eveTransportDef::clone() {
+	return new eveTransportDef(transType, dataType, method, timeout, accessName );
 }
 
-eveCaTransportDef::eveCaTransportDef(eveType etype, pvMethodT caMethod, double timeo, QString pvname) :
-	eveTransportDef::eveTransportDef(etype) {
-	timeout = timeo;
-	pV = pvname;
-	method = caMethod;
-	transtype = eveTRANS_CA;
-}
-eveCaTransportDef::~eveCaTransportDef() {
-	// TODO Auto-generated destructor stub
-}
-eveCaTransportDef* eveCaTransportDef::clone() {
-	return new eveCaTransportDef(dataType, method, timeout, pV );
-}
-
-eveDeviceCommand::eveDeviceCommand(eveTransportDef * trans, QString value, eveType valtype) {
+eveDeviceCommand::eveDeviceCommand(eveBaseTransportDef * trans, QString value, eveType valtype) {
 	transDef = trans;
 	valueString = value;
 	valueType = valtype;
@@ -51,7 +64,7 @@ eveDeviceCommand::~eveDeviceCommand() {
 	if (transDef != NULL) delete transDef;
 }
 eveDeviceCommand* eveDeviceCommand::clone() {
-	eveTransportDef *trans;
+	eveBaseTransportDef *trans;
 	if (transDef != NULL)
 		trans = transDef->clone();
 	else
@@ -136,12 +149,12 @@ eveMotor::~eveMotor() {
 	// TODO Auto-generated destructor stub
 }
 
-eveEventDefinition::eveEventDefinition(eveDeviceCommand *dPv, eveEventTypeT evtype, QString dName, QString dId) :
-	eveBaseDevice(dName, dId) {
-	valueCmd = dPv;
-	eventType = evtype;
-}
-
-eveEventDefinition::~eveEventDefinition() {
-	if (valueCmd != NULL) delete valueCmd;
-}
+//eveEventDefinition::eveEventDefinition(eveDeviceCommand *dPv, eveEventTypeT evtype, QString dName, QString dId) :
+//	eveBaseDevice(dName, dId) {
+//	valueCmd = dPv;
+//	eventType = evtype;
+//}
+//
+//eveEventDefinition::~eveEventDefinition() {
+//	if (valueCmd != NULL) delete valueCmd;
+//}

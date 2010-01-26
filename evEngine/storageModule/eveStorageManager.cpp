@@ -29,7 +29,6 @@ eveStorageManager::~eveStorageManager() {
  */
 void eveStorageManager::handleMessage(eveMessage *message){
 
-	eveError::log(4, "eveStorageManager: message arrived");
 	switch (message->getType()) {
 		case EVEMESSAGETYPE_STORAGECONFIG:
 			sendError(DEBUG,0,"eveStorageManager::handleMessage: got STORAGECONFIG-message");
@@ -39,9 +38,9 @@ void eveStorageManager::handleMessage(eveMessage *message){
 				else
 					sendError(ERROR,0,QString("eveStorageManager::handleMessage: unable to init StorageObject for File %1 (%2)").arg(fileName).arg(message->getType()));
 			}
-			break;
-		case EVEMESSAGETYPE_ENGINESTATUS:
-			sendError(DEBUG, 0, "handleMessage: EVEMESSAGETYPE_ENGINESTATUS not yet implemented");
+			else {
+				sendError(ERROR,0,QString("eveStorageManager::handleMessage: wrong Filename %1, expected %2").arg(((eveStorageMessage*)message)->getFileName()).arg(fileName));
+			}
 			break;
 		case EVEMESSAGETYPE_CHAINSTATUS:
 			if (((eveChainStatusMessage*)message)->getStatus() == eveChainDONE){
@@ -50,10 +49,12 @@ void eveStorageManager::handleMessage(eveMessage *message){
 					sendError(ERROR,0,QString("handleMessage: unable to remove not existing chainId %1 from chainList").arg(id));
 				}
 				else {
+					// if id is in chainIdChannelHash, then it is in chainIdDCHash
+					delete chainIdDCHash.take(id);
 					// close input queue, if we are done
 					if (chainIdChannelHash.isEmpty()) disableInput();
-					// TODO we could recycle message instead cloning, if removing "delete message" below
-					eveChainStatusMessage* answer = ((eveChainStatusMessage*)message)->clone();
+					eveChainStatusMessage* answer = new eveChainStatusMessage(eveChainSTORAGEDONE, id, 0, 0);
+ 					//eveChainStatusMessage* answer = ((eveChainStatusMessage*)message)->clone();
 					answer->setStatus(eveChainSTORAGEDONE);
 					addMessage(answer);
 					if (chainIdChannelHash.isEmpty()) shutdown();
@@ -64,7 +65,6 @@ void eveStorageManager::handleMessage(eveMessage *message){
 		{
 			int id = ((eveDataMessage*)message)->getChainId();
 			if (chainIdChannelHash.contains(id)){
-				sendError(DEBUG, 0, "received new storage data");
 				(chainIdDCHash.value(id))->addData((eveDataMessage*)message);
 			}
 			else
@@ -73,7 +73,7 @@ void eveStorageManager::handleMessage(eveMessage *message){
 		break;
 		case EVEMESSAGETYPE_DEVINFO:
 		{
-			sendError(ERROR, 0, QString("Device Info: (%1/%2) Name: %3 (%4), %5").arg(((eveDevInfoMessage*)message)->getChainId())
+			sendError(DEBUG, 0, QString("Device Info: (%1/%2) Name: %3 (%4), %5").arg(((eveDevInfoMessage*)message)->getChainId())
 					.arg(((eveDevInfoMessage*)message)->getSmId())
 					.arg(((eveDevInfoMessage*)message)->getName())
 					.arg(((eveDevInfoMessage*)message)->getXmlId())
@@ -140,7 +140,7 @@ void eveStorageManager::shutdown(){
 }
 
 /**
- * \brief this routine is possibly obsolete
+ * \brief create a DataCollector for the chain of this message
  * @param message storageConfiguration message from scanmodule chain
  * @return true if initialization was successful
  */

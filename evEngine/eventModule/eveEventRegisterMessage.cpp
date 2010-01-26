@@ -7,9 +7,9 @@
 
 #include "eveEventRegisterMessage.h"
 
-eveEventRegisterMessage::eveEventRegisterMessage(bool regORunreg, eveEventProperty* evprop) {
+eveEventRegisterMessage::eveEventRegisterMessage(bool regOrUnreg, eveEventProperty* evprop) : eveMessage(EVEMESSAGETYPE_EVENTREGISTER) {
 	event = evprop;
-	registerEvent = regORunreg;
+	registerEvent = regOrUnreg;
 
 }
 // copy constructor
@@ -20,7 +20,6 @@ eveEventRegisterMessage::eveEventRegisterMessage(const eveEventRegisterMessage& 
 }
 
 eveEventRegisterMessage::~eveEventRegisterMessage() {
-	if (event != NULL) delete event;
 }
 
 eveEventProperty* eveEventRegisterMessage::takeEventProperty() {

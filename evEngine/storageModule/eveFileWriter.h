@@ -18,8 +18,8 @@
  */
 class eveFileWriter {
 public:
-	eveFileWriter();
-	virtual ~eveFileWriter();
+	// eveFileWriter();
+	virtual ~eveFileWriter() {};
 	virtual int init(int, QString, QString, QHash<QString, QString>*) = 0;
 	virtual int setCols(int, QString, QString, QStringList) = 0;
 	virtual int open(int) = 0;
@@ -28,5 +28,12 @@ public:
 	virtual QString errorText() = 0;
 
 };
+
+QT_BEGIN_NAMESPACE
+
+Q_DECLARE_INTERFACE(eveFileWriter,"de.ptb.epics.eve.FileWriterInterface/1.0");
+
+QT_END_NAMESPACE
+
 
 #endif /* EVEFILEWRITER_H_ */
