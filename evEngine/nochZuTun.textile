@@ -2,9 +2,11 @@
 
 h3. Was noch fehlt
 
+(Hilfe mit F1)
+
 * -HDF4 Support ist nicht geplant-
 * -HDF5 Support-
-* "Detector Tolerance"-Werte wie im alten MP. averageCount (values per measure point), maxDeviation (tolerance), Minimum (tolerance limit), maxAttempts.
+* -"Detector Tolerance"-Werte wie im alten MP. averageCount (values per measure point), maxDeviation (tolerance), Minimum (tolerance limit), maxAttempts.-
 * -DetectorReadyEvent: Wird ausgelöst, sobald die DetektorLesePhase beendet ist.-
 * -RepeatOnRedo als Eigenschaft des SM: Wenn es im Editor beim SM aktiviert ist, dann wird beim Auftreten eines RedoEvents der Messpunkt vollständig wiederholt, d.h. alle Detektoren werden erneut ausgelesen, innere SMs werden erneut gestartet etc.-
 * -RepeatOnRedo als Detektoreigenschaft: Nur die eine Messung (d.h. auch bei AverageMessungen nur eine Messung) während der das RedoEvent (z.B. ToppingUp) auftritt, wird wiederholt.-
@@ -23,8 +25,10 @@ h3. Was noch fehlt
 
 bc. Engine hat implementiert:  Detector-Events haben eine Id mit D-<chainid>-<smid>-<channelid>, Diese Id erscheint im XML.
 
-* die savescandescription-Funktionalität fehlt noch, dabei den QByteArray mit den XML-Daten in 
-MessageFactory in einen Pointer umwandeln und in der AddPlMessage ein takeXMLData statt getXMLData, um das häufige umkopieren zu sparen.
+* die savescandescription-Funktionalität fehlt noch, dabei den QByteArray mit den XML-Daten in MessageFactory in einen Pointer umwandeln und in der AddPlMessage ein takeXMLData statt getXMLData, um das häufige umkopieren zu sparen.
 
+* -einen zusätzlichen ChainStatus AcquisitionRunning zumindest als Message an den Viewer als Unterstatus von Executing, der dem Plot anzeigt, dass die jetzt folgenden Daten geplottet werden sollen. Im Gegensatz zu den Daten, die während ReadPos gesendet werden.- Anmerkung: ist anders gelöst. Der Typ in der DataMessage kann gesetzt werden. Derzeit wird nur unmodified/raw geplottet, evtl. kann ein weiterer Typ definiert werden, der nicht raw ist, aber trotzdem geplottet werden soll.
+
+* requestMessages: haben eine Signal-Methode, die vom Empfänger ausgelöst werden kann. Verhindert das umständliche Senden und Warten auf die Antwort z.B. beim StorageConfig
 
  

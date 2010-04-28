@@ -218,7 +218,7 @@ noch mehr Events:
 	
 	Event-Source: die Quelle des Events, z.B der Monitor, der einen
 				Wert überschreitet.
-	Event-Target: Das Eventziel, z.B. ein Detektor zu triggern, eine
+	Event-Action: Die Aktion, die ausgelöst wird, z.B. ein Detektor zu triggern, eine
 				Chain zu starten etc.
 				
 	TODO:
