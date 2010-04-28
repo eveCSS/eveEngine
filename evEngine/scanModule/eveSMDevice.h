@@ -35,7 +35,6 @@ public:
 	bool resetNeeded(){return setPrevious;};
 	bool isDone(){return ready;};
 	bool isOK(){return deviceOK;};
-	QString getName(){return name;};
 	void sendError(int, int, int, QString);
 
 
@@ -54,7 +53,6 @@ private:
 	bool ready;
 	bool deviceOK;
 	int signalCounter;
-	QString name;
 	QList<eveTransportT> transportList;
 	eveBaseTransport* valueTrans;
 	eveScanModule* scanModule;

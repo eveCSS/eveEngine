@@ -31,6 +31,7 @@ eveSMBaseDevice(scanmodule) {
 	stopTrans = NULL;
 	triggerTrans = NULL;
 	unitTrans = NULL;
+	math = NULL;
 	channelOK = false;
 	ready = false;
 	triggerValue = 1;
@@ -41,7 +42,7 @@ eveSMBaseDevice(scanmodule) {
 
 	if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
 		if (definition->getValueCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			valueTrans = new eveCaTransport(this, name, (eveTransportDef*)definition->getValueCmd()->getTrans());
+			valueTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getValueCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}
@@ -52,7 +53,7 @@ eveSMBaseDevice(scanmodule) {
 
 	if ((definition->getStopCmd() != NULL) && (definition->getStopCmd()->getTrans()!= NULL)){
 		if (definition->getStopCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			stopTrans = new eveCaTransport(this, name, (eveTransportDef*)definition->getStopCmd()->getTrans());
+			stopTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getStopCmd()->getTrans());
 			stopValue.setType(definition->getStopCmd()->getValueType());
 			stopValue.setValue(definition->getStopCmd()->getValueString());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
@@ -62,7 +63,7 @@ eveSMBaseDevice(scanmodule) {
 
 	if ((definition->getTrigCmd() != NULL) && (definition->getTrigCmd()->getTrans()!= NULL)){
 		if (definition->getTrigCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			triggerTrans = new eveCaTransport(this, name, (eveTransportDef*)definition->getTrigCmd()->getTrans());
+			triggerTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getTrigCmd()->getTrans());
 			triggerValue.setType(definition->getTrigCmd()->getValueType());
 			triggerValue.setValue(definition->getTrigCmd()->getValueString());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
@@ -75,7 +76,7 @@ eveSMBaseDevice(scanmodule) {
 			unit = definition->getUnitCmd()->getValueString();
 		}
 		else if (definition->getUnitCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			unitTrans = new eveCaTransport(this, name, (eveTransportDef*)definition->getUnitCmd()->getTrans());
+			unitTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getUnitCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}
@@ -87,7 +88,7 @@ eveSMBaseDevice(scanmodule) {
 	if (parameter.contains("averagecount"))
 		averageCount = parameter.value("averagecount").toInt(&ok);
 	if (!ok) sendError(ERROR, 0, "Unable to evaluate averagecount");
-	maxAttempts = 0;
+	maxAttempts = 1e8;
 	ok = true;
 	if (parameter.contains("maxattempts"))
 		maxAttempts = parameter.value("maxattempts").toInt(&ok);
@@ -108,6 +109,10 @@ eveSMBaseDevice(scanmodule) {
 	if (!ok) sendError(ERROR, 0, "Unable to evaluate confirmtrigger");
 	if (parameter.contains("sendreadyevent"))
 		sendreadyevent = (parameter.value("sendreadyevent").toLower() == "true");
+
+	// we do average calculations if averageCount > 0
+	valueCalc = NULL;
+	if (averageCount > 1) valueCalc = new eveMath(averageCount, maxAttempts, minimum, maxDeviation);
 /*
 	repeatOnRedo = false;
 	if (parameter.contains("repeatonredo"))
@@ -258,24 +263,40 @@ void eveSMChannel::transportReady(int status) {
 	else if (channelStatus == eveCHANNELREAD){
 		if (curValue != NULL) delete curValue;
 		curValue = valueTrans->getData();
-		if (curValue == NULL) {
-			sendError(ERROR, 0, "unable to read current value");
-		}
-		else {
-			curValue->setXmlId(xmlId);
-			curValue->setName(name);
-		}
 
 		channelStatus = eveCHANNELIDLE;
 
 		if (redo){
-			if (curValue != NULL) {
-				delete curValue;
-				curValue = NULL;
-			}
+			// for now we repeat from start
+			// if needed we could just repeat the last detector value
+			valueCalc->reset();
 			triggerRead(false);
 		}
+		else if (curValue == NULL){
+			// message and bail out
+			sendError(ERROR, 0, "unable to read current value");
+			signalReady();
+		}
+		else if (valueCalc){
+			// we need to do average measurements
+			valueCalc->addValue(curValue->toVariant());
+			sendError(DEBUG, 0, QString("Channel %1, Raw Value %2").arg(curValue->getXmlId()).arg(curValue->toVariant().toDouble()));
+			if(valueCalc->isDone()){
+				// ready with average measurements
+				delete curValue;
+				curValue = valueCalc->getResultMessage();
+				valueCalc->reset();
+				curValue->setXmlId(xmlId);
+				curValue->setName(name);
+				signalReady();
+				sendError(DEBUG, 0, QString("Channel %1, Average Value %2").arg(curValue->getXmlId()).arg(curValue->toVariant().toDouble()));
+			}
+			else
+				triggerRead(false);
+		}
 		else {
+			curValue->setXmlId(xmlId);
+			curValue->setName(name);
 			signalReady();
 		}
 	}
@@ -413,6 +434,10 @@ eveDevInfoMessage* eveSMChannel::getDeviceInfo(){
 	else
 		sl = new QStringList();
 	sl->append(QString("unit: %1").arg(unit));
+	if (curValue != NULL){
+		sl->append(QString("Value: %1").arg(curValue->toVariant().toString()));
+	}
+
 	return new eveDevInfoMessage(xmlId, name, sl);
 }
 
@@ -427,6 +452,37 @@ void eveSMChannel::newEvent(eveEventProperty* evprop) {
 		sendError(DEBUG, 0, "received redo event");
 		redo = true;
 	}
+}
+
+/**
+ * for now we always calculate all algorithms
+ */
+void eveSMChannel::mathReset() {
+	if (math == NULL)
+		math = new eveMath(EVEMATH_ALL);
+	else
+		math->reset(EVEMATH_ALL);
+}
+
+void eveSMChannel::mathAdd(eveVariant data) {
+	if (math != NULL)
+		math->addValue(data);
+}
+
+QList<eveDataMessage*> eveSMChannel::getAllResultMessages() {
+	QList<eveDataMessage*> dataList;
+	if (math != NULL){
+		for (int i = 0; i < 16; ++i) {
+			int type = 1 << i;
+			if (math->haveAlgorithm(type)) {
+				eveDataMessage* message = math->getResultMessage(type);
+				message->setName(name);
+				message->setXmlId(xmlId);
+				dataList.append(message);
+			}
+		}
+	}
+	return dataList;
 }
 
 /**

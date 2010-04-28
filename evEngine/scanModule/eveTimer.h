@@ -22,7 +22,7 @@ class eveTimer: public eveBaseTransport {
 	Q_OBJECT
 
 public:
-	eveTimer(eveSMBaseDevice *, QString, eveTransportDef*);
+	eveTimer(eveSMBaseDevice *, QString, QString, eveTransportDef*);
 	virtual ~eveTimer();
 	int readData(bool);
 	int writeData(eveVariant, bool);
@@ -43,7 +43,6 @@ private:
 	eveSMBaseDevice* baseDev;
 	bool haveMonitor;
 	QTimer timer;
-	QString name;
 	int timerId;
 	QString accessname;
 	QDateTime targetTime;

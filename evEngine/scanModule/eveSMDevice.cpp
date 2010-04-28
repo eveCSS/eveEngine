@@ -27,13 +27,14 @@ eveSMDevice::eveSMDevice(eveScanModule* scanmodule, eveDevice* definition, eveVa
 	signalCounter=0;
 	haveResetValue = false;
 	name = definition->getName();
+	xmlId = definition->getId();
 	ready = false;
 	deviceOK = false;
 	valueTrans = NULL;
 
 	if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
 		if (definition->getValueCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			valueTrans = new eveCaTransport(this, name, (eveTransportDef*)definition->getValueCmd()->getTrans());
+			valueTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getValueCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}

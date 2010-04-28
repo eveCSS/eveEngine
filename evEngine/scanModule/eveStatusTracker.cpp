@@ -52,7 +52,7 @@ bool eveBasicStatusTracker::setChainStatus(eveChainStatusMessage* message) {
 			foreach (int cid, chainStatus.keys()){
 				//if (cid == chainId) continue;
 				chainStatusT endStatus = eveChainDONE;
-				if (storageList.contains(cid))
+				if (chidWithStorageList.contains(cid))
 					endStatus = eveChainSTORAGEDONE;
 				if (chainStatus.value(cid) != endStatus) AllDone = false;
 			}
@@ -63,7 +63,7 @@ bool eveBasicStatusTracker::setChainStatus(eveChainStatusMessage* message) {
 					loadedXML = false;
 					XmlName.clear();
 					chainStatus.clear();
-					storageList.clear();
+					chidWithStorageList.clear();
 					emit engineIdle();
 				}
 			}
@@ -71,6 +71,7 @@ bool eveBasicStatusTracker::setChainStatus(eveChainStatusMessage* message) {
 		default:
 			break;
 	}
+	return engStatusChng;
 }
 
 eveEngineStatusMessage * eveBasicStatusTracker::getEngineStatusMessage() {

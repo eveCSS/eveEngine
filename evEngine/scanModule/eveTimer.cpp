@@ -8,13 +8,12 @@
 #include "eveTimer.h"
 #include "eveError.h"
 
-eveTimer::eveTimer(eveSMBaseDevice *parent, QString devname, eveTransportDef* transdef) : eveBaseTransport(parent), timer(parent){
+eveTimer::eveTimer(eveSMBaseDevice *parent, QString xmlid, QString name, eveTransportDef* transdef) : eveBaseTransport(parent, xmlid, name), timer(parent){
 
 	baseDev = parent;
 	transStatus = eveUNDEFINED;
 	currentAction = eveIDLE;
 	haveMonitor = false;
-	name = devname;
 	newData = NULL;
 	accessname = transdef->getName();
 	//method = transdef->getMethod();
@@ -56,7 +55,7 @@ int eveTimer::readData(bool queue){
 
 	eveDataStatus status = {0,0,0};
 	QDateTime dt = QDateTime::currentDateTime();
-	newData = new eveDataMessage(name, status, DMTunmodified, eveTime::eveTimeFromDateTime(dt), dt);
+	newData = new eveDataMessage(xmlId, name, status, DMTunmodified, eveTime::eveTimeFromDateTime(dt), dt);
 	emit done(0);
 	return 0;
 }
