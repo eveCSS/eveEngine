@@ -14,14 +14,15 @@ eveDeviceMonitor::eveDeviceMonitor(eveEventManager* eventManager, eveEventProper
 	// Note: eventProp lives in a different thread with unknown lifetime
 	currentState = false;
 	event = eventProp;
-	QString name = "";
+	name = "";
+	xmlId = "";
 	manager = eventManager;
 	if (event != NULL) {
 		name = event->getName();
 		limit = event->getLimit();
 		if ((event->getDevCommand() != NULL) && (event->getDevCommand()->getTrans()!= NULL)){
 			if (event->getDevCommand()->getTrans()->getTransType() == eveTRANS_CA){
-				monitorTrans = new eveCaTransport(this, name, (eveTransportDef*)event->getDevCommand()->getTrans());
+				monitorTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)event->getDevCommand()->getTrans());
 				if (monitorTrans != NULL) {
 					connect(monitorTrans, SIGNAL(valueChanged(eveVariant*)), this, SLOT(valueChange(eveVariant*)));
 
