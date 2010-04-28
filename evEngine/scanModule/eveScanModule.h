@@ -90,9 +90,12 @@ private:
 	bool currentStageReady;
 	int currentStageCounter;
 	int signalCounter;
+	int triggerRid;
+	bool triggerConfirm;
 	bool isRoot;
 	bool catchedRedo;
 	bool catchedTrigger;
+	double settleTime;
 	double triggerDelay;
 	QHash<stageT, void(eveScanModule::*)()> stageHash;
 	eveScanManager* manager;

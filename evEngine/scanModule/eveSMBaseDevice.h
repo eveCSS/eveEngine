@@ -21,7 +21,12 @@ public:
 	eveSMBaseDevice(QObject*);
 	virtual ~eveSMBaseDevice();
 	virtual void sendError(int, int, int, QString)=0;
+	QString getName(){return name;};
+	QString getXmlId(){return xmlId;};
 
+protected:
+	QString xmlId;
+	QString name;
 };
 
 #endif /* EVESMBASEDEVICE_H_ */

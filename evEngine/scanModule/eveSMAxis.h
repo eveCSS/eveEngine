@@ -44,8 +44,6 @@ public:
 	void execQueue();
 	void init();
 	bool isDone(){return ready;};
-	QString getName(){return name;};
-	QString getxmlId(){return xmlId;};
 	QString getUnit(){return unit;};
 	eveDevInfoMessage* getDeviceInfo();
 	eveDataMessage* getPositionMessage();
@@ -65,8 +63,6 @@ private:
 	bool ready;
 	bool inDeadband;
 	bool axisStop;
-	QString xmlId;
-	QString name;
 	QString unit;
 	eveVariant currentPosition;
 	eveVariant targetPosition;

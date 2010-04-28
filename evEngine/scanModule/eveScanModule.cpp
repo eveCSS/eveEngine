@@ -11,6 +11,8 @@
 #include "eveScanModule.h"
 #include "eveScanThread.h"
 #include "eveDeviceList.h"
+#include "eveEventProperty.h"
+
 
 eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int chainid, int smid) :
 	QObject(parent){
@@ -26,9 +28,14 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     smLastStatus = eveSmEXECUTING;
     smId = smid;
     chainId = chainid;
-    triggerDelay = 0.0;
 	catchedRedo = false;
 	catchedTrigger=false;
+
+	settleTime = parser->getSMTagDouble(chainId, smId, "settletime", 0.0);
+	triggerDelay = parser->getSMTagDouble(chainId, smId, "triggerdelay", 0.0);
+    triggerConfirm  = parser->getSMTagBool(chainId, smId, "triggerconfirm", false);
+    QString scanType = parser->getSMTag(chainId, smId, "type");
+	if (scanType != "classic") sendError(ERROR,0,QString("unknown smtype: %1").arg(scanType));
 
 	stageHash.insert(eveStgINIT, &eveScanModule::stgInit);
 	stageHash.insert(eveStgREADPOS, &eveScanModule::stgReadPos);
@@ -54,8 +61,6 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     	appendedSM = new eveScanModule(manager, parser, chainId, appendedNo);
     	connect (appendedSM, SIGNAL(SMready()), this, SLOT(execStage()), Qt::QueuedConnection);
     }
-
-	// TODO register scanmodule local events
 
 	// TODO check startevent
 
@@ -94,7 +99,6 @@ eveScanModule::~eveScanModule() {
 
 	try
 	{
-		// TODO delete all devices, axes etc.
 		if (nestedSM != NULL) delete nestedSM;
 		if (appendedSM != NULL) delete appendedSM;
 
@@ -167,6 +171,7 @@ void eveScanModule::stgInit() {
 		foreach (eveEventProperty* evprop, *eventList){
 			sendError(DEBUG, 0, QString("registering event for ..."));
 			manager->registerEvent(smId, evprop, false);
+			if (evprop->getActionType() == eveEventProperty::TRIGGER) triggerConfirm=true;
 		}
 		delete eventList;
 		eventList = NULL;
@@ -208,8 +213,8 @@ void eveScanModule::readPos() {
  */
 void eveScanModule::stgReadPos() {
 
-	sendError(DEBUG,0,"stgReadPos");
 	if (currentStageCounter == 0){
+		sendError(DEBUG,0,"stgReadPos starting");
 		currentStageCounter = 1;
 		signalCounter = 0;
 		foreach (eveSMAxis *axis, *axisList){
@@ -218,7 +223,7 @@ void eveScanModule::stgReadPos() {
 			sendError(DEBUG, 0, QString("%1 position is %2").arg(axis->getName()).arg(dummy.toDouble()));
 		}
 		foreach (eveSMChannel *channel, *channelList){
-			sendMessage(channel->getDeviceInfo());
+			//sendMessage(channel->getDeviceInfo());
 			sendError(INFO,0,QString("testing detector channel %1").arg(channel->getName()));
 			channel->triggerRead(false);
 			++signalCounter;
@@ -245,12 +250,15 @@ void eveScanModule::stgReadPos() {
 					sendError(INFO, 0, QString("stgReadPos: axis %1 not ready").arg(axis->getName()));
 				}
 			}
-			if (ready) {
-				foreach (eveSMAxis *axis, *axisList){
-					sendMessage(axis->getPositionMessage());
+			foreach (eveSMChannel *channel, *channelList){
+				if (!channel->isDone()) {
+					ready = false;
+					sendError(INFO, 0, QString("stgReadPos: channel %1 not ready").arg(channel->getName()));
 				}
+			}
+			if (ready) {
 				foreach (eveSMChannel *channel, *channelList){
-					sendMessage(channel->getValueMessage());
+					sendMessage(channel->getDeviceInfo());
 				}
 				currentStageReady=true;
 				emit SMready();
@@ -291,6 +299,10 @@ void eveScanModule::stgGotoStart() {
 		if (nestedSM != NULL) {
 			nestedSM->gotoStart();
 			++signalCounter;
+		}
+		// reset channels
+		foreach (eveSMChannel *channel, *channelList){
+			channel->mathReset();
 		}
 		emit sigExecStage();
 	}
@@ -375,16 +387,13 @@ void eveScanModule::stgPrescan() {
 void eveScanModule::stgSettleTime() {
 
 	if (currentStageCounter == 0){
-		sendError(INFO,0,"stgSettleTime");
+		//sendError(DEBUG,0,"stgSettleTime");
 		currentStageCounter=1;
-		QTimer::singleShot(1000, this, SLOT(execStage()));
+		QTimer::singleShot((int)(settleTime * 1000.0), this, SLOT(execStage()));
 	}
 	else {
-		sendError(INFO,0,"stgSettleTime Done");
-
-		// set true if stage done
+		//sendError(DEBUG,0,"stgSettleTime Done");
 		currentStageReady=true;
-
 		emit sigExecStage();
 	}
 }
@@ -393,7 +402,7 @@ void eveScanModule::stgSettleTime() {
  * \brief trigger detectors and read their values
  *
  * - wait triggerDelay
- * - if necessary, wait for trigger-event
+ * - if necessary, wait for trigger-event or a manual trigger via request
  * - trigger detecors and start nested scan
  * - read detectors  (and check status)
  * - do not wait until all detectors are ready with trigger, before
@@ -408,26 +417,40 @@ void eveScanModule::stgSettleTime() {
  */
 void eveScanModule::stgTrigRead() {
 
-	/* gleichzeitiger Start von CA-Kommandos:
-	 * - eine GroupTransportListe initialisieren
-	 * - alle SMAxis->gotoStart mit GroupTransportListe aufrufen.
-	 *   dabei einen CAGroupTransport erzeugen, wenn notwendig (optional einen anderen Transport)
-	 * - die Achsen schicken ihre Befehle ab ohne ca_flush
-	 * - am Ende die GroupTransportListe abfeuern (flush)
-	 *   feuert die caGroup und optional weitere Transports
-	 *
-	 *  unabhängiger Start:
-	 *  - SMAxis->gotoStart(NULL ) erzeugt sich eigenen Transport und starte sich selbst.
-	 *
-	 */
-
 	if (currentStageCounter == 0){
 		currentStageCounter=1;
-	    // TODO triggerDelay is not yet read from XML
 		QTimer::singleShot((int)(triggerDelay * 1000.0), this, SLOT(execStage()));
 	}
 	else if (currentStageCounter == 1){
+		// TODO check if triggerDelay really expired
 		currentStageCounter=2;
+		signalCounter = 0;
+		if (triggerConfirm){
+			catchedTrigger = false;
+			smLastStatus = smStatus;
+			smStatus = eveSmTRIGGERWAIT;
+			manager->setStatus(smId, smStatus);
+			++signalCounter;
+			triggerRid = manager->sendRequest(smId, "Manual Trigger");
+		}
+		emit sigExecStage();
+	}
+	else if (currentStageCounter == 2){
+		// check if trigger event received
+		if (triggerConfirm){
+			if (catchedTrigger){
+				currentStageCounter=3;
+				manager->cancelRequest(smId, triggerRid);
+				emit sigExecStage();
+			}
+		}
+		else {
+			currentStageCounter=3;
+			emit sigExecStage();
+		}
+	}
+	else if (currentStageCounter == 3){
+		currentStageCounter=4;
 		signalCounter = 0;
 		sendError(DEBUG, 0, "stgTrigRead");
 		foreach (eveSMChannel *channel, *channelList){
@@ -459,6 +482,7 @@ void eveScanModule::stgTrigRead() {
 					else {
 						bool ok = false;
 						double dval = dmesg->toVariant().toDouble(&ok);
+						if (ok) channel->mathAdd(dmesg->toVariant());
 						if (ok) sendError(DEBUG, 0, QString("%1: value %2").arg(channel->getName()).arg(dval));
 						sendMessage(dmesg);
 					}
@@ -565,6 +589,15 @@ void eveScanModule::stgPostscan() {
 			sendError(INFO,0,"stgPostScan writing");
 			device->writeValue(false);
 			++signalCounter;
+		}
+		// send all calculated results
+		foreach (eveSMChannel *channel, *channelList){
+			foreach (eveDataMessage* message, channel->getAllResultMessages()){
+				sendMessage(message);
+//				bool ok = false;
+//				double dval = message->toVariant().toDouble(&ok);
+//				if (ok) sendError(DEBUG, 0, QString("%1: value %2 (%3)").arg(channel->getName()).arg(dval).arg((int)message->getDataMod()));
+			}
 		}
 		emit sigExecStage();
 	}
@@ -958,6 +991,7 @@ bool eveScanModule::triggerSM(int smid) {
 		found = true;
 		if (smStatus == eveSmTRIGGERWAIT) {
 			catchedTrigger=true;
+			smStatus = smLastStatus;
 			emit sigExecStage();
 		}
 	}
@@ -1025,7 +1059,7 @@ void eveScanModule::sendMessage(eveMessage* message){
 eveSMAxis* eveScanModule::findAxis(QString axisid){
 
 	foreach (eveSMAxis *axis, *axisList){
-		if (axis->getxmlId() == axisid)
+		if (axis->getXmlId() == axisid)
 		return axis;
 	}
 	return NULL;
