@@ -1,7 +1,7 @@
 #ifndef EVEMESSAGEFILTER_H_
 #define EVEMESSAGEFILTER_H_
 
-#define EVEMESSAGEFILTER_LOWLIMIT 40
+#define EVEMESSAGEFILTER_LOWLIMIT 60
 #define EVEMESSAGEFILTER_HIGHLIMIT 150
 #define EVEMESSAGEFILTER_TIMEOUT 1000	// msecs
 #define EVEMESSAGEFILTER_QUEUELENGTH 20
@@ -32,6 +32,7 @@ public:
 	bool checkMessage(eveMessage *);
 	void queueMessage(eveMessage *);
 	QList<eveMessage * > * getCache();
+	void clearCache();
 
 private slots:
 	void timeout();

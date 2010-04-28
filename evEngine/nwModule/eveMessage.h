@@ -46,7 +46,6 @@
 #define EVEMESSAGETYPE_REMOVEFROMPLAYLIST 0x0202
 #define EVEMESSAGETYPE_REORDERPLAYLIST 0x0203
 #define EVEMESSAGETYPE_STORAGECONFIG 0x1000
-#define EVEMESSAGETYPE_STORAGEACK 0x1001
 #define EVEMESSAGETYPE_DEVINFO 0x1002
 #define EVEMESSAGETYPE_EVENTREGISTER 0x1003
 
@@ -56,6 +55,7 @@
 #define EVEREQUESTTYPE_FLOAT 0x03
 #define EVEREQUESTTYPE_TEXT 0x04
 #define EVEREQUESTTYPE_ERRORTEXT 0x05
+#define EVEREQUESTTYPE_TRIGGER 0x10
 
 #define EVEMESSAGEPRIO_NORMAL 0x0
 #define EVEMESSAGEPRIO_HIGH 0x01
@@ -110,8 +110,8 @@ struct evePlayListEntry {
 	QString author;
 };
 
-enum eveDataModType {DMTunmodified, DMTcenter, DMTedge, DMTmin, DMTmax, DMTfwhm, DMTmean, DMTstandarddev};
-
+enum eveDataModType {DMTunmodified, DMTcenter, DMTedge, DMTmin, DMTmax, DMTfwhm, DMTmean, DMTstandarddev, DMTsum};
+enum eveAcqStatus {ACQSTATok, ACQSTATmaxattempt};
 // TODO
 // remove all the clone() stuff except where virtual constructors are needed and use explicit copy constructors where needed
 
@@ -341,6 +341,7 @@ public:
 	virtual ~eveRequestAnswerMessage();
 	int getReqId(){return requestId;};
 	int getReqType(){return requestType;};
+	//int getAnswerInt(){return answerInt;};
 	bool compare(eveMessage *);
 
 private:
@@ -430,13 +431,13 @@ class eveDataMessage : public eveBaseDataMessage
 {
 public:
 //	eveDataMessage(QString, eveDataStatus, int prio=0, int dest=0);
-	eveDataMessage(QString, eveDataStatus, eveDataModType, eveTime, QVector<int>, int prio=0, int dest=0 );
-	eveDataMessage(QString, eveDataStatus, eveDataModType, eveTime, QVector<short>, int prio=0, int dest=0 );
-	eveDataMessage(QString, eveDataStatus, eveDataModType, eveTime, QVector<signed char>, int prio=0, int dest=0 );
-	eveDataMessage(QString, eveDataStatus, eveDataModType, eveTime, QVector<float>, int prio=0, int dest=0 );
-	eveDataMessage(QString, eveDataStatus, eveDataModType, eveTime, QVector<double>, int prio=0, int dest=0 );
-	eveDataMessage(QString, eveDataStatus, eveDataModType, eveTime, QStringList, int prio=0, int dest=0 );
-	eveDataMessage(QString, eveDataStatus, eveDataModType, eveTime, QDateTime, int prio=0, int dest=0 );
+	eveDataMessage(QString, QString, eveDataStatus, eveDataModType, eveTime, QVector<int>, int prio=0, int dest=0 );
+	eveDataMessage(QString, QString, eveDataStatus, eveDataModType, eveTime, QVector<short>, int prio=0, int dest=0 );
+	eveDataMessage(QString, QString, eveDataStatus, eveDataModType, eveTime, QVector<signed char>, int prio=0, int dest=0 );
+	eveDataMessage(QString, QString, eveDataStatus, eveDataModType, eveTime, QVector<float>, int prio=0, int dest=0 );
+	eveDataMessage(QString, QString, eveDataStatus, eveDataModType, eveTime, QVector<double>, int prio=0, int dest=0 );
+	eveDataMessage(QString, QString, eveDataStatus, eveDataModType, eveTime, QStringList, int prio=0, int dest=0 );
+	eveDataMessage(QString, QString, eveDataStatus, eveDataModType, eveTime, QDateTime, int prio=0, int dest=0 );
 	virtual ~eveDataMessage();
 
 	const QVector<int>& getIntArray(){return dataArrayInt;};
@@ -445,7 +446,6 @@ public:
 	const QVector<float>& getFloatArray(){return dataArrayFloat;};
 	const QVector<double>& getDoubleArray(){return dataArrayDouble;};
 	const QStringList& getStringArray(){return dataStrings;};
-	QString getId(){return ident;};
 	eveDataStatus getDataStatus(){return dataStatus;};
 	eveType getDataType(){return dataType;};
 	eveDataModType getDataMod(){return dataModifier;};
@@ -460,7 +460,6 @@ public:
 
 private:
 	int posCount;
-	QString ident;
 	eveTime timestamp;
 	quint32 arraySize;
 	eveDataStatus dataStatus;				// epicsSeverity, SeverityCondition, AcquisitionStatus

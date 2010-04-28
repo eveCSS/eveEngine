@@ -10,10 +10,10 @@ eveMessageFilter::eveMessageFilter(eveNetObject *nwPtr)
 	netObject = nwPtr;
 	skippedMessageCount = 0;
 	messageCount=0;
-	chainStatusCache = 0;
-	engineStatusCache = 0;
-	playlistCache = 0;
-	currentXmlCache = 0;
+	chainStatusCache = NULL;
+	engineStatusCache = NULL;
+	playlistCache = NULL;
+	currentXmlCache = NULL;
 	seqTimer = new QTimer(this);
     connect(seqTimer, SIGNAL(timeout()), this, SLOT(timeout()));
     seqTimer->start(EVEMESSAGEFILTER_TIMEOUT);
@@ -67,19 +67,15 @@ bool eveMessageFilter::checkMessage(eveMessage *message)
  * \brief return a list with all cached message
  * \return the list with messages
  *
- * Actual filter method receives the message and compares it to the last message
- * If this is an error message and the last EVEMESSAGEFILTER_LOWLIMIT messages
- * were the same type of error message, this message is discarded.
- * If the EVEMESSAGEFILTER_HIGHLIMIT is reached, this message is discarded
- *
+ * note: order is important, Clients expect the following order if engine is executing
  */
 QList<eveMessage * > * eveMessageFilter::getCache()
 {
 	QList<eveMessage * > *cachelist = new  QList<eveMessage * >;
-	if (chainStatusCache) cachelist->append(chainStatusCache);
-	if (engineStatusCache) cachelist->append(engineStatusCache);
-	if (playlistCache) cachelist->append(playlistCache);
 	if (currentXmlCache) cachelist->append(currentXmlCache);
+	if (playlistCache) cachelist->append(playlistCache);
+	if (engineStatusCache) cachelist->append(engineStatusCache);
+	if (chainStatusCache) cachelist->append(chainStatusCache);
 
 	return cachelist;
 }
@@ -153,3 +149,18 @@ void eveMessageFilter::timeout()
 	skippedMessageCount= 0;
 }
 
+/**
+ * clear all cached messages except playlist message
+ */
+void eveMessageFilter::clearCache(){
+
+	while (!errorMessageCacheList.isEmpty())
+		delete errorMessageCacheList.takeFirst();
+	if (engineStatusCache) delete engineStatusCache;
+	engineStatusCache = NULL;
+	if (chainStatusCache) delete chainStatusCache;
+	chainStatusCache = NULL;
+	if (currentXmlCache) delete currentXmlCache;
+	currentXmlCache = NULL;
+
+}

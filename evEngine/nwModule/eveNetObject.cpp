@@ -94,12 +94,16 @@ void eveNetObject::removeSocket(eveSocket* socket){
 /* \brief process current message
  * \param message current message
  *
- * Gives the message to the filter object.
+ * call message filter, clear cached messages if engine is ready
  *
  */
 void eveNetObject::handleMessage(eveMessage * message)
 {
 	if (!message) return;
+
+	if ((message->getType() == EVEMESSAGETYPE_ENGINESTATUS) &&
+			(((eveEngineStatusMessage*)message)->getStatus() == eveEngIDLENOXML))
+			mFilter->clearCache();
 
 	bool cancelled = mFilter->checkMessage(message);
 	if (cancelled) {

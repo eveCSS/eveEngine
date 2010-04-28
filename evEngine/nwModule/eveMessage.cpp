@@ -21,7 +21,6 @@ eveMessage::eveMessage(int mtype, int prio, int dest)
 	// TODO remove this assertion
 	assert ((type == EVEMESSAGETYPE_START) ||
 			(type == EVEMESSAGETYPE_HALT) ||
-			(type == EVEMESSAGETYPE_STORAGEACK) ||
 			(type == EVEMESSAGETYPE_STORAGECONFIG) ||
 			(type == EVEMESSAGETYPE_CHAINSTATUS) ||
 			(type == EVEMESSAGETYPE_ENGINESTATUS) ||
@@ -106,7 +105,6 @@ eveMessageInt::eveMessageInt(int iType, int ival, int prio, int dest) :
 	value = ival;
 	// check the allowed types
 	assert ((type == EVEMESSAGETYPE_AUTOPLAY) ||
-			(type == EVEMESSAGETYPE_STORAGEACK) ||
 			(type == EVEMESSAGETYPE_REMOVEFROMPLAYLIST));
 }
 /**
@@ -521,10 +519,9 @@ bool eveBaseDataMessage::compare(eveBaseDataMessage* with){
  * \param mtime time of data acquisition
  * \param data integer array data
  */
-eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QVector<int> data, int prio, int dest) :
-	eveBaseDataMessage(EVEMESSAGETYPE_DATA, prio, dest)
+eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QVector<int> data, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, prio, dest)
 {
-	ident = Id;
 	dataStatus = stat;
 	dataModifier = dmod;
 	dataType = eveInt32T;
@@ -540,10 +537,9 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
  * \param mtime time of data acquisition
  * \param data short array data
  */
-eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QVector<short> data, int prio, int dest) :
-	eveBaseDataMessage(EVEMESSAGETYPE_DATA, prio, dest)
+eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QVector<short> data, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, prio, dest)
 {
-	ident = Id;
 	dataStatus = stat;
 	dataModifier = dmod;
 	dataType = eveInt16T;
@@ -559,10 +555,9 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
  * \param mtime time of data acquisition
  * \param data char array data
  */
-eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QVector<signed char> data, int prio, int dest) :
-	eveBaseDataMessage(EVEMESSAGETYPE_DATA, prio, dest)
+eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QVector<signed char> data, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, prio, dest)
 {
-	ident = Id;
 	dataStatus = stat;
 	dataModifier = dmod;
 	dataType = eveInt8T;
@@ -578,10 +573,9 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
  * \param mtime time of data acquisition
  * \param data float array data
  */
-eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QVector<float> data, int prio, int dest) :
-	eveBaseDataMessage(EVEMESSAGETYPE_DATA, prio, dest)
+eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QVector<float> data, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, prio, dest)
 {
-	ident = Id;
 	dataStatus = stat;
 	dataModifier = dmod;
 	dataType = eveFloat32T;
@@ -597,10 +591,9 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
  * \param mtime time of data acquisition
  * \param data double array data
  */
-eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QVector<double> data, int prio, int dest) :
-	eveBaseDataMessage(EVEMESSAGETYPE_DATA, prio, dest)
+eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QVector<double> data, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, prio, dest)
 {
-	ident = Id;
 	dataStatus = stat;
 	dataModifier = dmod;
 	dataType = eveFloat64T;
@@ -616,10 +609,9 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
  * \param mtime time of data acquisition
  * \param data double array data
  */
-eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QStringList data, int prio, int dest) :
-	eveBaseDataMessage(EVEMESSAGETYPE_DATA, prio, dest)
+eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QStringList data, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, prio, dest)
 {
-	ident = Id;
 	dataStatus = stat;
 	dataModifier = dmod;
 	dataType = eveStringT;
@@ -635,10 +627,9 @@ eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dm
  * \param mtime time of data acquisition
  * \param data double array data
  */
-eveDataMessage::eveDataMessage(QString Id, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QDateTime datetime, int prio, int dest) :
-	eveBaseDataMessage(EVEMESSAGETYPE_DATA, prio, dest)
+eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QDateTime datetime, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, prio, dest)
 {
-	ident = Id;
 	dataStatus = stat;
 	dataModifier = dmod;
 	dataType = eveDateTimeT;
@@ -661,25 +652,25 @@ eveDataMessage* eveDataMessage::clone(){
 
 	switch (dataType) {
 		case eveInt8T:					/* eveInt8 */
-			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayChar, priority, destination);
+			message = new eveDataMessage(xmlId, name, dataStatus, dataModifier, timestamp, dataArrayChar, priority, destination);
 		break;
 		case eveInt16T:					/* eveInt16 */
-			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayShort, priority, destination);
+			message = new eveDataMessage(xmlId, name, dataStatus, dataModifier, timestamp, dataArrayShort, priority, destination);
 		break;
 		case eveInt32T:					/* eveInt32 */
-			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayInt, priority, destination);
+			message = new eveDataMessage(xmlId, name, dataStatus, dataModifier, timestamp, dataArrayInt, priority, destination);
 		break;
 		case eveFloat32T:					/* eveFloat32 */
-			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayFloat, priority, destination);
+			message = new eveDataMessage(xmlId, name, dataStatus, dataModifier, timestamp, dataArrayFloat, priority, destination);
 		break;
 		case eveFloat64T:					/* eveFloat64 */
-			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataArrayDouble, priority, destination);
+			message = new eveDataMessage(xmlId, name, dataStatus, dataModifier, timestamp, dataArrayDouble, priority, destination);
 		break;
 		case eveStringT:					/* eveString */
-			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dataStrings, priority, destination);
+			message = new eveDataMessage(xmlId, name, dataStatus, dataModifier, timestamp, dataStrings, priority, destination);
 		break;
 		case eveDateTimeT:					/* eveString */
-			message = new eveDataMessage(ident, dataStatus, dataModifier, timestamp, dateTime, priority, destination);
+			message = new eveDataMessage(xmlId, name, dataStatus, dataModifier, timestamp, dateTime, priority, destination);
 		break;
 		default:
 			eveError::log(4,"eveDataMessage unknown data type");
