@@ -418,11 +418,11 @@ CompType hdf5Plugin::createStandardDataType(QString name1, QString name2, eveTyp
 		typeA = StrType(PredType::C_S1, STANDARD_STRINGSIZE +1);
 		break;
 	default:
-		return NULL;
+		return (CompType) NULL;
 	}
 
 	CompType comptype( size );
-	printf("in progress: %s %s \n", qPrintable(name1), qPrintable(name2));
+	// printf("in progress: %s %s \n", qPrintable(name1), qPrintable(name2));
 	comptype.insertMember( qPrintable(name1), offsetA, typeA);
 	comptype.insertMember( qPrintable(name2), offsetB, typeB);
 	return comptype;
