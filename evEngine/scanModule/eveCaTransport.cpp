@@ -11,8 +11,6 @@
 #include "eveError.h"
 #include "db_access.h"
 
-//#include "eveScanManager.h"
-
 QHash<struct ca_client_context *, int> eveCaTransport::contextCounter = QHash<struct ca_client_context *, int>();
 QReadWriteLock eveCaTransport::contextLock;
 
@@ -26,7 +24,7 @@ QReadWriteLock eveCaTransport::contextLock;
  * \param transdef definition of EPICS PV related properties
  * \param parent
  */
-eveCaTransport::eveCaTransport(eveSMBaseDevice *parent, QString devname, eveTransportDef* transdef) : eveBaseTransport(parent)
+eveCaTransport::eveCaTransport(eveSMBaseDevice *parent, QString xmlid, QString name, eveTransportDef* transdef) : eveBaseTransport(parent, xmlid, name)
 {
 
 	transStatus = eveUNDEFINED;
@@ -37,7 +35,6 @@ eveCaTransport::eveCaTransport(eveSMBaseDevice *parent, QString devname, eveTran
 	chanChid = 0;
 	dataPtr = NULL;
 	writeDataPtr = NULL;
-	name = devname;
 	newData = NULL;
 	pvname = transdef->getName();
 	method = transdef->getMethod();
@@ -74,13 +71,13 @@ eveCaTransport::~eveCaTransport(){
 			contextCounter.insert(caThreadContext, tmp);
 		}
 		else {
-			sendError(DEBUG, 0, " all channels done, destroy CA Context");
+			eveError::log(4, " all channels done, destroy CA Context");
 			if (caThreadContext == ca_current_context()){
 				ca_context_destroy();
 				contextCounter.remove(caThreadContext);
 			}
 			else
-				sendError(FATAL, 0, "thread / CA context mismatch");
+				eveError::log(4, "thread / CA context mismatch");
 		}
 	}
 }
@@ -614,7 +611,8 @@ eveDataMessage* eveCaTransport::getDataMessage(struct event_handler_args arg){
 	eveCaTransport *pv = (eveCaTransport *) ca_puser(arg.chid);
 	epicsAlarmCondition status = (epicsAlarmCondition)((struct dbr_time_short *)arg.dbr)->status;
 	epicsAlarmSeverity severity = (epicsAlarmSeverity)((struct dbr_time_short *)arg.dbr)->severity;
-	QString id = pv->getName();
+	QString name = pv->getName();
+	QString xmlId = pv->getXmlId();
 	epicsTimeStamp ets = ((struct dbr_time_short *)arg.dbr)->stamp;
 	eveDataStatus dStatus;
 	dStatus.condition = (quint8) status;
@@ -627,27 +625,27 @@ eveDataMessage* eveCaTransport::getDataMessage(struct event_handler_args arg){
 	if (arg.type == DBR_TIME_LONG){
 		QVector<int> dataArray(arg.count);
 		memcpy((void *)dataArray.data(), (const void *) &((struct dbr_time_long *)arg.dbr)->value, sizeof(int) * arg.count);
-		newdata = new eveDataMessage(id, dStatus, dataMod, etime, dataArray);
+		newdata = new eveDataMessage(xmlId, name, dStatus, dataMod, etime, dataArray);
 	}
 	else if (arg.type == DBR_TIME_SHORT){
 		QVector<short> dataArray(arg.count);
 		memcpy((void *)dataArray.data(), (const void *) &((struct dbr_time_short *)arg.dbr)->value, sizeof(short) * arg.count);
-		newdata = new eveDataMessage(id, dStatus, dataMod, etime, dataArray);
+		newdata = new eveDataMessage(xmlId, name, dStatus, dataMod, etime, dataArray);
 	}
 	else if (arg.type == DBR_TIME_CHAR){
 		QVector<signed char> dataArray(arg.count);
 		memcpy((void *)dataArray.data(), (const void *) &((struct dbr_time_char *)arg.dbr)->value, sizeof(char) * arg.count);
-		newdata = new eveDataMessage(id, dStatus, dataMod, etime, dataArray);
+		newdata = new eveDataMessage(xmlId, name, dStatus, dataMod, etime, dataArray);
 	}
 	else if (arg.type == DBR_TIME_FLOAT){
 		QVector<float> dataArray(arg.count);
 		memcpy((void *)dataArray.data(), (const void *) &((struct dbr_time_float *)arg.dbr)->value, sizeof(float) * arg.count);
-		newdata = new eveDataMessage(id, dStatus, dataMod, etime, dataArray);
+		newdata = new eveDataMessage(xmlId, name, dStatus, dataMod, etime, dataArray);
 	}
 	else if (arg.type == DBR_TIME_DOUBLE){
 		QVector<double> dataArray(arg.count);
 		memcpy((void *)dataArray.data(), (const void *) &((struct dbr_time_double *)arg.dbr)->value, sizeof(double) * arg.count);
-		newdata = new eveDataMessage(id, dStatus, dataMod, etime, dataArray);
+		newdata = new eveDataMessage(xmlId, name, dStatus, dataMod, etime, dataArray);
 	}
 	else if (arg.type == DBR_TIME_ENUM){
 		QStringList qsl;
@@ -656,7 +654,7 @@ eveDataMessage* eveCaTransport::getDataMessage(struct event_handler_args arg){
 		foreach(short index, dataArray){
 			qsl.insert(index, pv->getEnumString(index));
 		}
-		newdata = new eveDataMessage(id, dStatus, dataMod, etime, qsl);
+		newdata = new eveDataMessage(xmlId, name, dStatus, dataMod, etime, qsl);
 	}
 	else if (arg.type == DBR_TIME_STRING){
 		char buffer[MAX_STRING_SIZE+1];
@@ -668,7 +666,7 @@ eveDataMessage* eveCaTransport::getDataMessage(struct event_handler_args arg){
 			qsl.insert(i, QString(buffer));
 			mystr += MAX_STRING_SIZE;
 		}
-		newdata = new eveDataMessage(id, dStatus, dataMod, etime, qsl);
+		newdata = new eveDataMessage(xmlId, name, dStatus, dataMod, etime, qsl);
 	}
 	return newdata;
 }

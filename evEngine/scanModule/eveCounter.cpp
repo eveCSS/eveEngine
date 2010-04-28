@@ -9,12 +9,11 @@
 #include <QDateTime>
 #include "eveError.h"
 
-eveCounter::eveCounter(eveSMBaseDevice *parent, QString devname, eveTransportDef* transdef) : eveBaseTransport(parent) {
+eveCounter::eveCounter(eveSMBaseDevice *parent, QString xmlid, QString name, eveTransportDef* transdef) : eveBaseTransport(parent, xmlid, name) {
 
 	transStatus = eveUNDEFINED;
 	currentAction = eveIDLE;
 	haveMonitor = false;
-	name = devname;
 	newData = NULL;
 	accessname = transdef->getName();
 	currentCount=0;
@@ -54,7 +53,7 @@ eveDataMessage* eveCounter::getData(){
 int eveCounter::readData(bool queue){
 
 	eveDataStatus status = {0,0,0};
-	newData = new eveDataMessage(name, status, DMTunmodified, eveTime::getCurrent(), QVector<int>(1,currentCount));
+	newData = new eveDataMessage(xmlId, name, status, DMTunmodified, eveTime::getCurrent(), QVector<int>(1,currentCount));
 	emit done(0);
 	return 0;
 }

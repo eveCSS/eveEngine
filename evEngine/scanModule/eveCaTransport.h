@@ -28,7 +28,7 @@ class eveCaTransport: public eveBaseTransport {
 	Q_OBJECT
 
 public:
-	eveCaTransport(eveSMBaseDevice *parent, QString, eveTransportDef*);
+	eveCaTransport(eveSMBaseDevice *parent, QString, QString, eveTransportDef*);
 	virtual ~eveCaTransport();
 	int readData(bool queue=false);
 	int writeData(eveVariant, bool queue=false);
@@ -81,12 +81,10 @@ private:
     QTimer *putTimer;
     void getEnumStrs();
 	QString getEnumString(int index);
-	QString getName(){return name;};
 	eveTransStatusT transStatus;
 	eveTransActionT currentAction;
 	int dataCount;
 	int timeOut;
-	QString name;
 	QString pvname;
 	transMethodT method;
 	eveType dataType;

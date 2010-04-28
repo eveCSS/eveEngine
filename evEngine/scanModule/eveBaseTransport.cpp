@@ -7,9 +7,9 @@
 
 #include "eveBaseTransport.h"
 
-eveBaseTransport::eveBaseTransport(eveSMBaseDevice *parent) : QObject(parent) {
-	// TODO Auto-generated constructor stub
-
+eveBaseTransport::eveBaseTransport(eveSMBaseDevice *parent, QString xmlid, QString devname) : QObject(parent) {
+	xmlId = xmlid;
+	name = devname;
 }
 
 eveBaseTransport::~eveBaseTransport() {

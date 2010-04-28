@@ -120,8 +120,8 @@ void eveManager::handleMessage(eveMessage *message){
 				sendError(INFO,0,"cannot process PAUSE command with current engine status");
 			}
 			break;
-		case EVEMESSAGETYPE_STORAGEACK:
-			engineStatus->addStorageId(((eveMessageInt*)message)->getInt());
+		case EVEMESSAGETYPE_STORAGECONFIG:
+			engineStatus->addStorageId(((eveStorageMessage*)message)->getChainId());
 			break;
 		case EVEMESSAGETYPE_CHAINSTATUS:
 			if (engineStatus->setChainStatus((eveChainStatusMessage*)message)){
@@ -206,7 +206,6 @@ bool eveManager::createSMs(QByteArray xmldata) {
     	return false;
     }
 	// create a thread for every chain in the xml-File
-    // TODO we might reuse existing threads in future
 
     // TODO might be easier to loop over a QList of chainids, since we dont't need the
     //      domelements any more
@@ -214,6 +213,7 @@ bool eveManager::createSMs(QByteArray xmldata) {
 	QStringList fileNameList;
 	while (itera.hasNext()) {
 		itera.next();
+		int storageChannelId = 0;
 		// we start a storage thread, if we have a savefilename and the name is not already on the list
 		QString value = scmlParser->getChainString(itera.key(), "savefilename");
 		if (!value.isEmpty()){
@@ -222,15 +222,16 @@ bool eveManager::createSMs(QByteArray xmldata) {
 				QMutex mutex;
 		        mutex.lock();
 		        QWaitCondition waitRegistration;
-				eveStorageThread *storageThread = new eveStorageThread(value, &waitRegistration, &mutex);
+				eveStorageThread *storageThread = new eveStorageThread(value, &xmldata, &waitRegistration, &mutex);
 				storageThread->start();
 				waitRegistration.wait(&mutex);
+				storageChannelId = storageThread->getChannelId();
 				// TODO send a message with xmldata to the storage thread with
 				// savefilename = value, if parameter savescandescription = true
 			}
 		}
 		// start a scanManager for every chain
-		eveScanManager *scanManager = new eveScanManager(this, scmlParser, itera.key());
+		eveScanManager *scanManager = new eveScanManager(this, scmlParser, itera.key(), storageChannelId);
 		eveScanThread *chainThread = new eveScanThread(scanManager);
 		scanManager->moveToThread(chainThread);
 		scanThreadList.append(chainThread);

@@ -20,7 +20,7 @@ class eveCounter: public eveBaseTransport {
 	Q_OBJECT
 
 public:
-	eveCounter(eveSMBaseDevice *, QString, eveTransportDef*);
+	eveCounter(eveSMBaseDevice *, QString, QString, eveTransportDef*);
 	virtual ~eveCounter();
 	int readData(bool);
 	int writeData(eveVariant, bool);
@@ -36,7 +36,6 @@ public:
 private:
 	bool haveMonitor;
 	int currentCount;
-	QString name;
 	QString accessname;
 	eveTransStatusT transStatus;
 	eveTransActionT currentAction;

@@ -21,7 +21,7 @@ class eveBaseTransport: public QObject{
 	Q_OBJECT
 
 public:
-	eveBaseTransport(eveSMBaseDevice *);
+	eveBaseTransport(eveSMBaseDevice *, QString, QString);
 	virtual ~eveBaseTransport();
 	virtual int readData(bool)=0;
 	virtual int writeData(eveVariant, bool)=0;
@@ -31,6 +31,8 @@ public:
 	virtual bool haveData()=0;
 	virtual eveDataMessage *getData()=0;
 	virtual QStringList* getInfo()=0;
+	QString getName(){return name;};
+	QString getXmlId(){return xmlId;};
 
 signals:
 	void done(int);
@@ -39,6 +41,8 @@ signals:
 protected:
 	void setData(eveDataMessage *data){newData=data;};
 	eveDataMessage *newData;
+	QString xmlId;
+	QString name;
 
 private:
 	int readTimeout;		// in ms
