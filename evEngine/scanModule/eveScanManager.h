@@ -32,7 +32,7 @@ class eveScanManager : public eveMessageChannel
 	Q_OBJECT
 
 public:
-	eveScanManager(eveManager *, eveXMLReader *, int);
+	eveScanManager(eveManager *, eveXMLReader *, int, int);
 	virtual ~eveScanManager();
 	// bool setRootSM(eveScanModule *);
 	virtual void shutdown();
@@ -45,6 +45,8 @@ public:
 	void handleMessage(eveMessage *);
 	void nextPos();
 	void registerEvent(int, eveEventProperty*, bool chain=false);
+	int sendRequest(int, QString);
+	void cancelRequest(int smid, int rid);
 
 public slots:
 	void smStart();
@@ -60,6 +62,7 @@ public slots:
 private:
 	void sendStatus(int, chainStatusT);
 	void addToHash(QHash<QString, QString>*, QString, eveXMLReader*);
+	QHash<int, int> requestHash;
 	QHash<QString, QString> chainHash;
 	QHash<QString, QString>* savePluginHash;
 	QList<eveEventProperty*> eventPropList;
@@ -73,8 +76,6 @@ private:
 	eveManager *manager;
 	int posCounter;
 	bool doBreak;
-	bool waitForMessageBeforeStart;
-	bool delayedStart;
 	bool shutdownPending;
 };
 

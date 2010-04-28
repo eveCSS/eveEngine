@@ -13,6 +13,7 @@
 #include "eveError.h"
 #include "eveEventProperty.h"
 #include "eveEventRegisterMessage.h"
+#include "eveRequestManager.h"
 
 /**
  *
@@ -20,20 +21,18 @@
  * @param chainid our chain id
  *
  */
-eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int chainid) :
+eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int chainid, int storageChan) :
 	eveMessageChannel(parent)
 {
 	QDomElement rootElement;
 
 	chainId = chainid;
-	storageChannel = 0;
+	storageChannel = storageChan;
 	posCounter = 0;
 	useStorage = false;
 	sentData = false;
 	chainStatus = eveEngIDLEXML;
 	manager = parent;
-	waitForMessageBeforeStart = false;
-	delayedStart = false;
 	shutdownPending = false;
 	nextEventId = chainId*100;
 	// TODO register global events
@@ -61,19 +60,17 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 	connect (manager, SIGNAL(pauseSMs()), this, SLOT(smPause()), Qt::QueuedConnection);
 
 	// collect various data
+	// TODO never used
 	addToHash(&chainHash, "confirmsave", parser);
 
 	// collect all storage-related data
 	savePluginHash = parser->getChainPlugin(chainId, "saveplugin");
 	addToHash(savePluginHash, "savefilename", parser);
-	addToHash(savePluginHash, "saveformat", parser);
 	addToHash(savePluginHash, "autonumber", parser);
+	addToHash(savePluginHash, "confirmsave", parser);
+	addToHash(savePluginHash, "savescandescription", parser);
 
 	if (savePluginHash->contains("savefilename")) useStorage = true;
-
-	// TODO
-	// here or in ScanManager (see ScanManager-code)
-	// if (parser->getChainString(chainId, "savescandescription").toLower() == "true")
 
 }
 
@@ -91,8 +88,7 @@ void eveScanManager::init() {
 	if (useStorage) {
 		// TODO before sending this we must make sure that the corresponding
 		// storage channel has been registered with messageHub
-		sendMessage(new eveStorageMessage(chainId, channelId, savePluginHash, 0, EVECHANNEL_STORAGE));
-		waitForMessageBeforeStart = true;
+		sendMessage(new eveStorageMessage(chainId, channelId, savePluginHash, 0, storageChannel));
 	}
 	rootSM->initialize();
 }
@@ -145,13 +141,7 @@ void eveScanManager::shutdown(){
  */
 void eveScanManager::smStart() {
 	sendError(INFO,0,"eveScanManager::smStart: starting root");
-	if (waitForMessageBeforeStart){
-		sendError(INFO,0,"eveScanManager::smStart: delayed start");
-		delayedStart = true;
-	}
-	else {
-		if (rootSM) rootSM->startChain();
-	}
+	if (rootSM) rootSM->startChain();
 }
 
 /**
@@ -223,7 +213,8 @@ void eveScanManager::smDone() {
 void eveScanManager::sendMessage(eveMessage *message){
 	// a message with destination zero is sent to all storageModules
 	if ((message->getType() == EVEMESSAGETYPE_DATA)
-		|| (message->getType() == EVEMESSAGETYPE_DEVINFO)) {
+		|| (message->getType() == EVEMESSAGETYPE_DEVINFO)
+		|| (message->getType() == EVECHANNEL_STORAGE)) {
 		message->setDestination(storageChannel);
 	}
 	if (message->getType() == EVEMESSAGETYPE_DATA) {
@@ -241,19 +232,15 @@ void eveScanManager::handleMessage(eveMessage *message){
 
 	eveError::log(4, "eveScanManager: message arrived");
 	switch (message->getType()) {
-		case EVEMESSAGETYPE_STORAGEACK:
-			// Storage is ready with init, if we already got a start signal
-			// we start now
-			storageChannel = ((eveMessageInt*)message)->getInt();
-			if (waitForMessageBeforeStart){
-				waitForMessageBeforeStart = false;
-				if (delayedStart){
-					delayedStart = false;
-					sendError(DEBUG,0,"handleMessage: delayed start, starting now");
-					smStart();
-				}
+		case EVEMESSAGETYPE_REQUESTANSWER:
+		{
+			int rid = ((eveRequestAnswerMessage*)message)->getReqId();
+			if (requestHash.contains(rid)) {
+				if (rootSM) rootSM->triggerSM(requestHash.value(rid));
+				requestHash.remove(rid);
 			}
-			break;
+		}
+		break;
 		default:
 			sendError(ERROR,0,"eveScanManager::handleMessage: unknown message");
 			break;
@@ -382,14 +369,12 @@ void eveScanManager::newEvent(eveEventProperty* evprop) {
 	switch (evprop->getActionType()){
 	case eveEventProperty::START:
 		// ignore all startevents before storage is ready
-		if (!waitForMessageBeforeStart){
 			if (evprop->isChainAction()){
 				if (rootSM) rootSM->startChain();
 			}
 			else {
 				if (rootSM) rootSM->startSM(evprop->getSmId());
 			}
-		}
 		break;
 	case eveEventProperty::PAUSE:
 		if (rootSM) {
@@ -454,5 +439,19 @@ void eveScanManager::newEvent(eveEventProperty* evprop) {
 		sendError(ERROR,0,"eveScanManager: unknown event action");
 		break;
 
+	}
+}
+
+int eveScanManager::sendRequest(int smid, QString text){
+	int newrid = eveRequestManager::getRequestManager()->newId(channelId);
+	requestHash.insert(newrid, smid);
+	addMessage(new eveRequestMessage(newrid,EVEREQUESTTYPE_TRIGGER, text));
+	return newrid;
+}
+
+void eveScanManager::cancelRequest(int smid, int rid){
+	if (requestHash.contains(rid)) {
+		requestHash.remove(rid);
+		addMessage(new eveRequestCancelMessage(rid));
 	}
 }
