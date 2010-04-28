@@ -33,7 +33,7 @@ eveXMLReader::~eveXMLReader() {
 
 #define EVE_VERSION        0
 #define EVE_REVISION       3
-#define EVE_MODIFICATION   2
+#define EVE_MODIFICATION   8
 
 /** \brief read XML-Data and create all device definitions and various hashes etc.
  * \param xmldata XML text data
@@ -64,8 +64,12 @@ bool eveXMLReader::read(QByteArray xmldata, eveDeviceList *devList)
     }
     QString thisVersion = QString("%1.%2.%3").arg((int)EVE_VERSION).arg((int)EVE_REVISION).arg((int)EVE_MODIFICATION);
     QStringList versions = version.text().split(".");
+    if (versions[0].toInt() != EVE_VERSION) {
+		sendError(ERROR,0,QString("eveXMLReader::read: incompatible xml versions, file: %1, application: %2").arg(version.text()).arg(thisVersion));
+        return false;
+    }
     if (versions[1].toInt() != EVE_REVISION) {
-		sendError(ERROR,0,QString("eveXMLReader::read: incompatible xml versions file: %1, application: %2").arg(version.text()).arg(thisVersion));
+		sendError(ERROR,0,QString("eveXMLReader::read: incompatible xml revisions file: %1, application: %2").arg(version.text()).arg(thisVersion));
         return false;
     }
     // build indices
@@ -666,6 +670,60 @@ int eveXMLReader::getIntValueOfTag(int chain, int smid, QString tagname){
 		if (ok) return value;
 	}
 	return 0;
+}
+
+/**
+ *
+ * @param chain chain id
+ * @param smid scanmodule id
+ * @param tagname name of XML-Tag
+ * @return value of tagname
+ */
+QString eveXMLReader::getSMTag(int chain, int smid, QString tagname) {
+
+	if (smIdHash.contains(chain)){
+		QDomElement domElement = smIdHash.value(chain)->value(smid);
+		domElement = domElement.firstChildElement(tagname);
+		if (!domElement.isNull()) return domElement.text();
+	}
+	return QString();
+}
+
+/**
+ *
+ * @param chain chain id
+ * @param smid scanmodule id
+ * @param tagname name of XML-Tag
+ * @return bool value of tagname or defaultVal if conversion fails
+ */
+bool eveXMLReader::getSMTagBool(int chain, int smid, QString tagname, bool defaultVal) {
+
+	QString value = getSMTag(chain, smid, tagname);
+	if (!value.isEmpty()){
+		if ((value.compare("yes", Qt::CaseInsensitive) == 0) || (value.compare("true", Qt::CaseInsensitive) == 0))
+			return true;
+		else
+			return false;
+	}
+	return defaultVal;
+}
+
+/**
+ *
+ * @param chain chain id
+ * @param smid scanmodule id
+ * @param tagname name of XML-Tag
+ * @return double value of tagname or defaultVal if conversion fails
+ */
+double eveXMLReader::getSMTagDouble(int chain, int smid, QString tagname, double defaultVal) {
+
+	QString value = getSMTag(chain, smid, tagname);
+	if (!value.isEmpty()){
+		bool ok=false;
+		double dval = value.toDouble(&ok);
+		if (ok) return dval;
+	}
+	return defaultVal;
 }
 
 /**

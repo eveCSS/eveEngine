@@ -46,6 +46,9 @@ public:
 	QList<eveEventProperty*>* getSMEventList(int, int);
 	QList<eveEventProperty*>* getChainEventList(int);
 	QString getChainString(int, QString);
+	QString getSMTag(int, int, QString);
+	bool getSMTagBool(int, int, QString, bool);
+	double getSMTagDouble(int, int, QString, double);
 	QHash<QString, QString>* getChainPlugin(int, QString);
 	QHash<QString, QString>* getPositioningPlugin(int, int, QString);
 
