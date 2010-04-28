@@ -25,6 +25,7 @@ public:
 	int open(int);
 	int addData(int, eveDataMessage* );
 	int close(int);
+	int setXMLData(QByteArray*);
 	QString errorText() {return errorString;};
 
 private:

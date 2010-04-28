@@ -13,8 +13,9 @@
 #include "eveDataCollector.h"
 #include "eveError.h"
 
-eveStorageManager::eveStorageManager(QString filename) {
+eveStorageManager::eveStorageManager(QString filename, QByteArray* xmldata) {
 	// register with messageHub
+	xmlData = new QByteArray(*xmldata);
 	fileName = filename;
 	channelId = eveMessageHub::getmHub()->registerChannel(this, EVECHANNEL_STORAGE);
 }
@@ -33,9 +34,7 @@ void eveStorageManager::handleMessage(eveMessage *message){
 		case EVEMESSAGETYPE_STORAGECONFIG:
 			sendError(DEBUG,0,"eveStorageManager::handleMessage: got STORAGECONFIG-message");
 			if (((eveStorageMessage*)message)->getFileName() == fileName){
-				if (configStorage((eveStorageMessage*)message))
-					addMessage(new eveMessageInt(EVEMESSAGETYPE_STORAGEACK, channelId, 0, ((eveStorageMessage*)message)->getChannelId()) );
-				else
+				if (!configStorage((eveStorageMessage*)message))
 					sendError(ERROR,0,QString("eveStorageManager::handleMessage: unable to init StorageObject for File %1 (%2)").arg(fileName).arg(message->getType()));
 			}
 			else {
@@ -149,7 +148,8 @@ bool eveStorageManager::configStorage(eveStorageMessage* message){
 	int chainId = message->getChainId();
 	if (!chainIdChannelHash.contains(chainId)){
 		chainIdChannelHash.insert(chainId, message->getChannelId());
-		eveDataCollector* dc = new eveDataCollector(this, message);
+		eveDataCollector* dc = new eveDataCollector(this, message, xmlData);
+		xmlData = NULL;
 		chainIdDCHash.insert(chainId, dc);
 		return true;
 	}

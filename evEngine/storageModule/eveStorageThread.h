@@ -1,6 +1,8 @@
 #ifndef EVESTORAGETHREAD_H_
 #define EVESTORAGETHREAD_H_
 
+#include "eveStorageManager.h"
+
 #include <QThread>
 #include <QMutex>
 #include <QWaitCondition>
@@ -9,12 +11,15 @@
 class eveStorageThread : public QThread
 {
 public:
-	eveStorageThread(QString, QWaitCondition*, QMutex *);
+	eveStorageThread(QString, QByteArray*, QWaitCondition*, QMutex *);
 	virtual ~eveStorageThread();
+	int getChannelId(){return manager->getChannelId();};
     void run();
 
 private:
+    eveStorageManager *manager;
 	QString fileName;
+	QByteArray* xmlData;
 	QMutex *waitMutex;
 	QWaitCondition* storageRegistered;
 };

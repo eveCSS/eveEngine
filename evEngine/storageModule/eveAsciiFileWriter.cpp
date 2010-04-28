@@ -30,7 +30,7 @@ eveAsciiFileWriter::~eveAsciiFileWriter() {
  */
 int eveAsciiFileWriter::init(int setID, QString filename, QString format, QHash<QString, QString>* parameter){
 	if (initDone) {
-		errorString=QString("AsciiFileWriter does not support multiple Data Sets, initialize only once");
+		errorString = QString("AsciiFileWriter does not support multiple Data Sets, initialize only once");
 		return ERROR;
 	}
 	// asciiFileWriter ignores parameter
@@ -40,6 +40,27 @@ int eveAsciiFileWriter::init(int setID, QString filename, QString format, QHash<
 	fileFormat = format;
 	errorString.clear();
 	return SUCCESS;
+}
+
+int eveAsciiFileWriter::setXMLData(QByteArray* xmldata){
+	int retval = SUCCESS;
+	if (initDone) {
+		QString xmlfilename = fileName + ".scml";
+		QFile* xmlfilePtr = new QFile(xmlfilename);
+		if (!xmlfilePtr->open(QIODevice::ReadWrite)){
+			errorString = QString("AsciiFileWriter: error opening File %1").arg(xmlfilename);
+			retval = ERROR;
+		}
+		else {
+			if (xmlfilePtr->write(*xmldata) < 0){
+				errorString = QString("AsciiFileWriter: error writing xmldata to File %1").arg(xmlfilename);
+				retval = ERROR;
+			}
+			xmlfilePtr->close();
+		}
+	}
+	if (xmldata != NULL) delete xmldata;
+	return retval;
 }
 
 /**

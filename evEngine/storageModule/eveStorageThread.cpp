@@ -1,11 +1,11 @@
 #include "eveStorageThread.h"
-#include "eveStorageManager.h"
 
-eveStorageThread::eveStorageThread(QString filename, QWaitCondition* waitRegistration, QMutex *mutex)
+eveStorageThread::eveStorageThread(QString filename, QByteArray* xmldata, QWaitCondition* waitRegistration, QMutex *mutex)
 {
 	fileName = filename;
 	storageRegistered = waitRegistration;
 	waitMutex = mutex;
+	xmlData = xmldata;
 }
 
 eveStorageThread::~eveStorageThread()
@@ -17,7 +17,8 @@ eveStorageThread::~eveStorageThread()
 void eveStorageThread::run()
 {
 	// create a Manager
-	eveStorageManager *manager = new eveStorageManager(fileName);
+	manager = new eveStorageManager(fileName, xmlData);
+	xmlData = NULL;
 	waitMutex->lock();
 	storageRegistered->wakeAll();
 	waitMutex->unlock();

@@ -18,7 +18,7 @@ class eveStorageManager;
  */
 class eveDataCollector {
 public:
-	eveDataCollector(eveStorageManager*, eveStorageMessage*);
+	eveDataCollector(eveStorageManager*, eveStorageMessage*, QByteArray*);
 	virtual ~eveDataCollector();
 	void addData(eveDataMessage*);
 	void addDevice(eveDevInfoMessage *);
@@ -34,7 +34,7 @@ private:
 	QStringList deviceList;
 	eveStorageManager* manager;
 	eveFileWriter* fileWriter;
-
+	QByteArray* xmlData;
 };
 
 #endif /* EVEDATACOLLECTOR_H_ */

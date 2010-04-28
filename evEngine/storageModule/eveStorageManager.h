@@ -20,11 +20,12 @@ class eveStorageManager : public eveMessageChannel
 	Q_OBJECT
 
 public:
-	eveStorageManager(QString);
+	eveStorageManager(QString, QByteArray* );
 	virtual ~eveStorageManager();
 	void shutdown();
 	void handleMessage(eveMessage *);
 	void sendError(int, int, QString);
+	int getChannelId(){return channelId;};
 
 private:
 	void sendError(int, int, int, QString);
@@ -32,6 +33,7 @@ private:
 	QHash<int, int> chainIdChannelHash;
 	QHash<int, eveDataCollector* > chainIdDCHash;
 	QString fileName;
+	QByteArray* xmlData;
 
 
 };

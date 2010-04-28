@@ -9,6 +9,7 @@
 #include <QProcess>
 #include <QDir>
 #include <QPluginLoader>
+#include "eveParameter.h"
 #include "eveDataCollector.h"
 #include "eveStorageManager.h"
 #include "eveAsciiFileWriter.h"
@@ -18,16 +19,19 @@
 /**
  * @param sman corresponding Storge Manager
  * @param message configuration info
+ * @param xmldata pointer to xml buffer with scandescription, will be deleted by this class
  */
-eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* message) {
+eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* message, QByteArray* xmldata) {
 
 	QHash<QString, QString>* paraHash = message->takeHash();
-	QString emptyString;
+	QString emptyString("");
 	chainId = message->getChainId();
 	fileName = message->getFileName();
-	fileType = paraHash->value("saveformat", emptyString);
+	fileType = paraHash->value("format", emptyString);
+	QString suffix = paraHash->value("suffix", emptyString);
 	pluginName = paraHash->value("pluginname", emptyString);
 	pluginPath = paraHash->value("location", emptyString);
+	bool saveXML = paraHash->value("savescandescription", emptyString).startsWith("true");
 	manager = sman;
 	fileWriter = NULL;
 	fwInitDone = false;
@@ -38,9 +42,14 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 		sman->sendError(ERROR,0,QString("eveDataCollector: empty filename not allowed, using dummy"));
 		fileName = "dummy-filename";
 	}
+	if (!suffix.isEmpty() && (!fileName.endsWith(suffix))) {
+		if (!(fileName.endsWith(".") || suffix.startsWith("."))) fileName.append(".");
+		fileName.append(suffix);
+	}
+
 	// if filename is relative and EVE_ROOT is defined, we use EVE_ROOT as root directory
 	if (QFileInfo(fileName).isRelative()){
-		QString eve_root;
+		QString eve_root = eveParameter::getParameter("eveRoot");
 		QStringList envList = QProcess::systemEnvironment();
 		foreach (QString env, envList){
 			if (env.startsWith("EVE_ROOT")){
@@ -64,7 +73,6 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 		fileName = numberedName;
 	}
 
-
 	switch (eveFileTest::createTestfile(fileName)){
 	case 1:
 		sman->sendError(ERROR, 0, QString("eveDataCollector: unable to use filename %1, file exists").arg(fileName));
@@ -86,7 +94,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 	// predefined info message with filename
 	if (fileTest) sman->sendError(INFO, 0x000a, fileName);
 
-	if (pluginName.isEmpty()){
+	if (pluginName.isEmpty() || (pluginName == "ASCII")){
 		if (fileType == "ASCII"){
 			fileWriter = new eveAsciiFileWriter();
 		}
@@ -104,7 +112,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 		}
 	}
 
-	if (!pluginName.isEmpty()){
+	if (!pluginName.isEmpty() && (pluginName != "ASCII")){
 
 #if defined(Q_OS_WIN)
 		pluginName.append(".dll");
@@ -144,8 +152,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 		    	QStringList envList = QProcess::systemEnvironment();
 		    	foreach (QString env, envList){
 		    		if (env.startsWith("EVE_PLUGINPATH")){
-		    			QStringList pieces = env.split("=");
-		    			if (pieces.count() == 2) pluginpath = pieces.at(1);
+		    			pluginpath = env.remove("EVE_PLUGINPATH=");
 		    			break;
 		    		}
 		    	}
@@ -184,8 +191,16 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 			manager->sendError(ERROR, 0, QString("FileWriter: init error: %1").arg(fileWriter->errorText()));
 		}
 		else {
-			if (fileTest) fwInitDone = true;
+			if (fileTest) {
+				fwInitDone = true;
+			}
 		}
+	}
+	if (xmldata){
+		if (saveXML && fwInitDone)
+			fileWriter->setXMLData(xmldata);
+		else
+			delete xmldata;
 	}
 	delete paraHash;
 }
@@ -221,10 +236,9 @@ void eveDataCollector::addData(eveDataMessage* message) {
 		}
 	}
 	else {
-		manager->sendError(ERROR, 0, QString("DataCollector: cannot add data for %1 (%2/%3), no device info")
+		manager->sendError(ERROR, 0, QString("DataCollector: cannot add data for %1 (%2), no device info")
 				.arg(message->getXmlId())
 				.arg(message->getName())
-				.arg(message->getId())
 				);
 	}
 }
