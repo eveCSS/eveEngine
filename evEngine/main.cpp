@@ -8,6 +8,8 @@
 #include <QAction>
 #include <QMenu>
 #include <QString>
+#include <QStringList>
+#include <QProcess>
 
 #include "eveMessageHub.h"
 #include "eveError.h"
@@ -17,31 +19,83 @@ int main(int argc, char *argv[])
 {
 	bool useGui = true;
 	bool useNet = true;
-	char xmlFileName[151];
-	char logFileName[151];
-	char interfaces[151] = "all";
+	QString xmlFileName;
+	QString logFileName;
+	QString interfaces("all");
+	QString eveRoot;
 	int loglevel;
 	int portNumber = 12345;
+	bool skipOne = false;
 
 	// poor mans argument parsing
 	for ( int i = 1; i < argc; i++ ) {
-		if ( QString(argv[i]) == "-g" )
+		if (skipOne){
+			skipOne = false;
+			continue;
+		}
+		bool ok;
+		QString argument = QString(argv[i]);
+		QString argumentNext;
+		QString parameter;
+		if (i+1 < argc) argumentNext = QString(argv[i+1]);
+
+		if ( argument.startsWith("-g" )){
 			useGui = true;
-		else if ( sscanf ( argv[i],"-d %u", &loglevel ) == 1 )
 			continue;
-		else if ( sscanf ( argv[i],"-p %u", &portNumber ) == 1 )
+		}
+		else if ( argument.startsWith("-n" )){
+			useNet = false;
 			continue;
-		else if ( QString(argv[i]) == "-n" )
-			useNet=false;
-		else if ( sscanf ( argv[i], "-f %150s", xmlFileName ) == 1 )
-        	continue;
-		else if ( sscanf ( argv[i], "-i %150s", interfaces ) == 1 )
-        	continue;
-		else if ( sscanf ( argv[i], "-l %150s", logFileName ) == 1 )
-			continue;
+		}
+		else if ( argument.startsWith("-d") ){
+			parameter = argument.remove(0,2).trimmed();
+			if (parameter.isEmpty()) {
+				parameter = argumentNext.trimmed();
+				skipOne = true;
+			}
+			loglevel = parameter.toInt(&ok);
+			if (ok) continue;
+		}
+		else if ( argument.startsWith("-p") ){
+			parameter = argument.remove(0,2).trimmed();
+			if (parameter.isEmpty()) {
+				parameter = argumentNext.trimmed();
+				skipOne = true;
+			}
+			portNumber = parameter.toInt(&ok);
+			if (ok) continue;
+		}
+		else if ( argument.startsWith("-f") ){
+			xmlFileName = argument.remove(0,2).trimmed();
+			if (xmlFileName.isEmpty()) {
+				xmlFileName = argumentNext.trimmed();
+				skipOne = true;
+			}
+			if (!xmlFileName.isEmpty()) continue;
+		}
+		else if ( argument.startsWith("-l") ){
+			logFileName = argument.remove(0,2).trimmed();
+			if (logFileName.isEmpty()) {
+				logFileName = argumentNext.trimmed();
+				skipOne = true;
+			}
+			if (!logFileName.isEmpty()) continue;
+		}
+		else if ( argument.startsWith("-e") ){
+			eveRoot = argument.remove(0,2).trimmed();
+			if (eveRoot.isEmpty()) {
+				eveRoot = argumentNext.trimmed();
+				skipOne = true;
+			}
+			if (!eveRoot.isEmpty()) continue;
+		}
+//		else if ( argument.startsWith("-i") ){
+//			interfaces = argument.remove(0,2).trimmed();
+//			if (interfaces.size() > 0) continue;
+//		}
 		else {
 			printf ("\"%s\"?\n", argv[i]);
-	        printf ("usage: %s [-d<debug level> => loglevel, -f<xml-File>, -g => Gui on (default), -n => no network, -p<port>, -l<interface> => default all\n",argv[0]);
+	        printf ("usage: %s [-d<debug level> => loglevel, -f<xml-File>, -g => Gui on (default), -n => no network, -p<port>, -e<root directory>\n",argv[0]);
 	        return (1);
 		}
     }
@@ -66,6 +120,17 @@ int main(int argc, char *argv[])
 	mainWin->resize(600, 800);
 	mainWin->show();
 
+	// check if environment variable EVE_ROOT is set
+	if (eveRoot.isEmpty()) {
+		QStringList envList = QProcess::systemEnvironment();
+		foreach (QString env, envList){
+			if (env.startsWith("EVE_ROOT=")){
+				eveRoot = env.remove("EVE_ROOT=");
+				break;
+			}
+		}
+	}
+
 	// build parameter list
 	eveParameter *paralist = new eveParameter();
 	if (useNet)
@@ -74,8 +139,8 @@ int main(int argc, char *argv[])
 		paralist->setParameter("use_network", "no");
 
 	paralist->setParameter("port", QString().setNum(portNumber));
-	paralist->setParameter("interfaces", QString(interfaces));
-
+	paralist->setParameter("interfaces", interfaces);
+	if (!eveRoot.isEmpty()) paralist->setParameter("eveRoot", eveRoot);
 
 	eveError *error = new eveError(textDisplay);
 	eveMessageHub *mHub = new eveMessageHub();
