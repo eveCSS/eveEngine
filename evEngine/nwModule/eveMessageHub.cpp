@@ -265,20 +265,25 @@ void eveMessageHub::newMessage(int messageSource)
 			case EVEMESSAGETYPE_STORAGECONFIG:
 				/* send configuration to storagemodule if available */
 				if (haveStorage()){
+					// tell manager cids with storage
+					if (mChanHash.contains(EVECHANNEL_MANAGER)){
+						eveMessage *mclone = message->clone();
+						if (!mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(mclone)) delete mclone;
+					}
 					if (sendToStorage(message)) message = NULL;
 				}
 				break;
-			case EVEMESSAGETYPE_STORAGEACK:
-				/* send back to corresponding chain */
-				if (mChanHash.contains(message->getDestination())){
-					eveMessage *mclone = message->clone();
-					if (!mChanHash.value(message->getDestination())->queueMessage(mclone)) delete mclone;
-				}
-				/* send storageack to manager (we always have one) to keep track of storagemodules*/
-				if (mChanHash.contains(EVECHANNEL_MANAGER)){
-					if (mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(message))message = NULL;
-				}
-				break;
+//			case EVEMESSAGETYPE_STORAGEACK:
+//				/* send back to corresponding chain */
+//				if (mChanHash.contains(message->getDestination())){
+//					eveMessage *mclone = message->clone();
+//					if (!mChanHash.value(message->getDestination())->queueMessage(mclone)) delete mclone;
+//				}
+//				/* send storageack to manager (we always have one) to keep track of storagemodules*/
+//				if (mChanHash.contains(EVECHANNEL_MANAGER)){
+//					if (mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(message))message = NULL;
+//				}
+//				break;
 			case EVEMESSAGETYPE_DEVINFO:
 				/* send device info to storagemodule if available */
 				if (haveStorage()){
