@@ -449,6 +449,7 @@ eveErrorMessage::eveErrorMessage(int errSeverity, int errFacility, int errType, 
 	facility = errFacility;
 	errorType = errType;
 	errorString = errString;
+	timestamp = eveTime::getCurrent();
 }
 eveErrorMessage::~eveErrorMessage()
 {

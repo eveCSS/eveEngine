@@ -300,10 +300,6 @@ void eveScanModule::stgGotoStart() {
 			nestedSM->gotoStart();
 			++signalCounter;
 		}
-		// reset channels
-		foreach (eveSMChannel *channel, *channelList){
-			channel->mathReset();
-		}
 		emit sigExecStage();
 	}
 	else {
@@ -482,7 +478,6 @@ void eveScanModule::stgTrigRead() {
 					else {
 						bool ok = false;
 						double dval = dmesg->toVariant().toDouble(&ok);
-						if (ok) channel->mathAdd(dmesg->toVariant());
 						if (ok) sendError(DEBUG, 0, QString("%1: value %2").arg(channel->getName()).arg(dval));
 						sendMessage(dmesg);
 					}
@@ -589,15 +584,6 @@ void eveScanModule::stgPostscan() {
 			sendError(INFO,0,"stgPostScan writing");
 			device->writeValue(false);
 			++signalCounter;
-		}
-		// send all calculated results
-		foreach (eveSMChannel *channel, *channelList){
-			foreach (eveDataMessage* message, channel->getAllResultMessages()){
-				sendMessage(message);
-//				bool ok = false;
-//				double dval = message->toVariant().toDouble(&ok);
-//				if (ok) sendError(DEBUG, 0, QString("%1: value %2 (%3)").arg(channel->getName()).arg(dval).arg((int)message->getDataMod()));
-			}
 		}
 		emit sigExecStage();
 	}

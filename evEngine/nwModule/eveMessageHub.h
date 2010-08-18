@@ -40,6 +40,7 @@ signals:
 private:
 	void addError(int, int,  QString);
 	bool sendToStorage(eveMessage*);
+	bool sendToMath(eveMessage*);
 	bool haveStorage(){return !storageChannelList.isEmpty();};
 	int scanChannelCounter;
 	int nextChannel;
@@ -50,6 +51,7 @@ private:
 	QHash<int, eveMessageChannel * > mChanHash;
 //	QList<eveMessageChannel> scanChannels;
 	QList<int> storageChannelList;
+	QList<int> mathChannelList;
 	static eveMessageHub* mHub;
 	int engineStatus;
 	QString currentXmlId;

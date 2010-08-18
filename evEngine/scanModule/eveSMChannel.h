@@ -17,7 +17,7 @@
 #include "eveCaTransport.h"
 #include "eveSMBaseDevice.h"
 #include "eveEventProperty.h"
-#include "eveMath.h"
+#include "eveAverage.h"
 
 class eveScanModule;
 
@@ -43,10 +43,7 @@ public:
 	QString getUnit(){return unit;};
 	eveDevInfoMessage* getDeviceInfo();
 	eveDataMessage* getValueMessage();
-	void mathReset();
 	void sendError(int, int, int, QString);
-	QList<eveDataMessage*> getAllResultMessages();
-	void mathAdd(eveVariant data);
 
 public slots:
 	void transportReady(int);
@@ -74,8 +71,7 @@ private:
 	QString unit;
 	bool sendreadyevent;
 	eveType channelType;
-	eveMath* math;
-	eveMath* valueCalc;
+	eveAverage* valueCalc;
 	eveScanModule* scanModule;
 	eveBaseTransport* valueTrans;
 	eveBaseTransport* stopTrans;

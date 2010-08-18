@@ -2,11 +2,13 @@
 #define EVEMESSAGECHANNEL_H_
 
 // predefined (reserved) Channels
-#define EVECHANNELS_RESERVED 4
+#define EVECHANNELS_RESERVED 5
 #define EVECHANNEL_NET 1
 #define EVECHANNEL_STORAGE 2
 #define EVECHANNEL_MANAGER 3
 #define EVECHANNEL_EVENT 4
+#define EVECHANNEL_MATH 5
+
 
 #include <QObject>
 #include <QReadWriteLock>

@@ -17,7 +17,7 @@
 
 
 /**
- * @param sman corresponding Storge Manager
+ * @param sman corresponding Storage Manager
  * @param message configuration info
  * @param xmldata pointer to xml buffer with scandescription, will be deleted by this class
  */

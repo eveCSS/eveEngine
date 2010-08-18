@@ -16,6 +16,7 @@
 #include "eveScanManager.h"
 #include "eveScanThread.h"
 #include "eveStorageThread.h"
+#include "eveMathThread.h"
 
 /**
  * \brief init and register with messageHub
@@ -226,8 +227,6 @@ bool eveManager::createSMs(QByteArray xmldata) {
 				storageThread->start();
 				waitRegistration.wait(&mutex);
 				storageChannelId = storageThread->getChannelId();
-				// TODO send a message with xmldata to the storage thread with
-				// savefilename = value, if parameter savescandescription = true
 			}
 		}
 		// start a scanManager for every chain
@@ -236,6 +235,8 @@ bool eveManager::createSMs(QByteArray xmldata) {
 		scanManager->moveToThread(chainThread);
 		scanThreadList.append(chainThread);
 		chainThread->start();
+		QThread *mathThread = new eveMathThread(itera.key(), scmlParser->getFilteredMathConfigs(itera.key()));
+		mathThread->start();
 	}
 	delete scmlParser;
 

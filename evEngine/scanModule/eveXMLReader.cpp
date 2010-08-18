@@ -1234,3 +1234,84 @@ eveEventProperty* eveXMLReader::getEvent(eveEventProperty::actionTypeT action, Q
 		return NULL;
 	}
 }
+
+/**
+ * returns a list with all detector/xaxis/normalize_id with corresponding plot id.
+ * The list is sorted in tree-hierarchy. List-elements with equal detector/xaxis/normalize_id/plotwindow
+ * and preinit == false are packed together into one mathConfig.
+ * The calculation and plotting will extend over more than one scanmodule only if all
+ * devices are the same in all plots and init == false in all plots except the first;
+ * Only on detector/xaxis pairs which are plotted math is applied.
+ *
+ * @param chid
+ * @return
+ */
+QList<eveMathConfig*>* eveXMLReader::getFilteredMathConfigs(int chid){
+
+	QList<eveMathConfig*> *mathConfigList = new QList<eveMathConfig*>();
+	int smid = getRootId(chid);
+
+	getMathConfigFromPlot(chid, smid, mathConfigList);
+
+	int index = 0;
+	while (index < mathConfigList->size()){
+		eveMathConfig* math = mathConfigList->at(index);
+		int next = index +1;
+		while (next < mathConfigList->size()){
+			eveMathConfig* mathNext = mathConfigList->at(next);
+			if (math->getPlotWindowId() == mathNext->getPlotWindowId()){
+				if (math->hasEqualDevices(*mathNext) && !mathNext->hasInit()) {
+					math->addScanModule(mathNext->getFirstScanModuleId());
+					mathConfigList->removeAt(next);
+					delete mathNext;
+				}
+				else {
+					break;
+				}
+			}
+			else {
+				next++;
+			}
+		}
+		index++;
+	}
+	return mathConfigList;
+}
+
+void eveXMLReader::getMathConfigFromPlot(int chid, int smid, QList<eveMathConfig*> *mathConfigList) {
+
+	if (smIdHash.contains(chid)){
+		QDomElement domElement = smIdHash.value(chid)->value(smid);
+		QDomElement domPlot = domElement.firstChildElement("plot");
+		while (!domPlot.isNull()) {
+			bool ok;
+			QString xAxisId;
+			QString yAxisId;
+			QString normalizeId;
+			int plotId = domPlot.attribute("id").toInt(&ok);
+			bool init = getSMTagBool(chid, smid, "init", true);
+			domElement = domPlot.firstChildElement("xaxis");
+			if (!domElement.isNull()) domElement = domElement.firstChildElement("id");
+			if (!domElement.isNull()) xAxisId = domElement.text();
+			QDomElement domYAxis = domPlot.firstChildElement("yaxis");
+			ok = (ok && (xAxisId.length() > 0));
+			while (ok && !domYAxis.isNull()){
+				domElement = domYAxis.firstChildElement("id");
+				if (!domElement.isNull()) yAxisId = domElement.text();
+				domElement = domYAxis.firstChildElement("normalize_id");
+				if (!domElement.isNull()) normalizeId = domElement.text();
+				if (yAxisId.length() > 0){
+					sendError(DEBUG, 0, QString("MathConfig: %1, %2, %3, Plot: %4, init: %5").arg(xAxisId).arg(yAxisId).arg(normalizeId).arg(plotId).arg(init));
+					eveMathConfig *mathConfig = new eveMathConfig(chid, plotId, init, xAxisId);
+					mathConfig->addScanModule(smid);
+					mathConfig->addYAxis(yAxisId, normalizeId);
+					mathConfigList->append(mathConfig);
+				}
+				domYAxis = domYAxis.nextSiblingElement("yaxis");
+			}
+			domPlot = domPlot.nextSiblingElement("plot");
+		}
+	}
+	if (getNested(chid, smid) != 0) getMathConfigFromPlot(chid, getNested(chid, smid), mathConfigList);
+	if (getAppended(chid, smid) != 0) getMathConfigFromPlot(chid, getAppended(chid, smid), mathConfigList);
+}

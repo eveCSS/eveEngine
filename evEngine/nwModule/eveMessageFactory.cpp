@@ -208,13 +208,14 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 		break;
 		case EVEMESSAGETYPE_DATA:
 		{
-			quint32 dtype;
+			quint32 chid, smid, poscounter, dtype;
 			eveDataStatus stat;
 			quint32 dataMod;
 			quint32 seconds, nanoseconds;
 			QString xmlId;
 			QString name = "";
 
+			inStream >> chid >> smid >> poscounter;
 			inStream >> dtype >> dataMod >> stat.severity >> stat.condition >> stat.acqStatus;
 			inStream >> seconds >> nanoseconds >> xmlId;
 			eveTime timeStamp = eveTime::eveTimeFromTime_tNano(seconds, nanoseconds);
@@ -270,6 +271,11 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 					message = new eveDataMessage(xmlId, name, stat, (eveDataModType)dataMod, timeStamp, dt);
 				}
 				break;
+			}
+			if (message != NULL){
+				((eveDataMessage*)message)->setChainId(chid);
+				((eveDataMessage*)message)->setSmId(smid);
+				((eveDataMessage*)message)->setPositionCount(poscounter);
 			}
 		}
 		break;
@@ -400,13 +406,17 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 		break;
 		case EVEMESSAGETYPE_DATA:
 		{
+			quint32 chid = ((eveDataMessage*)message)->getChainId();
+			quint32 smid = ((eveDataMessage*)message)->getSmId();
+			quint32 poscounter = ((eveDataMessage*)message)->getPositionCount();
 			quint32 dtype = (quint32)((eveDataMessage*)message)->getDataType();
 			eveDataStatus stat = ((eveDataMessage*)message)->getDataStatus();
 			quint32 dataMod = (quint32)((eveDataMessage*)message)->getDataMod();
 			eveTime dtime = ((eveDataMessage*)message)->getDataTimeStamp();
 			QString xmlId = ((eveDataMessage*)message)->getXmlId();
 			quint32 messageLength = 0;
-			outStream << messageLength << dtype << dataMod << stat.severity << stat.condition << stat.acqStatus << dtime.seconds() << dtime.nanoSeconds() << xmlId;
+			outStream << messageLength << chid << smid << poscounter << dtype << dataMod;
+			outStream << stat.severity << stat.condition << stat.acqStatus << dtime.seconds() << dtime.nanoSeconds() << xmlId;
 			switch (dtype) {
 				case eveInt8T:					/* eveInt8 */
 				{

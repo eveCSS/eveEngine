@@ -4,7 +4,9 @@ QT += core \
     network \
     gui \
     xml
-HEADERS += scanModule/eveMath.h \
+HEADERS += mathModule/eveMathManager.h \
+    mathModule/eveMathThread.h \
+    scanModule/eveAverage.h \
     scanModule/eveSMBaseDevice.h \
     scanModule/eveCounter.h \
     scanModule/eveTime.h \
@@ -50,8 +52,12 @@ HEADERS += scanModule/eveMath.h \
     nwModule/eveMessageChannel.h \
     nwModule/eveMessageHub.h \
     nwModule/eveNwThread.h \
-    nwModule/evePlaylistManager.h
-SOURCES += scanModule/eveMath.cpp \
+    nwModule/evePlaylistManager.h \
+    mathModule/eveMath.h \
+    mathModule/eveMathConfig.h
+SOURCES += mathModule/eveMathManager.cpp \
+    mathModule/eveMathThread.cpp \
+    scanModule/eveAverage.cpp \
     scanModule/eveSMBaseDevice.cpp \
     scanModule/eveCounter.cpp \
     scanModule/eveTime.cpp \
@@ -97,13 +103,16 @@ SOURCES += scanModule/eveMath.cpp \
     nwModule/eveMessageHub.cpp \
     nwModule/eveNwThread.cpp \
     main.cpp \
-    nwModule/evePlayListManager.cpp
+    nwModule/evePlayListManager.cpp \
+    mathModule/eveMath.cpp \
+    mathModule/eveMathConfig.cpp
 INCLUDEPATH += nwModule \
     scanModule \
     storageModule \
     /soft/epics/base-3.14.10/include \
     /soft/epics/base-3.14.10/include/os/Linux \
-    eventModule
+    eventModule \
+    mathModule
 unix:LIBS += -L/opt/epics/base-3.14.10/lib/linux-x86 \
     -lca \
     -lCom

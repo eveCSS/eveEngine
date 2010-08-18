@@ -31,7 +31,6 @@ eveSMBaseDevice(scanmodule) {
 	stopTrans = NULL;
 	triggerTrans = NULL;
 	unitTrans = NULL;
-	math = NULL;
 	channelOK = false;
 	ready = false;
 	triggerValue = 1;
@@ -112,7 +111,7 @@ eveSMBaseDevice(scanmodule) {
 
 	// we do average calculations if averageCount > 0
 	valueCalc = NULL;
-	if (averageCount > 1) valueCalc = new eveMath(averageCount, maxAttempts, minimum, maxDeviation);
+	if (averageCount > 1) valueCalc = new eveAverage(averageCount, maxAttempts, minimum, maxDeviation);
 /*
 	repeatOnRedo = false;
 	if (parameter.contains("repeatonredo"))
@@ -452,37 +451,6 @@ void eveSMChannel::newEvent(eveEventProperty* evprop) {
 		sendError(DEBUG, 0, "received redo event");
 		redo = true;
 	}
-}
-
-/**
- * for now we always calculate all algorithms
- */
-void eveSMChannel::mathReset() {
-	if (math == NULL)
-		math = new eveMath(EVEMATH_ALL);
-	else
-		math->reset(EVEMATH_ALL);
-}
-
-void eveSMChannel::mathAdd(eveVariant data) {
-	if (math != NULL)
-		math->addValue(data);
-}
-
-QList<eveDataMessage*> eveSMChannel::getAllResultMessages() {
-	QList<eveDataMessage*> dataList;
-	if (math != NULL){
-		for (int i = 0; i < 16; ++i) {
-			int type = 1 << i;
-			if (math->haveAlgorithm(type)) {
-				eveDataMessage* message = math->getResultMessage(type);
-				message->setName(name);
-				message->setXmlId(xmlId);
-				dataList.append(message);
-			}
-		}
-	}
-	return dataList;
 }
 
 /**

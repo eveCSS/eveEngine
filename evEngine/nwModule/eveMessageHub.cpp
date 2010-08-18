@@ -83,6 +83,10 @@ int eveMessageHub::registerChannel(eveMessageChannel * channel, int channelId)
 		newId = ++nextChannel;
 		storageChannelList.append(newId);
 	}
+	else if (channelId == EVECHANNEL_MATH ) {
+		newId = ++nextChannel;
+		mathChannelList.append(newId);
+	}
 	else
 		newId = channelId;
 
@@ -108,6 +112,7 @@ void eveMessageHub::unregisterChannel(int channelId)
 		mChanHash.remove(channelId);
 	}
 	storageChannelList.removeAll(channelId);
+	mathChannelList.removeAll(channelId);
 	return;
 }
 
@@ -141,12 +146,15 @@ void eveMessageHub::newMessage(int messageSource)
 				}
 				break;
 			case EVEMESSAGETYPE_CHAINSTATUS:
+			{
 				/* send  to storagemodules if available */
 				if (haveStorage()){
 					eveMessage *mclone = message->clone();
 					if (!sendToStorage(mclone))
 						delete mclone;
 				}
+				eveMessage *mclone = message->clone();
+				if (!sendToMath(mclone)) delete mclone;
 				/* send chainstatus to viewers if available */
 				if (mChanHash.contains(EVECHANNEL_NET)){
 					eveMessage *mclone = message->clone();
@@ -162,27 +170,21 @@ void eveMessageHub::newMessage(int messageSource)
 					if (mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(message))message = NULL;
 				}
 				break;
+			}
 			case EVEMESSAGETYPE_DATA:
 				{
 					/* send data to viewers if available */
 					if (mChanHash.contains(EVECHANNEL_NET)){
-						// do we need to clone the message?
-						if (haveStorage()){
-							eveMessage *mclone = message->clone();
-							if (!mChanHash.value(EVECHANNEL_NET)->queueMessage(mclone)){
-								delete mclone;
-								addError(ERROR, 0, "EVEMESSAGETYPE_DATA: EVECHANNEL_NET does not accept data ");
-							}
-						}
-						else {
-							if (mChanHash.value(EVECHANNEL_NET)->queueMessage(message)) message = NULL;
+						eveMessage *mclone = message->clone();
+						if (!mChanHash.value(EVECHANNEL_NET)->queueMessage(mclone)) delete mclone;
 
-						}
 					}
 					/* send data to storagemodules if available */
 					if (haveStorage()){
-						if (sendToStorage(message)) message = NULL;
+						eveMessage *mclone = message->clone();
+						if (!sendToStorage(mclone)) delete mclone;
 					}
+					if (sendToMath(message)) message = NULL;
 				}
 				break;
 			case EVEMESSAGETYPE_AUTOPLAY:
@@ -383,6 +385,37 @@ bool eveMessageHub::sendToStorage(eveMessage* message)
 			if (!mChanHash.value(channel)->queueMessage(message)) delete message;
 			retval = true;
 		}
+	}
+	return retval;
+}
+
+/**
+ *
+ * @param message pointer to the message to be sent
+ * @return true if message was put into the receiver queue or has been deleted
+ */
+bool eveMessageHub::sendToMath(eveMessage* message)
+{
+	eveMessage* clone;
+	bool retval = false;
+
+	// send only raw data to math
+	if ((message->getType() == EVEMESSAGETYPE_DATA) &&
+			(((eveDataMessage*)message)->getDataMod() != DMTunmodified)){
+		delete message;
+		return true;
+	}
+	// TODO
+	// we should send the message to MathManager of corresponding chain only
+	int count = mathChannelList.count();
+	foreach (int chan, mathChannelList) {
+		if (count > 1)
+			clone = message->clone();
+		else
+			clone = message;
+		if (!mChanHash.value(chan)->queueMessage(clone)) delete clone;
+		--count;
+		retval = true;
 	}
 	return retval;
 }

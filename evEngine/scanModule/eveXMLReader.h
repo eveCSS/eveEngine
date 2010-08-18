@@ -19,6 +19,7 @@
 #include "eveSMAxis.h"
 #include "eveSMChannel.h"
 #include "eveEventProperty.h"
+#include "eveMathConfig.h"
 
 class eveScanModule;
 class eveScanManager;
@@ -51,8 +52,10 @@ public:
 	double getSMTagDouble(int, int, QString, double);
 	QHash<QString, QString>* getChainPlugin(int, QString);
 	QHash<QString, QString>* getPositioningPlugin(int, int, QString);
+	QList<eveMathConfig*>* getFilteredMathConfigs(int);
 
 private:
+	void getMathConfigFromPlot(int, int, QList<eveMathConfig*>*);
 	void sendError(int, int,  QString);
 	void createDetectorDefinition(QDomNode);
 	void createMotorDefinition(QDomNode);
