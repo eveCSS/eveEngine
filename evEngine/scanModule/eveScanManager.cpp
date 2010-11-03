@@ -124,6 +124,7 @@ void eveScanManager::shutdown(){
 
 	// make sure mHub reads all outstanding messages before closing the channel
 	if (unregisterIfQueueIsEmpty()){
+		eveError::log(1, QString("eveScanManager: shutdown done"));
 		QThread::currentThread()->quit();
 	}
 	else {

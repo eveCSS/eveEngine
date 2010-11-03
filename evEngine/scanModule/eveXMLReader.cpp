@@ -199,11 +199,13 @@ eveBaseTransportDef * eveXMLReader::createTransportDefinition(QDomElement node)
 	if (node.hasAttribute("type")) {
 		typeString = node.attribute("type");
 		if (typeString == "int") accesstype = eveInt32T;
+		else if (typeString == "OnOff") accesstype = eveInt32T;
+		else if (typeString == "OpenClose") accesstype = eveInt32T;
 		else if (typeString == "double") accesstype = eveFloat64T;
 		else if (typeString == "string") accesstype = eveStringT;
 		else if (typeString == "datetime") accesstype = eveDateTimeT;
 		else {
-			sendError(ERROR,0,QString("eveXMLReader::createTransport: unknown data type: %1").arg(typeString));
+			sendError(ERROR,0,QString("eveXMLReader::createTransportDef: unknown data type: %1").arg(typeString));
 		}
 	}
 	if (node.hasAttribute("method")) {
@@ -216,11 +218,11 @@ eveBaseTransportDef * eveXMLReader::createTransportDefinition(QDomElement node)
 		else if (methodString == "GETPUTCB") accessMethod = eveGETPUTCB;
 		else if (methodString == "monitor") accessMethod = eveMONITOR;
 		else {
-			sendError(ERROR,0,QString("eveXMLReader::createTransport: unknown method: %1").arg(methodString));
+			sendError(ERROR,0,QString("eveXMLReader::createTransportDef: unknown method: %1").arg(methodString));
 		}
 	}
 	else {
-		sendError(ERROR, 0, "eveXMLReader::createTransport: method attribute is missing");
+		sendError(ERROR, 0, "eveXMLReader::createTransportDef: method attribute is missing");
 	}
 
 	if (node.hasAttribute("timeout")) {
@@ -231,7 +233,7 @@ eveBaseTransportDef * eveXMLReader::createTransportDefinition(QDomElement node)
 			timeout = tmpdouble;
 		}
 		else {
-			sendError(ERROR,0,QString("eveXMLReader::createTransport: unable to read timeout from xml"));
+			sendError(ERROR,0,QString("eveXMLReader::createTransportDef: unable to read timeout from xml"));
 		}
 	}
 	if (node.hasAttribute("transport")) {
