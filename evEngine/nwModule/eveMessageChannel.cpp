@@ -63,6 +63,8 @@ bool eveMessageChannel::unregisterIfQueueIsEmpty()
 		return true;
 	}
 	else {
+		eveError::log(1, QString("eveMessageChannel: %1 more Messages before shutdown").arg(sendMessageList.size()));
+		emit messageWaiting(channelId);
 		return false;
 	}
 }
