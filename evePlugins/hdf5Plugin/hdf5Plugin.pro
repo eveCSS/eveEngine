@@ -7,9 +7,13 @@ INCLUDEPATH += ../../evEngine/storageModule/ \
     /soft/epics/base-3.14.10/include/os/Linux \
     /home/eden/src/hdf5/1.8.4/include/
 HEADERS = hdf5Plugin.h
-SOURCES = hdf5Plugin.cpp
+SOURCES = hdf5Plugin.cpp \
+    ../../evEngine/scanModule/eveTime.cpp
 LIBS += -L/home/eden/src/hdf5/1.8.4-32bit/lib-static \
     -lhdf5_cpp \
-    -lhdf5
+    -lhdf5 \
+    -L/opt/epics/base-3.14.10/lib/linux-x86 \
+    -lca \
+    -lCom
 TARGET = $$qtLibraryTarget(hdf5plugin)
 DESTDIR = ../lib
