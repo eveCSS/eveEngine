@@ -25,7 +25,7 @@ h3. Was noch fehlt
 
 bc. Engine hat implementiert:  Detector-Events haben eine Id mit D-<chainid>-<smid>-<channelid>, Diese Id erscheint im XML.
 
-* die savescandescription-Funktionalität fehlt noch, dabei den QByteArray mit den XML-Daten in MessageFactory in einen Pointer umwandeln und in der AddPlMessage ein takeXMLData statt getXMLData, um das häufige umkopieren zu sparen.
+* -die savescandescription Funktionalität fehlt noch, dabei den QByteArray mit den XMLDaten in MessageFactory in einen Pointer umwandeln und in der AddPlMessage ein takeXMLData statt getXMLData, um das häufige umkopieren zu sparen-
 
 * -einen zusätzlichen ChainStatus AcquisitionRunning zumindest als Message an den Viewer als Unterstatus von Executing, der dem Plot anzeigt, dass die jetzt folgenden Daten geplottet werden sollen. Im Gegensatz zu den Daten, die während ReadPos gesendet werden.- Anmerkung: ist anders gelöst. Der Typ in der DataMessage kann gesetzt werden. Derzeit wird nur unmodified/raw geplottet, evtl. kann ein weiterer Typ definiert werden, der nicht raw ist, aber trotzdem geplottet werden soll.
 
