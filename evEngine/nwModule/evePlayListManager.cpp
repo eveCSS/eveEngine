@@ -21,6 +21,7 @@ evePlayListManager::~evePlayListManager() {
  * \param name	name of XML-Description
  * \param author author@host
  * \param data XML-Text
+ *
  */
 void evePlayListManager::addEntry(QString *name, QString *author, QByteArray *data) {
 
