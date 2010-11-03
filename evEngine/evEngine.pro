@@ -52,7 +52,7 @@ HEADERS += mathModule/eveMathManager.h \
     nwModule/eveMessageChannel.h \
     nwModule/eveMessageHub.h \
     nwModule/eveNwThread.h \
-    nwModule/evePlaylistManager.h \
+    nwModule/evePlayListManager.h \
     mathModule/eveMath.h \
     mathModule/eveMathConfig.h
 SOURCES += mathModule/eveMathManager.cpp \
