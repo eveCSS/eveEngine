@@ -95,7 +95,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 	if (fileTest) sman->sendError(INFO, 0x000a, fileName);
 
 	if (pluginName.isEmpty() || (pluginName == "ASCII")){
-		if (fileType == "ASCII"){
+		if (fileType.isEmpty() || (fileType == "ASCII")){
 			fileWriter = new eveAsciiFileWriter();
 		}
 		else if (fileType == "HDF5") {
@@ -111,8 +111,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 			sman->sendError(ERROR,0,QString("eveDataCollector::configStorage: unknown file type: %1").arg(fileType));
 		}
 	}
-
-	if (!pluginName.isEmpty() && (pluginName != "ASCII")){
+	else {
 
 #if defined(Q_OS_WIN)
 		pluginName.append(".dll");
@@ -187,10 +186,12 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 	}
 
 	if (fileWriter){
-		if (fileWriter->init(chainId, fileName, fileType, paraHash) != SUCCESS){
+		int status = fileWriter->init(chainId, fileName, fileType, paraHash);
+		if ((status == ERROR)||(status == FATAL)){
 			manager->sendError(ERROR, 0, QString("FileWriter: init error: %1").arg(fileWriter->errorText()));
 		}
 		else {
+			if (status == MINOR)manager->sendError(MINOR, 0, QString("FileWriter: init warning: %1").arg(fileWriter->errorText()));
 			if (fileTest) {
 				fwInitDone = true;
 			}

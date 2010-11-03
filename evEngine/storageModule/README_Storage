@@ -21,10 +21,9 @@ Es gibt einen StorageThread pro Datenfile:
 	die dann an eine FileWriter-Instanz weiterreichen.
 	
 	Nach jedem Messpunkt wird die formatspezifische addData-Routine
-	für alle abzuspeichernde Geräte (Motoren und Detektoren) aufgerufen.
+	für alle abzuspeichernde Geräte (Motoren und Detektoren) mit dem 
+	dazugehörigen PositionCounter aufgerufen.
 	
-	Anschließend wird die formatspezifische nextPosition()-Methode
-	aufgerufen.
 	
 	Formatspezifisches FileWriter Interface:
 		Reihenfolge ist wichtig: init, dann setCols, dann open etc.
