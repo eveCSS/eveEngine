@@ -9,6 +9,8 @@
 #include "eveEventRegisterMessage.h"
 #include "eveError.h"
 #include "eveScanModule.h"
+#include "eveTimer.h"
+#include "eveCounter.h"
 
 /**
  *
@@ -40,10 +42,19 @@ eveSMBaseDevice(scanmodule) {
 	eventList = eventlist;
 
 	if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
-		if (definition->getValueCmd()->getTrans()->getTransType() == eveTRANS_CA){
+      eveTransportDef* transdef = (eveTransportDef*)definition->getValueCmd()->getTrans();
+      if (transdef->getTransType() == eveTRANS_CA){
 			valueTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getValueCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
+      else if (transdef->getTransType() == eveTRANS_LOCAL) {
+          if (transdef->getName() == "Timer"){
+             valueTrans = new eveTimer(this, xmlId, name, transdef);
+          }
+          else if (transdef->getName() == "Counter"){
+             valueTrans = new eveCounter(this, xmlId, name, transdef);
+          }
+      }
 	}
 	if (valueTrans != NULL)
 		haveValue = true;
