@@ -21,6 +21,7 @@ public:
 	eveMathManager(int , QList<eveMathConfig*>* );
 	virtual ~eveMathManager();
 	void sendError(int, int, QString);
+	void sendMessage(eveDataMessage* message){addMessage(message);};
 	void shutdown();
 
 private:

@@ -42,6 +42,7 @@ public slots:
 private:
 	eveSMBaseDevice* baseDev;
 	bool haveMonitor;
+	eveType datatype;
 	QTimer timer;
 	int timerId;
 	QString accessname;

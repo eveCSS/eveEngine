@@ -89,6 +89,6 @@ void eveCounter::sendError(int severity, int errorType,  QString message){
  */
 QStringList* eveCounter::getInfo(){
 	QStringList *sl = new QStringList();
-	sl->append(QString("Local: %1").arg(accessname));
+	sl->append(QString("Access:local:%1").arg(accessname));
 	return sl;
 }

@@ -47,6 +47,7 @@ eveSMBaseDevice(sm){
 	axisOK = false;
 	axisStop = false;
 	curPosition = NULL;
+	unit="";
 
 	if ((motorAxisDef->getGotoCmd() != NULL) && (motorAxisDef->getGotoCmd()->getTrans() != NULL)){
 		eveTransportDef* transdef = (eveTransportDef*)motorAxisDef->getGotoCmd()->getTrans();
@@ -446,9 +447,10 @@ eveDevInfoMessage* eveSMAxis::getDeviceInfo(){
 		sl = gotoTrans->getInfo();
 	else
 		sl = new QStringList();
-	sl->append(QString("unit: %1").arg(unit));
+	sl->append(QString("unit:%1").arg(unit));
+	sl->append(QString("DeviceType:Axis"));
 	if (curPosition != NULL){
-		sl->append(QString("Position: %1").arg(currentPosition.toString()));
+		sl->append(QString("Position:%1").arg(currentPosition.toString()));
 	}
 	return new eveDevInfoMessage(xmlId, name, sl);
 }

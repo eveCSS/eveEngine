@@ -6,6 +6,7 @@
  */
 
 #include "eveMath.h"
+#include "eveMathManager.h"
 #include <cmath>
 #include <exception>
 
@@ -15,7 +16,8 @@
  * @param mathConfig configuration data for math
  * @return
  */
-eveMath::eveMath(eveMathConfig mathConfig) : eveMathConfig(mathConfig){
+eveMath::eveMath(eveMathConfig mathConfig, eveMathManager* manag) : eveMathConfig(mathConfig){
+	mmanager = manag;
 	if (normalizeId.length() > 0)
 		doNormalize = true;
 	else
@@ -80,7 +82,11 @@ void eveMath::addValue(QString deviceId, int pos, eveVariant dataVar){
 				return;
 
 			if (((xpos == ypos ) && doNormalize && (xpos == zpos)) || ((xpos == ypos ) && !doNormalize )) {
-				if (doNormalize && (fabs(zdata) > 0.0)) ydata /= zdata;
+				if (doNormalize && (fabs(zdata) > 0.0)) {
+					ydata /= zdata;
+					eveDataStatus status = {1,1,1};
+					mmanager->addMessage(new eveDataMessage(detectorId, QString(), status, DMTnormalized, epicsTime(), QVector<double>(ydata)));
+				}
 				xdataArray.append(xdata);
 				ydataArray.append(ydata);
 				modified = true;

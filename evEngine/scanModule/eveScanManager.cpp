@@ -31,7 +31,6 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 	posCounter = 0;
 	useStorage = false;
 	sentData = false;
-	chainStatus = eveEngIDLEXML;
 	manager = parent;
 	shutdownPending = false;
 	nextEventId = chainId*100;
@@ -288,6 +287,8 @@ void eveScanManager::setStatus(int smid, smStatusT status){
 		sendStatus(smid, eveChainSmPAUSED);
 	else if (status == eveSmTRIGGERWAIT)
 		sendStatus(smid, eveChainSmTRIGGERWAIT);
+	else if (status == eveSmAPPEND)
+		sendStatus(smid, eveChainSmDONE);
 	else if (status == eveSmDONE)
 		sendStatus(smid, eveChainSmDONE);
 }

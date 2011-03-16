@@ -34,14 +34,11 @@ class eveScanManager : public eveMessageChannel
 public:
 	eveScanManager(eveManager *, eveXMLReader *, int, int);
 	virtual ~eveScanManager();
-	// bool setRootSM(eveScanModule *);
 	virtual void shutdown();
 	void sendError(int, int, QString);
 	void sendMessage(eveMessage*);
 	virtual void sendError(int, int, int, QString);
 	void setStatus(int, smStatusT);
-	engineStatusT getChainStatus(){return chainStatus;};
-	//eveDeviceList * getDeviceDefs(){return manager->getDeviceDefs();};
 	void handleMessage(eveMessage *);
 	void nextPos();
 	void registerEvent(int, eveEventProperty*, bool chain=false);
@@ -72,7 +69,6 @@ private:
 	bool useStorage;
 	bool sentData;
 	eveScanModule * rootSM;
-	engineStatusT chainStatus;
 	eveManager *manager;
 	int posCounter;
 	bool doBreak;

@@ -322,10 +322,10 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 		case EVEMESSAGETYPE_ENGINESTATUS:
 		{
 			struct timespec statTime = ((eveEngineStatusMessage*)message)->getTime();
-			QString * xmlId = ((eveEngineStatusMessage*)message)->getXmlId();
+			QString xmlId = ((eveEngineStatusMessage*)message)->getXmlId();
 			quint32 estatus = ((eveEngineStatusMessage*)message)->getStatus();
 			quint32 messageLength = 0;
-			outStream << messageLength << (quint32) statTime.tv_sec << (quint32) statTime.tv_nsec << estatus << *xmlId;
+			outStream << messageLength << (quint32) statTime.tv_sec << (quint32) statTime.tv_nsec << estatus << xmlId;
 			outStream.device()->seek(8);
 			messageLength = block->length() - 12;
 			outStream << messageLength;
@@ -394,11 +394,11 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 		case EVEMESSAGETYPE_ADDTOPLAYLIST:
 		case EVEMESSAGETYPE_CURRENTXML:
 		{
-			QString * xmlName = ((eveAddToPlMessage*)message)->getXmlName();
-			QString * xmlAuthor = ((eveAddToPlMessage*)message)->getXmlAuthor();
-			QByteArray * xmlData = ((eveAddToPlMessage*)message)->getXmlData();
+			QString xmlName = ((eveAddToPlMessage*)message)->getXmlName();
+			QString xmlAuthor = ((eveAddToPlMessage*)message)->getXmlAuthor();
+			QByteArray xmlData = ((eveAddToPlMessage*)message)->getXmlData();
 			quint32 messageLength = 0;
-			outStream << messageLength << *xmlName << *xmlAuthor << *xmlData;
+			outStream << messageLength << xmlName << xmlAuthor << xmlData;
 			outStream.device()->seek(8);
 			messageLength = block->length() - 12;
 			outStream << messageLength;

@@ -163,6 +163,7 @@ void evePosCalc::setEndPos(QString pos) {
  */
 void evePosCalc::setStartPos(QString pos) {
 	setPos(pos, &startPos);
+	if (startPos.getType() == eveDateTimeT) sendError(DEBUG, QString("setting startpos to %1").arg(startPos.toDateTime().toString()));
 }
 
 /**
@@ -186,6 +187,7 @@ void evePosCalc::setStepWidth(QString stepwidth) {
 		else {
 			stepWidth.setValue(stepwidth.toDouble(&ok));
 		}
+		sendError(DEBUG, QString("set stepwidth to %1 (%2)").arg(stepWidth.toDouble(&ok)).arg(stepwidth));
 	}
 	else if (axisType == eveDOUBLE){
 		stepWidth.setValue(stepwidth.toDouble(&ok));
@@ -343,7 +345,6 @@ void evePosCalc::reset(){
 	if (!startPosAbs.isValid() || !endPosAbs.isValid())
 		sendError(ERROR, "startPos or endPos invalid");
 
-
 	posCounter = 0;
 	isAtEnd = false;
 	currentPos = startPosAbs;
@@ -365,7 +366,12 @@ void evePosCalc::stepfuncAdd(){
 		sendError(ERROR, "stepfunction add may be used with integer, double or datetime values only");
 	}
 	else {
-		currentPos = currentPos + stepWidth;
+		if ((currentPos.getType() == eveDateTimeT) && (stepWidth.getType() == eveDOUBLE)){
+			currentPos.setValue(currentPos.toDateTime().addMSecs((int)(stepWidth.toDouble(NULL)*1000.0)));
+		}
+		else {
+			currentPos = currentPos + stepWidth;
+		}
 		if (((stepWidth >=0) && (currentPos >= endPosAbs)) || ((stepWidth < 0) && (currentPos <= endPosAbs))){
 			currentPos = endPosAbs;
 			isAtEnd = true;

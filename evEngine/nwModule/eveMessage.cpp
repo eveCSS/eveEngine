@@ -177,9 +177,9 @@ eveAddToPlMessage::eveAddToPlMessage(QString xmlname, QString xmlauthor, QByteAr
 	priority = prio;
 	type = EVEMESSAGETYPE_ADDTOPLAYLIST;
 	// tbd. use try/catch block
-	XmlName = new QString(xmlname);
-	XmlAuthor = new QString(xmlauthor);
-	XmlData = new QByteArray(xmldata);
+	XmlName = QString(xmlname);
+	XmlAuthor = QString(xmlauthor);
+	XmlData = QByteArray(xmldata);
 }
 /**
  * \brief compare two messages
@@ -190,17 +190,14 @@ bool eveAddToPlMessage::compare(eveMessage *message)
 {
 	if (!message) return false;
 	if (type != message->getType()) return false;
-	if (*XmlName != *(((eveAddToPlMessage*)message)->getXmlName())) return false;
-	if (*XmlAuthor != *(((eveAddToPlMessage*)message)->getXmlAuthor())) return false;
-	if (*XmlData != *(((eveAddToPlMessage*)message)->getXmlData())) return false;
+	if (XmlName != ((eveAddToPlMessage*)message)->getXmlName()) return false;
+	if (XmlAuthor != ((eveAddToPlMessage*)message)->getXmlAuthor()) return false;
+	if (XmlData != ((eveAddToPlMessage*)message)->getXmlData()) return false;
 
 	return true;
 }
 eveAddToPlMessage::~eveAddToPlMessage()
 {
-	delete XmlName;
-	delete XmlAuthor;
-	delete XmlData;
 }
 
 /*
@@ -232,13 +229,11 @@ eveCurrentXmlMessage::~eveCurrentXmlMessage()
 eveEngineStatusMessage::eveEngineStatusMessage(int status, QString xmlname, int prio, int dest) :
 	eveMessage(EVEMESSAGETYPE_ENGINESTATUS, 0, 0)
 {
-	XmlId = new QString(xmlname);
+	XmlId = QString(xmlname);
 	estatus = status;
 	timestamp = eveTime::getCurrent();
 }
-eveEngineStatusMessage::~eveEngineStatusMessage()
-{
-	delete XmlId;
+eveEngineStatusMessage::~eveEngineStatusMessage(){
 }
 /**
  * \brief compare two messages
@@ -324,7 +319,7 @@ eveRequestMessage::eveRequestMessage(int rid, int rtype, QString rtext){
 	type = EVEMESSAGETYPE_REQUEST;
 	requestId = rid;
 	requestType = rtype;
-	requestString = rtext;
+	requestString = QString(rtext);
 }
 /**
  * \brief compare two messages
@@ -386,11 +381,10 @@ eveRequestAnswerMessage::eveRequestAnswerMessage(int rid, int rtype, QString ans
 	type = EVEMESSAGETYPE_REQUESTANSWER;
 	requestId = rid;
 	requestType = rtype;
-	answerString = new QString(answer);
+	answerString = QString(answer);
 }
 eveRequestAnswerMessage::~eveRequestAnswerMessage(){
 
-	if ((requestType == EVEREQUESTTYPE_TEXT) || (requestType == EVEREQUESTTYPE_ERRORTEXT)) delete answerString;
 }
 /**
  * \brief compare two messages
@@ -448,7 +442,7 @@ eveErrorMessage::eveErrorMessage(int errSeverity, int errFacility, int errType, 
 	severity = errSeverity;
 	facility = errFacility;
 	errorType = errType;
-	errorString = errString;
+	errorString = QString(errString);
 	timestamp = eveTime::getCurrent();
 }
 eveErrorMessage::~eveErrorMessage()
@@ -482,8 +476,8 @@ eveBaseDataMessage::eveBaseDataMessage(int mtype, int cid, int smid, QString xml
 {
 	chainId = cid;
 	smId = smid;
-	name = nam;
-	xmlId = xmlid;
+	name = QString(nam);
+	xmlId = QString(xmlid);
 }
 
 eveBaseDataMessage::eveBaseDataMessage(int mtype, int prio, int dest) :
@@ -528,7 +522,7 @@ eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, 
 	dataType = eveInt32T;
 	dataArrayInt = QVector<int>(data);
 	arraySize = dataArrayInt.size();
-	timestamp = mtime;
+	timestamp = eveTime(mtime);
 	posCount = 0;
 }
 /**
@@ -546,7 +540,7 @@ eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, 
 	dataType = eveInt16T;
 	dataArrayShort = QVector<short>(data);
 	arraySize = dataArrayShort.size();
-	timestamp = mtime;
+	timestamp = eveTime(mtime);
 	posCount = 0;
 }
 /**
@@ -564,7 +558,7 @@ eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, 
 	dataType = eveInt8T;
 	dataArrayChar = QVector<signed char>(data);
 	arraySize = dataArrayChar.size();
-	timestamp = mtime;
+	timestamp = eveTime(mtime);
 	posCount = 0;
 }
 /**
@@ -582,7 +576,7 @@ eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, 
 	dataType = eveFloat32T;
 	dataArrayFloat = QVector<float>(data);
 	arraySize = dataArrayFloat.size();
-	timestamp = mtime;
+	timestamp = eveTime(mtime);
 	posCount = 0;
 }
 /**
@@ -600,7 +594,7 @@ eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, 
 	dataType = eveFloat64T;
 	dataArrayDouble = QVector<double>(data);
 	arraySize = dataArrayDouble.size();
-	timestamp = mtime;
+	timestamp = eveTime(mtime);
 	posCount = 0;
 }
 /**
@@ -618,7 +612,7 @@ eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, 
 	dataType = eveStringT;
 	dataStrings = QStringList(data);
 	arraySize = dataStrings.size();
-	timestamp = mtime;
+	timestamp = eveTime(mtime);
 	posCount = 0;
 }
 /**
@@ -634,11 +628,16 @@ eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, 
 	dataStatus = stat;
 	dataModifier = dmod;
 	dataType = eveDateTimeT;
-	dataStrings = QStringList(datetime.toString("hh:mm:ss.zzz"));
-	dateTime = datetime;
+	dateTime = QDateTime(datetime);
 	arraySize = dataStrings.size();
-	timestamp = mtime;
+	timestamp = eveTime(mtime);
 	posCount = 0;
+
+	if (datetime.isValid())
+		dataStrings = QStringList(datetime.toString("hh:mm:ss.zzz"));
+	else
+		dataStrings = QStringList("");
+
 }
 
 eveDataMessage::~eveDataMessage() {

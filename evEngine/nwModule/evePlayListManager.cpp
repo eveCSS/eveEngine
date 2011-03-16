@@ -23,7 +23,7 @@ evePlayListManager::~evePlayListManager() {
  * \param data XML-Text
  *
  */
-void evePlayListManager::addEntry(QString *name, QString *author, QByteArray *data) {
+void evePlayListManager::addEntry(QString name, QString author, QByteArray data) {
 
 	evePlayListEntry entry;
 	eveDataEntry * dataentry;
@@ -37,14 +37,14 @@ void evePlayListManager::addEntry(QString *name, QString *author, QByteArray *da
 	else
 		++lastId;
 
-	if (data->length() < 10){
+	if (data.length() < 10){
 		eveError::log(4, "evePlayListManager::addEntry: XML-Data is empty");
 		return;
 	}
 
 	entry.pid = lastId;
-	entry.name = *name;
-	entry.author = *author;
+	entry.name = QString(name);
+	entry.author = QString(author);
 	if (entry.name.length() < 1) entry.name = "none";
 	if (entry.author.length() < 1) entry.author = "none";
 
@@ -56,8 +56,8 @@ void evePlayListManager::addEntry(QString *name, QString *author, QByteArray *da
 	}
 	else {
 		dataentry->isLoaded = 1;
-		dataentry->data = new QByteArray(*data);
-		dataentry->filename = NULL;
+		dataentry->data = QByteArray(data);
+		dataentry->filename = "";
 	}
 	datahash.insert(entry.pid, dataentry);
 	playlist.append(entry);
@@ -126,9 +126,9 @@ evePlayListData* evePlayListManager::takeFirst(){
 		return NULL;
 	}
 	evePlayListData* data = new evePlayListData;
-	data->name = entry.name;
-	data->author = entry.author;
-	data->data = *(dataentry->data);
+	data->name = QString(entry.name);
+	data->author = QString(entry.author);
+	data->data = QByteArray(dataentry->data);
 	return data;
 }
 /**

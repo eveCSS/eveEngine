@@ -32,8 +32,8 @@ eveXMLReader::~eveXMLReader() {
 }
 
 #define EVE_VERSION        0
-#define EVE_REVISION       3
-#define EVE_MODIFICATION   8
+#define EVE_REVISION       4
+#define EVE_MODIFICATION   0
 
 /** \brief read XML-Data and create all device definitions and various hashes etc.
  * \param xmldata XML text data
@@ -81,6 +81,12 @@ bool eveXMLReader::read(QByteArray xmldata, eveDeviceList *devList)
      	if (domElem.hasAttribute("id")) {
      		QString typeString = domElem.attribute("id");
      		int chainNo = typeString.toInt();
+     		if (chainIdList.contains(chainNo)){
+     			sendError(ERROR,0,QString("duplicate chainId %1").arg(chainNo));
+     		}
+     		else {
+     			chainIdList.append(chainNo);
+     		}
      		chainDomIdHash.insert(chainNo, domElem);
      		smIdHash.insert(chainNo, new QHash<int, QDomElement> );
      		QDomElement domSM = domElem.firstChildElement("scanmodules");

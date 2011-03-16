@@ -111,7 +111,7 @@ struct evePlayListEntry {
 	QString author;
 };
 
-enum eveDataModType {DMTunmodified, DMTcenter, DMTedge, DMTmin, DMTmax, DMTfwhm, DMTmean, DMTstandarddev, DMTsum};
+enum eveDataModType {DMTunmodified, DMTcenter, DMTedge, DMTmin, DMTmax, DMTfwhm, DMTmean, DMTstandarddev, DMTsum, DMTnormalized};
 enum eveAcqStatus {ACQSTATok, ACQSTATmaxattempt};
 // TODO
 // remove all the clone() stuff except where virtual constructors are needed and use explicit copy constructors where needed
@@ -216,17 +216,17 @@ class eveAddToPlMessage : public eveMessage
 public:
 	eveAddToPlMessage(QString, QString, QByteArray, int prio=0);
 	virtual ~eveAddToPlMessage();
-	QString * getXmlName(){return XmlName;};
-	QString * getXmlAuthor(){return XmlAuthor;};
-	QByteArray * getXmlData(){return XmlData;};
+	QString getXmlName(){return XmlName;};
+	QString getXmlAuthor(){return XmlAuthor;};
+	QByteArray getXmlData(){return XmlData;};
 	bool compare(eveMessage *);
-	virtual eveAddToPlMessage* clone(){return new eveAddToPlMessage(*XmlName, *XmlAuthor, *XmlData, priority);};
+	virtual eveAddToPlMessage* clone(){return new eveAddToPlMessage(XmlName, XmlAuthor, XmlData, priority);};
 
 
 protected:
-	QString * XmlName;
-	QString * XmlAuthor;
-	QByteArray * XmlData;
+	QString XmlName;
+	QString XmlAuthor;
+	QByteArray XmlData;
 };
 
 /**
@@ -237,7 +237,7 @@ class eveCurrentXmlMessage : public eveAddToPlMessage
 public:
 	eveCurrentXmlMessage(QString, QString, QByteArray, int prio=0);
 	virtual ~eveCurrentXmlMessage();
-	eveCurrentXmlMessage* clone(){return new eveCurrentXmlMessage(*XmlName, *XmlAuthor, *XmlData, priority);};
+	eveCurrentXmlMessage* clone(){return new eveCurrentXmlMessage(XmlName, XmlAuthor, XmlData, priority);};
 };
 
 enum engineStatusT {eveEngIDLENOXML=1, eveEngIDLEXML, eveEngLOADINGXML, eveEngEXECUTING, eveEngPAUSED, eveEngSTOPPED, eveEngHALTED} ;
@@ -259,15 +259,15 @@ public:
 	eveEngineStatusMessage(int, QString, int prio=0, int dest=0);
 	virtual ~eveEngineStatusMessage();
 	int getStatus(){return estatus;};
-	QString * getXmlId(){return XmlId;};
+	QString getXmlId(){return XmlId;};
 	eveTime getTime(){return timestamp;};
 	bool compare(eveMessage *);
-	eveEngineStatusMessage* clone(){return new eveEngineStatusMessage(estatus, *XmlId, priority, destination);};
+	eveEngineStatusMessage* clone(){return new eveEngineStatusMessage(estatus, XmlId, priority, destination);};
 
 private:
 	eveTime timestamp;
 	int estatus;
-	QString * XmlId;
+	QString XmlId;
 };
 
 enum chainStatusT {eveChainSmIDLE=1, eveChainSmINITIALIZING, eveChainSmEXECUTING, eveChainSmPAUSED, eveChainSmTRIGGERWAIT, eveChainSmDONE, eveChainDONE, eveChainSTORAGEDONE};
@@ -348,7 +348,7 @@ public:
 private:
 	int requestId;
 	int requestType;
-	QString *answerString;
+	QString answerString;
 	bool answerBool;
 	int answerInt;
 	float answerFloat;

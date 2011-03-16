@@ -634,14 +634,14 @@ void eveScanModule::stgFinish() {
 	if (appendedSM && (currentStageCounter == 0)) {
 		++currentStageCounter;
 		smStatus = eveSmAPPEND;
+		manager->setStatus(smId, smStatus);
 		appendedSM->start();
 	}
 	else {
-
-		// set true if stage done
-		currentStageReady=true;
-		if ((appendedSM) && (manager->getChainStatus() == eveEngEXECUTING))
+		if (smStatus == eveSmAPPEND)
 			currentStageReady=appendedSM->isDone();
+		else
+			currentStageReady=true;
 
 		if (currentStageReady) emit sigExecStage();
 	}
@@ -656,9 +656,9 @@ void eveScanModule::stgFinish() {
 void eveScanModule::execStage() {
 
 	if ((currentStage == eveStgFINISH) && currentStageReady){
-		// we are done
+		// we are done, do not send status if previous status was smAppend
+		if (smStatus != eveSmAPPEND ) manager->setStatus(smId, eveSmDONE);
 		smStatus = eveSmDONE;
-		manager->setStatus(smId, smStatus);
 		emit SMready();
 		return;
 	}

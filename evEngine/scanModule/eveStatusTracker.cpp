@@ -140,8 +140,13 @@ bool eveManagerStatusTracker::setBreak() {
  */
 bool eveManagerStatusTracker::setHalt() {
 
-	engineStatus = eveEngHALTED;
-	return true;
+	if ((engineStatus == eveEngIDLEXML) || (engineStatus == eveEngLOADINGXML) ||
+			(engineStatus == eveEngEXECUTING) || (engineStatus == eveEngPAUSED)	||
+			(engineStatus == eveEngSTOPPED)){
+		engineStatus = eveEngHALTED;
+		return true;
+	}
+	return false;
 }
 /**
  * \brief tell tracker that stop command has been received

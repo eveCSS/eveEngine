@@ -39,7 +39,7 @@ eveTime::eveTime(time_t_wrapper ttw) : epicsTime(ttw){
  * @return converted time from QDateTime
  */
 eveTime eveTime::eveTimeFromDateTime(QDateTime dt){
-	return eveTimeFromTime_tNano(dt.toTime_t(), dt.time().msec()*1000);
+	return eveTimeFromTime_tNano(dt.toTime_t(), dt.time().msec()*1000000);
 }
 
 /**
@@ -100,6 +100,6 @@ quint64 eveTime::get64bitTime(){
  */
 QDateTime eveTime::getDateTime(){
 	QDateTime dt = QDateTime::fromTime_t(seconds());
-	dt.addMSecs(nanoSeconds()/1000);
+	dt.addMSecs(((quint64)nanoSeconds())/1000000);
 	return dt;
 }

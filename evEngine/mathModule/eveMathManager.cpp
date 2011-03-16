@@ -18,7 +18,7 @@ eveMathManager::eveMathManager(int chainId, QList<eveMathConfig*>* mathConfigLis
 
 	while (!mathConfigList->isEmpty()){
 		eveMathConfig *mathConfig = mathConfigList->takeFirst();
-		eveMath* math = new eveMath(*mathConfig);
+		eveMath* math = new eveMath(*mathConfig, this);
 		delete mathConfig;
 		foreach (int scanmoduleId, math->getAllScanModuleIds()){
 			mathHash.insert(scanmoduleId, math);

@@ -40,6 +40,7 @@ eveSMBaseDevice(scanmodule) {
 	channelStatus = eveCHANNELINIT;
 	channelType=definition->getChannelType();
 	eventList = eventlist;
+	unit = "";
 
 	if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
       eveTransportDef* transdef = (eveTransportDef*)definition->getValueCmd()->getTrans();
@@ -443,9 +444,11 @@ eveDevInfoMessage* eveSMChannel::getDeviceInfo(){
 		sl = valueTrans->getInfo();
 	else
 		sl = new QStringList();
-	sl->append(QString("unit: %1").arg(unit));
+
+	sl->append(QString("unit:%1").arg(unit));
+	sl->append(QString("DeviceType:Channel"));
 	if (curValue != NULL){
-		sl->append(QString("Value: %1").arg(curValue->toVariant().toString()));
+		sl->append(QString("Value:%1").arg(curValue->toVariant().toString()));
 	}
 
 	return new eveDevInfoMessage(xmlId, name, sl);

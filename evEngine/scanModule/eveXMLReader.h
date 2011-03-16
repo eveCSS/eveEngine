@@ -37,7 +37,7 @@ public:
 	virtual ~eveXMLReader();
 	bool read(QByteArray, eveDeviceList *);
 	int getRootId(int);
-	QHash<int, QDomElement> getChainIdHash(){return chainDomIdHash;};
+	QList<int> getChainIdList(){return chainIdList;};
 	int getNested(int, int);
 	int getAppended(int, int);
 	QList<eveSMDevice*>* getPreScanList(eveScanModule*, int, int);
@@ -62,6 +62,7 @@ private:
 	void createDeviceDefinition(QDomNode);
 	//void createEventDefinition(QDomNode);
 	int getIntValueOfTag(int, int, QString);
+	QList<int> chainIdList;
 	QList<eveSMDevice*>* getSMDeviceList(eveScanModule*, int, int, QString);
 	eveEventProperty* getEvent(eveEventProperty::actionTypeT, QDomElement);
     QDomDocument *domDocument;

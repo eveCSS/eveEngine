@@ -32,8 +32,8 @@ struct evePlayListData {
  */
 struct eveDataEntry {
 	bool isLoaded;
-	QByteArray *data;
-	QString *filename;
+	QByteArray data;
+	QString filename;
 };
 
 /**
@@ -50,7 +50,7 @@ class evePlayListManager : public QObject
 public:
 	evePlayListManager();
 	virtual ~evePlayListManager();
-	void addEntry(QString *, QString *, QByteArray *);
+	void addEntry(QString, QString, QByteArray);
 	void reorderEntry(int, int);
 	void removeEntry(int);
 	bool isEmpty(){return playlist.isEmpty();};

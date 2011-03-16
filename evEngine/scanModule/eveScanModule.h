@@ -36,7 +36,8 @@ class eveScanModule: public QObject
 public:
 	eveScanModule(eveScanManager *, eveXMLReader *, int, int);
 	virtual ~eveScanModule();
-	bool isDone(){return (smStatus==eveSmDONE)?true:false;}
+	bool isDone(){return (smStatus==eveSmDONE)?true:false;};
+	// smStatusT getStatus(){return smStatus;};
 	void initialize();
 	void sendError(int, int, int, QString);
 	void sendMessage(eveMessage*);

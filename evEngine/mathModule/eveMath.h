@@ -12,6 +12,9 @@
 #include "eveVariant.h"
 #include "eveMessage.h"
 #include "eveMathConfig.h"
+//#include "eveMathManager.h"
+
+class eveMathManager;
 
 enum MathAlgorithm {MIN, MAX, CENTER, EDGE, FWHM, STD_DEVIATION, MEAN, SUM};
 
@@ -19,7 +22,7 @@ class eveMath  : public eveMathConfig {
 public:
 	static QList<MathAlgorithm> getAlgorithms();
 	eveMath(int);
-	eveMath(eveMathConfig mathConfig);
+	eveMath(eveMathConfig mathConfig, eveMathManager *);
 	eveMath(int, int, double, double);
 	virtual ~eveMath();
 	void reset();
@@ -37,6 +40,7 @@ private:
 	MathAlgorithm algorithm;
 	bool modified;
 	bool doNormalize;
+	eveMathManager* mmanager;
 	QList<MathAlgorithm> usedAlgorithm;
 	QVector<double> xdataArray;
 	QVector<double> ydataArray;

@@ -677,7 +677,7 @@ eveDataMessage* eveCaTransport::getDataMessage(struct event_handler_args arg){
  */
 QStringList* eveCaTransport::getInfo(){
 	QStringList *sl = new QStringList();
-	sl->append(QString("PV: %1").arg(pvname));
+	sl->append(QString("Access:ca:%1").arg(pvname));
 	return sl;
 }
 /**

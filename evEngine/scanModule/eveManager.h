@@ -30,8 +30,6 @@ public:
 	void sendError(int, int, QString);
 	virtual void sendError(int, int, int, QString);
 	void shutdown();
-	bool loadPlayListEntry();
-	bool createSMs(QByteArray);
 	bool sendStart();
 	//eveDeviceList * getDeviceDefs(){return deviceList;};
 
@@ -44,6 +42,9 @@ signals:
 	void pauseSMs();
 
 private:
+	bool loadPlayListEntry();
+	bool createSMs(QByteArray);
+	void startChains();
 	// eveMessageHub * mHub;
 	eveDeviceList *deviceList;
 	eveManager *manager;

@@ -177,8 +177,12 @@ bool eveManager::loadPlayListEntry(){
 			if (engineStatus->setXMLLoaded(createSMs(plEntry->data))){
 				addMessage(new eveCurrentXmlMessage(plEntry->name, plEntry->author, plEntry->data));
 				addMessage(playlist->getCurrentPlayList());
+				addMessage(engineStatus->getEngineStatusMessage());
+				startChains();
 			}
-			addMessage(engineStatus->getEngineStatusMessage());
+			else {
+				addMessage(engineStatus->getEngineStatusMessage());
+			}
 			delete plEntry;
 		}
 		else {
@@ -208,15 +212,12 @@ bool eveManager::createSMs(QByteArray xmldata) {
     }
 	// create a thread for every chain in the xml-File
 
-    // TODO might be easier to loop over a QList of chainids, since we dont't need the
-    //      domelements any more
-	QHashIterator<int, QDomElement> itera(scmlParser->getChainIdHash());
 	QStringList fileNameList;
-	while (itera.hasNext()) {
-		itera.next();
+	scanThreadList.clear();
+	foreach (int chainId, scmlParser->getChainIdList()){
 		int storageChannelId = 0;
 		// we start a storage thread, if we have a savefilename and the name is not already on the list
-		QString value = scmlParser->getChainString(itera.key(), "savefilename");
+		QString value = scmlParser->getChainString(chainId, "savefilename");
 		if (!value.isEmpty()){
 			if (!fileNameList.contains(value)){
 				fileNameList.append(value);
@@ -230,12 +231,11 @@ bool eveManager::createSMs(QByteArray xmldata) {
 			}
 		}
 		// start a scanManager for every chain
-		eveScanManager *scanManager = new eveScanManager(this, scmlParser, itera.key(), storageChannelId);
+		eveScanManager *scanManager = new eveScanManager(this, scmlParser, chainId, storageChannelId);
 		eveScanThread *chainThread = new eveScanThread(scanManager);
 		scanManager->moveToThread(chainThread);
 		scanThreadList.append(chainThread);
-		chainThread->start();
-		QThread *mathThread = new eveMathThread(itera.key(), scmlParser->getFilteredMathConfigs(itera.key()));
+		QThread *mathThread = new eveMathThread(chainId, scmlParser->getFilteredMathConfigs(chainId));
 		mathThread->start();
 	}
 	delete scmlParser;
@@ -243,6 +243,13 @@ bool eveManager::createSMs(QByteArray xmldata) {
 	return true;
 }
 
+void eveManager::startChains(){
+	// Now start the chainThreads
+	foreach (QThread * chainThread, scanThreadList) {
+		chainThread->start();
+	}
+
+}
 
 /**
  * \brief send start signal to scanmanagers
