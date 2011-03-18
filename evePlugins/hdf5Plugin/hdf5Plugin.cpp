@@ -13,6 +13,7 @@
 
 using namespace std;
 
+
 hdf5Plugin::hdf5Plugin() {
 	// TODO Auto-generated constructor stub
 	fileName = "";
@@ -107,12 +108,12 @@ int hdf5Plugin::setXMLData(QByteArray* xmldata){
 		QString xmlfilename = fileName + ".scml";
 		QFile* filePtr = new QFile(xmlfilename);
 		if (!filePtr->open(QIODevice::ReadWrite)){
-			errorString = QString("AsciiFileWriter: error opening File %1").arg(xmlfilename);
+			errorString = QString("HDF5Plugin: error opening File %1").arg(xmlfilename);
 			retval = ERROR;
 		}
 		else {
 			if (filePtr->write(*xmldata) < 0){
-				errorString = QString("AsciiFileWriter: error writing xmldata to File %1").arg(xmlfilename);
+				errorString = QString("HDF5Plugin: error writing xmldata to File %1").arg(xmlfilename);
 				retval = ERROR;
 			}
 			filePtr->close();
@@ -154,6 +155,7 @@ int hdf5Plugin::setCols(int setID, QString colid, QString name, QStringList info
 }
 
 /**
+ * \brief create the datasets, since we now know the datatype
  *
  * @param setID		dataset-identification (chain-id)
  * @param data		data to write to file
@@ -162,23 +164,28 @@ int hdf5Plugin::setCols(int setID, QString colid, QString name, QStringList info
 int hdf5Plugin::addData(int setID, eveDataMessage* data)
 {
 	if (!setIdList.contains(setID)) {
-		errorString = QString("HDF5Plugin: setID %1 has not been initialized").arg(setID);
+		errorString = QString("HDF5Plugin:addData: setID %1 has not been initialized").arg(setID);
 		return ERROR;
 	}
 	if (!idHash.contains(setID)) {
-		errorString = QString("HDF5Plugin: Columns for setID %1 not set").arg(setID);
+		errorString = QString("HDF5Plugin:addData: Columns for setID %1 not set").arg(setID);
 		return ERROR;
 	}
-	if (data->getArraySize() != 1){
-		//TODO handle array data
-		// return addArrayData(setID, data);
-		return ERROR;
-	}
-
 	QString colId = data->getXmlId();
+	if (colId.length() < 1){
+		errorString = QString("HDF5Plugin:addData: Columns invalid xml-id");
+		return ERROR;
+	}
+//	if (data->getArraySize() != 1){
+//		//TODO handle array data
+//		errorString = QString("HDF5Plugin:addData: array data not yet implemented");
+//		// return addArrayData(setID, data);
+//		return ERROR;
+//	}
+
 	columnInfo* colInfo = idHash.value(setID)->value(colId);
 	if (colInfo == NULL){
-		errorString = QString("HDF5Plugin: Column for device %1 not in hash").arg(colId);
+		errorString = QString("HDF5Plugin:addData: Column for device %1 not in hash").arg(colId);
 		return ERROR;
 	}
 	if (colInfo->isNotInit){
@@ -199,32 +206,41 @@ int hdf5Plugin::addData(int setID, eveDataMessage* data)
 			hsize_t chunk_dims[] = {1};
 			createProps.setChunk( 1, chunk_dims );
 
-			colInfo->compoundType = createStandardDataType(qPrintable(data->getName()), QString("PosCounter"), data->getDataType());
+			colInfo->arraySize = data->getArraySize();
+			colInfo->compoundType = createDataType(QString("PosCounter"), qPrintable(colId), data->getDataType(), colInfo->arraySize);
+
+			// Create the memory buffer.
+			colInfo->memSize = colInfo->compoundType.getSize();
+			colInfo->memBuffer = (memSpace_t *) calloc(1, colInfo->memSize);
 
 			// Create the dataset.
-			colInfo->dset = dataFile->createDataSet(qPrintable(data->getName()), colInfo->compoundType, colInfo->dspace, createProps);
+			colInfo->dset = dataFile->createDataSet(qPrintable(colId), colInfo->compoundType, colInfo->dspace, createProps);
 			colInfo->dset.extend( colInfo->currentDim );
 
-			// add Attribute XML-ID=colId
-			hsize_t stringdim[1];
-			stringdim[0] = colId.toLocal8Bit().length();
-			Attribute attrib = colInfo->dset.createAttribute("XML-ID", PredType::C_S1, DataSpace(1, stringdim));
-			attrib.write(PredType::C_S1, qPrintable(colId));
-			//TODO add other attributes after changing info from QStringList to a parahash
-			// add Attribute PV=
+			// add attribute XML-ID
+			hsize_t stringDim = 1;
+			StrType st = StrType(PredType::C_S1, colId.toLocal8Bit().length());
+			Attribute attrib = colInfo->dset.createAttribute("XML-ID", st, DataSpace(1, &stringDim));
+			attrib.write(st, qPrintable(colId));
 
-			DataSpace filespace = colInfo->dset.getSpace();
+			// add more attributes
+			foreach(QString infoLine, colInfo->info){
+				QStringList infoSplit = infoLine.split(":");
+				if (infoSplit.count() > 1){
+					QString attribName = infoSplit.takeFirst();
+					QString attribValue = infoSplit.join(":");
+					if ((attribName.length() > 0) && (attribValue.length() > 0)) {
+						StrType st = StrType(PredType::C_S1, attribValue.toLocal8Bit().length());
+						Attribute attrib = colInfo->dset.createAttribute(qPrintable(attribName), st, DataSpace(1, &stringDim));
+						attrib.write(st, qPrintable(attribValue));
+					}
+				}
+			}
 			colInfo->currentOffset[0] = 0;
-			hsize_t dims1[1] = {1};            /* data1 dimensions */
-			filespace.selectHyperslab( H5S_SELECT_SET, dims1, colInfo->currentOffset );
-
-			void *buffer = getBufferAddress(data);
-			colInfo->dset.write( buffer, colInfo->compoundType, colInfo->memspace, filespace );
-			++colInfo->currentOffset[0];
 		}
 		catch( Exception error )
 		{
-			errorString = QString("HDF5Plugin: %1").arg(error.getCDetailMsg());
+			errorString = QString("HDF5Plugin:addData: %1").arg(error.getCDetailMsg());
 			setIdList.removeAll(setID);
 			return ERROR;
 		}
@@ -232,21 +248,47 @@ int hdf5Plugin::addData(int setID, eveDataMessage* data)
 
 
 	}
-	else {
-		// not the first value, init has been done
 
-		DataSpace filespace = colInfo->dset.getSpace();
-		hsize_t dims1[] = {1};            /* data1 dimensions */
-		filespace.selectHyperslab( H5S_SELECT_SET, dims1, colInfo->currentOffset );
-		void *buffer = getBufferAddress(data);
-		colInfo->dset.write( buffer, colInfo->compoundType, colInfo->memspace, filespace );
-		++colInfo->currentOffset[0];
-		if (colInfo->currentOffset[0] >= colInfo->currentDim[0]){
-			colInfo->currentDim[0] += sizeIncrement;
-			colInfo->dset.extend( colInfo->currentDim );
+	DataSpace filespace = colInfo->dset.getSpace();
+	hsize_t dims1[] = {1};             /* data1 dimensions */
+	filespace.selectHyperslab( H5S_SELECT_SET, dims1, colInfo->currentOffset );
+
+	// zero the memory buffer
+	memset(colInfo->memBuffer, 0, colInfo->memSize);
+	colInfo->memBuffer->positionCount = data->getPositionCount();
+	if ((data->getDataType() == eveEnum16T) || (data->getDataType() == eveStringT) || (data->getDataType() == eveDateTimeT)){
+		int stringLength;
+		if (data->getDataType() == eveStringT) {
+			stringLength = STANDARD_STRINGSIZE+1;
+		}
+		else if (data->getDataType() == eveDateTimeT){
+			stringLength = DATETIME_STRINGSIZE+1;
+		}
+		else {
+			stringLength = STANDARD_ENUM_STRINGSIZE+1;
+		}
+
+		char *start = (char*) &colInfo->memBuffer->aPtr;
+		foreach(QString dataString, data->getStringArray()){
+			if((start + stringLength) <= (((char*) &colInfo->memBuffer->aPtr) + colInfo->memSize - sizeof(qint32))){
+				strncpy(start, dataString.toLocal8Bit().constData(), stringLength);
+				start += stringLength;
+			}
 		}
 	}
-	errorString = QString("HDF5Plugin: successfully added %1. value").arg(colInfo->currentOffset[0]-1);
+	else {
+		void *buffer = getDataBufferAddress(data);
+		colInfo->memBuffer->positionCount = data->getPositionCount();
+		memcpy(&colInfo->memBuffer->aPtr, buffer, getMinimumDataBufferLength(data, colInfo->memSize - sizeof(qint32)));
+	}
+	colInfo->dset.write( (void*)colInfo->memBuffer, colInfo->compoundType, colInfo->memspace, filespace );
+
+	++colInfo->currentOffset[0];
+	if (colInfo->currentOffset[0] >= colInfo->currentDim[0]){
+		colInfo->currentDim[0] += sizeIncrement;
+		colInfo->dset.extend( colInfo->currentDim );
+	}
+	errorString = QString("HDF5Plugin:addData: successfully added %1. value").arg(colInfo->currentOffset[0]-1);
     return SUCCESS;
 }
 
@@ -258,12 +300,12 @@ int hdf5Plugin::addData(int setID, eveDataMessage* data)
 int hdf5Plugin::close(int setID)
 {
 	if (!setIdList.contains(setID)) {
-		errorString = QString("HDF5Plugin: unable to close; setID %1 has not been initialized").arg(setID);
+		errorString = QString("HDF5Plugin:close: unable to close; setID %1 has not been initialized").arg(setID);
 		return ERROR;
 	}
 	setIdList.removeAll(setID);
 	if (!idHash.contains(setID)) {
-		errorString = QString("HDF5Plugin: Columns for setID %1 not set").arg(setID);
+		errorString = QString("HDF5Plugin:close: Columns for setID %1 not set").arg(setID);
 		return MINOR;
 	}
 	int status = SUCCESS;
@@ -312,6 +354,11 @@ hdf5Plugin::columnInfo::columnInfo(QString colname, QStringList colinfo){
 	isNotInit = true;
 	name = colname;
 	info = colinfo;
+	memBuffer = NULL;
+}
+
+hdf5Plugin::columnInfo::~columnInfo(){
+	if (memBuffer) free(memBuffer);
 }
 
 PredType hdf5Plugin::convertToHdf5Type(eveType type){
@@ -333,7 +380,6 @@ PredType hdf5Plugin::convertToHdf5Type(eveType type){
 		case eveFloat64T:
 			return PredType::NATIVE_DOUBLE;
 		case eveDateTimeT:
-			return PredType::NATIVE_UINT64;
 		case eveEnum16T:
 		case eveStringT:
 			return PredType::C_S1;
@@ -342,158 +388,120 @@ PredType hdf5Plugin::convertToHdf5Type(eveType type){
 	}
 }
 
-CompType hdf5Plugin::createStandardDataType(QString name1, QString name2, eveType type){
 
+CompType hdf5Plugin::createDataType(QString name1, QString name2, eveType type, int arrayCount){
 
-	size_t size, offsetA, offsetB;
-
-	DataType typeA;
-	DataType typeB(PredType::NATIVE_INT32);
+	int ndims=1;
+	hsize_t arrayDims = arrayCount;
+	DataType typeA(PredType::NATIVE_INT32);
+	DataType typeB;
 
 	switch (type) {
 	case eveInt8T:
-		offsetA = HOFFSET(sInt8_t, a);
-		offsetB = HOFFSET(sInt8_t, b);
-		typeA = PredType::NATIVE_INT8;
-		size = sizeof(sInt8_t);
-		break;
 	case eveUInt8T:
-		offsetA = HOFFSET(sUInt8_t, a);
-		offsetB = HOFFSET(sUInt8_t, b);
-		typeA = PredType::NATIVE_UINT8;
-		size = sizeof(sUInt8_t);
-		break;
 	case eveInt16T:
-		offsetA = HOFFSET(sInt16_t, a);
-		offsetB = HOFFSET(sInt16_t, b);
-		typeA = PredType::NATIVE_INT16;
-		size = sizeof(sInt16_t);
-		break;
 	case eveUInt16T:
-		offsetA = HOFFSET(sUInt16_t, a);
-		offsetB = HOFFSET(sUInt16_t, b);
-		typeA = PredType::NATIVE_UINT16;
-		size = sizeof(sUInt16_t);
-		break;
 	case eveInt32T:
-		offsetA = HOFFSET(sInt32_t, a);
-		offsetB = HOFFSET(sInt32_t, b);
-		typeA = PredType::NATIVE_INT32;
-		size = sizeof(sInt32_t);
-		break;
 	case eveUInt32T:
-		offsetA = HOFFSET(sUInt32_t, a);
-		offsetB = HOFFSET(sUInt32_t, b);
-		typeA = PredType::NATIVE_UINT32;
-		size = sizeof(sUInt32_t);
-		break;
-	case eveDateTimeT:
-		offsetA = HOFFSET(sUInt64_t, a);
-		offsetB = HOFFSET(sUInt64_t, b);
-		typeA = PredType::NATIVE_UINT64;
-		size = sizeof(sUInt64_t);
-		break;
 	case eveFloat32T:
-		offsetA = HOFFSET(sFloat_t, a);
-		offsetB = HOFFSET(sFloat_t, b);
-		typeA = PredType::NATIVE_FLOAT;
-		size = sizeof(sFloat_t);
-		break;
 	case eveFloat64T:
-		offsetA = HOFFSET(sDouble_t, a);
-		offsetB = HOFFSET(sDouble_t, b);
-		typeA = PredType::NATIVE_DOUBLE;
-		size = sizeof(sDouble_t);
+		if (arrayCount == 1)
+			typeB = AtomType(convertToHdf5Type(type));
+		else
+			typeB = ArrayType (convertToHdf5Type(type), ndims, &arrayDims);
 		break;
 	case eveEnum16T:
-		offsetA = HOFFSET(sEumString_t, a);
-		offsetB = HOFFSET(sEumString_t, b);
-		size = sizeof(sEumString_t);
-		typeA = StrType(PredType::C_S1, STANDARD_ENUM_STRINGSIZE +1);
+		if (arrayCount == 1)
+			typeB = AtomType(StrType(PredType::C_S1, STANDARD_ENUM_STRINGSIZE+1));
+		else
+			typeB = ArrayType (StrType(PredType::C_S1, STANDARD_ENUM_STRINGSIZE+1), ndims, &arrayDims);
 		break;
 	case eveStringT:
-		offsetA = HOFFSET(sString_t, a);
-		offsetB = HOFFSET(sString_t, b);
-		size = sizeof(sString_t);
-		typeA = StrType(PredType::C_S1, STANDARD_STRINGSIZE +1);
+		if (arrayCount == 1)
+			typeB = AtomType(StrType(PredType::C_S1, STANDARD_STRINGSIZE+1));
+		else
+			typeB = ArrayType (StrType(PredType::C_S1, STANDARD_STRINGSIZE+1), ndims, &arrayDims);
+		break;
+	case eveDateTimeT:
+		if (arrayCount == 1)
+			typeB = AtomType(StrType(PredType::C_S1, DATETIME_STRINGSIZE+1));
+		else
+			typeB = ArrayType (StrType(PredType::C_S1, DATETIME_STRINGSIZE+1), ndims, &arrayDims);
 		break;
 	default:
 		return (CompType) NULL;
 	}
 
-	CompType comptype( size );
-	// printf("in progress: %s %s \n", qPrintable(name1), qPrintable(name2));
-	comptype.insertMember( qPrintable(name1), offsetA, typeA);
-	comptype.insertMember( qPrintable(name2), offsetB, typeB);
+	CompType comptype( typeA.getSize() + typeB.getSize());
+	comptype.insertMember( qPrintable(name1), 0, typeA);
+	comptype.insertMember( qPrintable(name2), typeA.getSize(), typeB);
 	return comptype;
 }
 
-void* hdf5Plugin::getBufferAddress(eveDataMessage* data){
 
-	void *buffer;
+void* hdf5Plugin::getDataBufferAddress(eveDataMessage* data){
+
 	switch (data->getDataType()) {
 	case eveInt8T:
-		sInt8.a = (qint8)data->getCharArray()[0];
-		sInt8.b = data->getPositionCount();
-		buffer = (void *) &sInt8;
-		break;
 	case eveUInt8T:
-		sUInt8.a = (quint8)data->getCharArray()[0];
-		sUInt8.b = data->getPositionCount();
-		buffer = (void *) &sUInt8;
+		return (void*) data->getCharArray().constData();
 		break;
 	case eveInt16T:
-		sInt16.a = (qint16)data->getShortArray()[0];
-		sInt16.b = data->getPositionCount();
-		buffer = (void *) &sInt16;
-		break;
 	case eveUInt16T:
-		sUInt16.a = (quint16)data->getShortArray()[0];
-		sUInt16.b = data->getPositionCount();
-		buffer = (void *) &sUInt16;
+		return (void*) data->getShortArray().constData();
 		break;
 	case eveInt32T:
-		sInt32.a = (qint32)data->getIntArray()[0];
-		sInt32.b = data->getPositionCount();
-		buffer = (void *) &sInt32;
-		break;
 	case eveUInt32T:
-		sUInt32.a = (quint32)data->getIntArray()[0];
-		sUInt32.b = data->getPositionCount();
-		buffer = (void *) &sUInt32;
+		return (void*) data->getIntArray().constData();
 		break;
 	case eveFloat32T:
-		sFloat.a = data->getFloatArray()[0];
-		sFloat.b = data->getPositionCount();
-		buffer = (void *) &sFloat;
+		return (void*) data->getFloatArray().constData();
 		break;
 	case eveFloat64T:
-		sDouble.a = data->getDoubleArray()[0];
-		sDouble.b = data->getPositionCount();
-		buffer = (void *) &sDouble;
-		break;
-	case eveDateTimeT:
-		sUInt64.a = data->getDateTime().get64bitTime();
-		sUInt64.b = data->getPositionCount();
-		buffer = (void *) &sUInt64;
-		break;
-	case eveEnum16T:
-		strncpy(sEumString.a, data->getStringArray().first().toLocal8Bit().constData(), STANDARD_ENUM_STRINGSIZE);
-		sEumString.a[STANDARD_ENUM_STRINGSIZE] = '\0';
-		sEumString.b = data->getPositionCount();
-		buffer = (void *) &sEumString;
-		break;
-	case eveStringT:
-		strncpy(sString.a, data->getStringArray().first().toLocal8Bit().constData(), STANDARD_STRINGSIZE);
-		sString.a[STANDARD_STRINGSIZE] = '\0';
-		sString.b = data->getPositionCount();
-		buffer = (void *) &sString;
+		return (void*) data->getDoubleArray().constData();
 		break;
 	default:
 		return NULL;
 	}
+}
 
-	return buffer;
+/**
+ *
+ * @param data eveDataMessage
+ * @param number compare to this
+ * @return the minimum of number and the used bytes in the data array
+ */
+int hdf5Plugin::getMinimumDataBufferLength(eveDataMessage* data, int other){
+
+	int arraySize = data->getArraySize();
+	int bufferSize = 0;
+
+	switch (data->getDataType()) {
+	case eveInt8T:
+	case eveUInt8T:
+		bufferSize = 1;
+		break;
+	case eveInt16T:
+	case eveUInt16T:
+		bufferSize = 2;
+		break;
+	case eveInt32T:
+	case eveUInt32T:
+	case eveFloat32T:
+		bufferSize = 4;
+		break;
+	case eveFloat64T:
+		bufferSize = 8;
+		break;
+	default:
+		break;
+	}
+	bufferSize *= arraySize;
+
+	if (bufferSize < other)
+		return bufferSize;
+
+	return other;
 }
 
 Q_EXPORT_PLUGIN2(hdf5plugin, hdf5Plugin);

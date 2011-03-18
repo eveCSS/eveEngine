@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'hdf5Plugin.h'
 **
-** Created: Wed Apr 28 15:12:15 2010
+** Created: Fri Jan 21 16:21:11 2011
 **      by: The Qt Meta Object Compiler version 59 (Qt 4.4.3)
 **
 ** WARNING! All changes made in this file will be lost!

@@ -18,55 +18,13 @@
 
 #define STANDARD_STRINGSIZE 40
 #define STANDARD_ENUM_STRINGSIZE 16
+#define DATETIME_STRINGSIZE 40
 
-typedef struct sUInt8_t {
-	quint8 a;
-	quint32 b;
-} sUInt8_t;
-typedef struct sInt8_t {
-	qint8 a;
-	quint32 b;
-} sInt8_t;
-typedef struct sUInt16_t {
-	quint16 a;
-	quint32 b;
-} sUInt16_t;
-typedef struct sInt16_t {
-	qint16 a;
-	quint32 b;
-} sInt16_t;
-typedef struct sUInt32_t {
-	quint32 a;
-	quint32 b;
-} sUInt32_t;
-typedef struct sInt32_t {
-	quint32 a;
-	quint32 b;
-} sInt32_t;
-typedef struct sUInt64_t {
-	quint64 a;
-	quint32 b;
-} sUInt64_t;
-typedef struct sInt64_t {
-	qint64 a;
-	quint32 b;
-} sInt64_t;
-typedef struct sFloat_t {
-	float a;
-	quint32 b;
-} sFloat_t;
-typedef struct sDouble_t {
-	double a;
-	quint32 b;
-} sDouble_t;
-typedef struct sString_t {
-	char a[STANDARD_STRINGSIZE +1];
-	quint32 b;
-} sString_t;
-typedef struct sEumString_t {
-	char a[STANDARD_ENUM_STRINGSIZE +1];
-	quint32 b;
-} sEumString_t;
+
+typedef struct {
+	qint32 positionCount;
+	void *aPtr;
+} memSpace_t;
 
 /*
  *
@@ -89,14 +47,19 @@ public:
 	QString errorText();
 
 private:
-	static CompType createStandardDataType(QString, QString, eveType);
+	static CompType createDataType(QString, QString, eveType, int);
 	static PredType convertToHdf5Type(eveType);
-	void* getBufferAddress(eveDataMessage*);
+	void* getDataBufferAddress(eveDataMessage*);
+	int getMinimumDataBufferLength(eveDataMessage*, int);
 	bool isFileOpen;
 	class columnInfo {
 		public:
 		columnInfo(QString, QStringList);
+		~columnInfo();
 		bool isNotInit;
+		int arraySize;
+		memSpace_t *memBuffer;
+		size_t memSize;
 		QString name;
 		QStringList info;
 		DataSpace dspace;
@@ -113,18 +76,6 @@ private:
 	H5File* dataFile;
 	int sizeIncrement;
 	QHash<int, QHash<QString, columnInfo* >* > idHash;
-    sInt8_t		sInt8;
-    sUInt8_t	sUInt8;
-    sInt16_t	sInt16;
-    sUInt16_t	sUInt16;
-    sInt32_t	sInt32;
-    sUInt32_t	sUInt32;
-    sInt64_t	sInt64;
-    sUInt64_t	sUInt64;
-    sFloat_t	sFloat;
-    sDouble_t	sDouble;
-    sString_t	sString;
-    sEumString_t sEumString;
 
 };
 
