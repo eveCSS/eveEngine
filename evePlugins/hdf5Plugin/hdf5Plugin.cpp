@@ -429,7 +429,7 @@ CompType hdf5Plugin::createDataType(QString name1, QString name2, eveType type, 
 			typeB = ArrayType (StrType(PredType::C_S1, DATETIME_STRINGSIZE+1), ndims, &arrayDims);
 		break;
 	default:
-		return (CompType) NULL;
+		return CompType(0);
 	}
 
 	CompType comptype( typeA.getSize() + typeB.getSize());
