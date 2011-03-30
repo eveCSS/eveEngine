@@ -528,38 +528,46 @@ void eveScanModule::stgNextPos() {
 			if(!axis->isAtEndPos()) allDone = false;
 		}
 
-		// if not all axes are done, go back to trigRead
 		if (allDone){
 			sendError(INFO,0,"stgNextPos Done");
 			currentStageReady=true;
 		}
 		else {
-			sendNextPos();
-			foreach (eveSMAxis *axis, *axisList){
+			if (triggerConfirm){
+				catchedTrigger = false;
+				smLastStatus = smStatus;
+				smStatus = eveSmTRIGGERWAIT;
+				manager->setStatus(smId, smStatus);
 				++signalCounter;
-				sendError(INFO, 0, QString("Moving axis %1").arg(axis->getName()));
-				// TODO here we need to insert the manual trigger and trigger delay?
-				// gotoNextPos returns immediately, if axis is already at end pos
-				axis->gotoNextPos(false);
+				triggerRid = manager->sendRequest(smId, "Trigger Positioning");
 			}
 		}
 		emit sigExecStage();
 	}
 	else if (currentStageCounter == 1){
-		// TODO check if triggerDelay really expired
-		currentStageCounter=2;
-		signalCounter = 0;
-		if (triggerConfirm){
-			catchedTrigger = false;
-			smLastStatus = smStatus;
-			smStatus = eveSmTRIGGERWAIT;
-			manager->setStatus(smId, smStatus);
-			++signalCounter;
-			triggerRid = manager->sendRequest(smId, "Manual Trigger");
-		}
-		emit sigExecStage();
-	}
 
+		if (signalCounter > 0){
+			--signalCounter;
+		}
+		else if (triggerConfirm && !catchedTrigger){
+			sendError(DEBUG, 0, QString("Signal caught, but no trigger yet"));
+		}
+		else {
+			currentStageCounter=2;
+			signalCounter = 0;
+
+			if (triggerConfirm) manager->cancelRequest(smId, triggerRid);
+
+			sendNextPos();
+			foreach (eveSMAxis *axis, *axisList){
+				++signalCounter;
+				sendError(INFO, 0, QString("Moving axis %1").arg(axis->getName()));
+				// TODO here we need to insert the trigger delay?
+				axis->gotoNextPos(false);
+			}
+			emit sigExecStage();
+		}
+	}
 	else {
 		if (signalCounter > 0){
 			--signalCounter;
@@ -673,6 +681,11 @@ void eveScanModule::stgFinish() {
  */
 void eveScanModule::execStage() {
 
+	// TODO Can we uncomment this and remove it in the individual stages ?
+/*	if (signalCounter > 0){
+		--signalCounter;
+	}
+*/
 	if ((currentStage == eveStgFINISH) && currentStageReady){
 		// we are done, do not send status if previous status was smAppend
 		if (smStatus != eveSmAPPEND ) manager->setStatus(smId, eveSmDONE);
@@ -1001,8 +1014,8 @@ bool eveScanModule::triggerSM(int smid, int rid) {
 			emit sigExecStage();
 		}
 	}
-	if (!found && nestedSM) found = nestedSM->redoSM(smid);
-	if (!found && (smStatus == eveSmAPPEND)) found = appendedSM->redoSM(smid);
+	if (!found && nestedSM) found = nestedSM->triggerSM(smid, rid);
+	if (!found && (smStatus == eveSmAPPEND)) found = appendedSM->triggerSM(smid, rid);
 	return found;
 }
 
