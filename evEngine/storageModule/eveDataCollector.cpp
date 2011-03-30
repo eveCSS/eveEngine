@@ -37,6 +37,13 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 	fwInitDone = false;
 	fwOpenDone = false;
 	bool fileTest = false;
+	bool doAutoNumber = false;
+
+	if (paraHash->value("autonumber", emptyString).toLower() == "true") doAutoNumber = true;;
+
+	// TODO
+	//we send dummy data for testing purpose only
+	//addMessage(new eveRequestMessage(eveRequestManager::getRequestManager()->newId(channelId),EVEREQUESTTYPE_OKCANCEL, "Sie haben HALT gedrueckt"));
 
 	if (fileName.isEmpty()){
 		sman->sendError(ERROR,0,QString("eveDataCollector: empty filename not allowed, using dummy"));
@@ -64,8 +71,14 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 			fileName = QFileInfo(eve_root + fileName).absoluteFilePath();
 		}
 	}
+
+	if (!doAutoNumber && (eveFileTest::createTestfile(fileName) == 1)){
+		doAutoNumber = true;
+		sman->sendError(MINOR, 0, QString("(DataCollector) file %1 already exists, enabling autonumber").arg(fileName));
+	}
+
 	QString numberedName = fileName;
-	if (paraHash->value("autonumber", emptyString).toLower() == "true") numberedName = eveFileTest::addNumber(fileName);
+	if (doAutoNumber) numberedName = eveFileTest::addNumber(fileName);
 	if (numberedName.isEmpty()){
 		sman->sendError(ERROR,0,QString("eveDataCollector: unable to add number to filename %1 ").arg(message->getFileName()));
 	}
@@ -75,8 +88,8 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 
 	switch (eveFileTest::createTestfile(fileName)){
 	case 1:
-		sman->sendError(ERROR, 0, QString("eveDataCollector: unable to use filename %1, file exists").arg(fileName));
-		break;
+		sman->sendError(ERROR, 0, QString("(DataCollector) unable to use filename %1, file exists").arg(fileName));
+	break;
 	case 2:
 		sman->sendError(ERROR, 0, QString("eveDataCollector: unable to use file %1, directory does not exist").arg(fileName));
 		break;
