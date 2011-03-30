@@ -108,9 +108,6 @@ void eveManager::handleMessage(eveMessage *message){
 			else {
 				sendError(INFO,0,"cannot process BREAK command with current engine status");
 			}
-			// TODO
-			//we send dummy data for testing purpose only
-			addMessage(new eveRequestMessage(eveRequestManager::getRequestManager()->newId(channelId),EVEREQUESTTYPE_OKCANCEL, "Sie haben HALT gedrueckt"));
 			break;
 		case EVEMESSAGETYPE_PAUSE:
 			if (engineStatus->setPause()){
