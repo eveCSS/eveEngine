@@ -318,10 +318,11 @@ void eveScanManager::addToHash(QHash<QString, QString>* hash, QString key, eveXM
  */
 void eveScanManager::nextPos(){
 	// send nextPos message
-	if (sentData){
-		sentData = false;
-		++posCounter;
-	}
+//	if (sentData){
+//		sentData = false;
+//		++posCounter;
+//	}
+	++posCounter;
 }
 
 /**

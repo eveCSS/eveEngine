@@ -63,22 +63,31 @@ void eveMath::reset(){
  * @param dataVar add value to list of values for calculations
  */
 void eveMath::addValue(QString deviceId, int smid, int pos, eveVariant dataVar){
+	if (deviceId == xAxisId) {
+		xpos = pos;
+		// TODO remove
+		//mmanager->sendError(DEBUG, 0, QString("xpos: %1").arg(xpos));
+
+	}
 	if (dataVar.canConvert(QVariant::Double)){
 		bool ok = false;
 		double data = dataVar.toDouble(&ok);
 		if (ok){
 			if (deviceId == xAxisId) {
 				xdata = data;
-				xpos = pos;
 			}
 			else if (deviceId == detectorId) {
 				ydata = data;
 				ypos = pos;
 				doYNorm = true;
+				// TODO remove
+				//mmanager->sendError(DEBUG, 0, QString("ypos: %1, value: %2").arg(ypos).arg(data));
 			}
 			else if (doNormalize && (deviceId == normalizeId)) {
 				zdata = data;
 				zpos = pos;
+				// TODO remove
+				//mmanager->sendError(DEBUG, 0, QString("zpos: %1, value: %2").arg(zpos).arg(data));
 			}
 			else
 				return;
@@ -96,6 +105,8 @@ void eveMath::addValue(QString deviceId, int smid, int pos, eveVariant dataVar){
 						status.severity = 4;
 					}
 					eveDataMessage *normalizedMessage = new eveDataMessage(detectorId, QString(), status, DMTnormalized, eveTime::getCurrent(), QVector<double>(1,ydata));
+					// TODO remove
+					//mmanager->sendError(DEBUG, 0, QString("normalized value: %1").arg(ydata));
 					normalizedMessage->setPositionCount(ypos);
 					normalizedMessage->setSmId(smid);
 					mmanager->sendMessage(normalizedMessage);
