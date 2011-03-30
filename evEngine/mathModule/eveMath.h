@@ -26,7 +26,7 @@ public:
 	eveMath(int, int, double, double);
 	virtual ~eveMath();
 	void reset();
-	void addValue(QString, int pos, eveVariant);
+	void addValue(QString, int smid, int pos, eveVariant);
 	QList<eveDataMessage*> getResultMessage(MathAlgorithm, int);
 	void setAlgorithm(MathAlgorithm alg){if (!usedAlgorithm.contains(alg))usedAlgorithm.append(alg);};
 	bool haveAlgorithm(MathAlgorithm alg){return usedAlgorithm.contains(alg);};
@@ -40,6 +40,7 @@ private:
 	MathAlgorithm algorithm;
 	bool modified;
 	bool doNormalize;
+	bool doYNorm;
 	eveMathManager* mmanager;
 	QList<MathAlgorithm> usedAlgorithm;
 	QVector<double> xdataArray;

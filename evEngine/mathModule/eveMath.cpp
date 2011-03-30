@@ -54,6 +54,7 @@ void eveMath::reset(){
 	ydataArray.clear();
 	xpos = -1;
 	ypos = -2;
+	doYNorm = false;
 }
 
 /**
@@ -61,7 +62,7 @@ void eveMath::reset(){
  *
  * @param dataVar add value to list of values for calculations
  */
-void eveMath::addValue(QString deviceId, int pos, eveVariant dataVar){
+void eveMath::addValue(QString deviceId, int smid, int pos, eveVariant dataVar){
 	if (dataVar.canConvert(QVariant::Double)){
 		bool ok = false;
 		double data = dataVar.toDouble(&ok);
@@ -73,6 +74,7 @@ void eveMath::addValue(QString deviceId, int pos, eveVariant dataVar){
 			else if (deviceId == detectorId) {
 				ydata = data;
 				ypos = pos;
+				doYNorm = true;
 			}
 			else if (doNormalize && (deviceId == normalizeId)) {
 				zdata = data;
@@ -82,10 +84,21 @@ void eveMath::addValue(QString deviceId, int pos, eveVariant dataVar){
 				return;
 
 			if (((xpos == ypos ) && doNormalize && (xpos == zpos)) || ((xpos == ypos ) && !doNormalize )) {
-				if (doNormalize && (fabs(zdata) > 0.0)) {
-					ydata /= zdata;
+				if (doNormalize && doYNorm) {
+					doYNorm = false;
 					eveDataStatus status = {1,1,1};
-					mmanager->addMessage(new eveDataMessage(detectorId, QString(), status, DMTnormalized, epicsTime(), QVector<double>(ydata)));
+					if (fabs(zdata) > 0.0) {
+						ydata /= zdata;
+					}
+					else {
+						ydata = 0.0;
+						status.condition = 3;
+						status.severity = 4;
+					}
+					eveDataMessage *normalizedMessage = new eveDataMessage(detectorId, QString(), status, DMTnormalized, eveTime::getCurrent(), QVector<double>(1,ydata));
+					normalizedMessage->setPositionCount(ypos);
+					normalizedMessage->setSmId(smid);
+					mmanager->sendMessage(normalizedMessage);
 				}
 				xdataArray.append(xdata);
 				ydataArray.append(ydata);

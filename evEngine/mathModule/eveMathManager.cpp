@@ -56,7 +56,7 @@ void eveMathManager::handleMessage(eveMessage *message){
 					(datamessage->getDataMod() == DMTunmodified)){
 				eveVariant data = datamessage->toVariant();
 				foreach(eveMath* math, mathHash.values(datamessage->getSmId())){
-					math->addValue(datamessage->getXmlId(), datamessage->getPositionCount() ,data);
+					math->addValue(datamessage->getXmlId(), datamessage->getSmId(), datamessage->getPositionCount(), data);
 				}
 			}
 		}
@@ -127,4 +127,14 @@ void eveMathManager::shutdown(){
  */
 void eveMathManager::sendError(int severity, int errorType,  QString errorString){
 	addMessage(new eveErrorMessage(severity, EVEMESSAGEFACILITY_MATH, errorType, errorString));
+}
+
+/**
+ *\brief queue the specified message to the send queue
+ *
+ * @param message message to be sent
+ */
+void eveMathManager::sendMessage(eveDataMessage* message){
+	message->setChainId(chid);
+	addMessage(message);
 }
