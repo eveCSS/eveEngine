@@ -236,7 +236,7 @@ void eveScanManager::handleMessage(eveMessage *message){
 		{
 			int rid = ((eveRequestAnswerMessage*)message)->getReqId();
 			if (requestHash.contains(rid)) {
-				if (rootSM) rootSM->triggerSM(requestHash.value(rid));
+				if (rootSM) rootSM->triggerSM(requestHash.value(rid), rid);
 				requestHash.remove(rid);
 			}
 		}
@@ -434,7 +434,7 @@ void eveScanManager::newEvent(eveEventProperty* evprop) {
 		break;
 	case eveEventProperty::TRIGGER:
 		if (!evprop->isChainAction()){
-			if (rootSM) rootSM->triggerSM(evprop->getSmId());
+			if (rootSM) rootSM->triggerSM(evprop->getSmId(), 0);
 		}
 		break;
 	default:

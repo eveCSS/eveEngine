@@ -30,6 +30,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     chainId = chainid;
 	catchedRedo = false;
 	catchedTrigger=false;
+	catchedDetecTrigger=false;
 
 	settleTime = parser->getSMTagDouble(chainId, smId, "settletime", 0.0);
 	triggerDelay = parser->getSMTagDouble(chainId, smId, "triggerdelay", 0.0);
@@ -84,6 +85,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     channelList = parser->getChannelList(this, chainId, smId);
 	foreach (eveSMChannel *channel, *channelList){
 	    connect (channel, SIGNAL(channelDone()), this, SLOT(execStage()), Qt::QueuedConnection);
+	    triggerDetecConf = channel->hasConfirmTrigger();
 	}
 
 	eventList = parser->getSMEventList(chainId, smId);
@@ -421,22 +423,22 @@ void eveScanModule::stgTrigRead() {
 		// TODO check if triggerDelay really expired
 		currentStageCounter=2;
 		signalCounter = 0;
-		if (triggerConfirm){
-			catchedTrigger = false;
+		if (triggerDetecConf){
+			catchedDetecTrigger = false;
 			smLastStatus = smStatus;
 			smStatus = eveSmTRIGGERWAIT;
 			manager->setStatus(smId, smStatus);
 			++signalCounter;
-			triggerRid = manager->sendRequest(smId, "Manual Trigger");
+			triggerDetecRid = manager->sendRequest(smId, "Trigger Detector");
 		}
 		emit sigExecStage();
 	}
 	else if (currentStageCounter == 2){
 		// check if trigger event received
-		if (triggerConfirm){
-			if (catchedTrigger){
+		if (triggerDetecConf){
+			if (catchedDetecTrigger){
 				currentStageCounter=3;
-				manager->cancelRequest(smId, triggerRid);
+				manager->cancelRequest(smId, triggerDetecRid);
 				emit sigExecStage();
 			}
 		}
@@ -536,12 +538,28 @@ void eveScanModule::stgNextPos() {
 			foreach (eveSMAxis *axis, *axisList){
 				++signalCounter;
 				sendError(INFO, 0, QString("Moving axis %1").arg(axis->getName()));
+				// TODO here we need to insert the manual trigger and trigger delay?
 				// gotoNextPos returns immediately, if axis is already at end pos
 				axis->gotoNextPos(false);
 			}
 		}
 		emit sigExecStage();
 	}
+	else if (currentStageCounter == 1){
+		// TODO check if triggerDelay really expired
+		currentStageCounter=2;
+		signalCounter = 0;
+		if (triggerConfirm){
+			catchedTrigger = false;
+			smLastStatus = smStatus;
+			smStatus = eveSmTRIGGERWAIT;
+			manager->setStatus(smId, smStatus);
+			++signalCounter;
+			triggerRid = manager->sendRequest(smId, "Manual Trigger");
+		}
+		emit sigExecStage();
+	}
+
 	else {
 		if (signalCounter > 0){
 			--signalCounter;
@@ -970,14 +988,16 @@ bool eveScanModule::breakChain() {
  * @return true if SM with smid was found
  *
  */
-bool eveScanModule::triggerSM(int smid) {
+bool eveScanModule::triggerSM(int smid, int rid) {
 
 	bool found = false;
 	if (smId == smid){
 		found = true;
 		if (smStatus == eveSmTRIGGERWAIT) {
-			catchedTrigger=true;
+			if (triggerRid == rid) catchedTrigger=true;
+			if (triggerDetecRid == rid) catchedDetecTrigger=true;
 			smStatus = smLastStatus;
+			manager->setStatus(smId, smStatus);
 			emit sigExecStage();
 		}
 	}

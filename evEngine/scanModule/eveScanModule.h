@@ -52,7 +52,7 @@ public:
 	bool pauseSM(int);
 	bool resumeSM(int);
 	bool haltSM(int);
-	bool triggerSM(int);
+	bool triggerSM(int, int);
 	bool redoSM(int);
 
 	void startChain();
@@ -92,10 +92,13 @@ private:
 	int currentStageCounter;
 	int signalCounter;
 	int triggerRid;
+	int triggerDetecRid;
 	bool triggerConfirm;
+	bool triggerDetecConf;
 	bool isRoot;
 	bool catchedRedo;
 	bool catchedTrigger;
+	bool catchedDetecTrigger;
 	double settleTime;
 	double triggerDelay;
 	QHash<stageT, void(eveScanModule::*)()> stageHash;

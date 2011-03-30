@@ -40,6 +40,7 @@ public:
 	void stop(bool);
 	bool isDone(){return ready;};
 	bool isOK(){return channelOK;};
+	bool hasConfirmTrigger(){return confirmTrigger;};
 	QString getUnit(){return unit;};
 	eveDevInfoMessage* getDeviceInfo();
 	eveDataMessage* getValueMessage();
