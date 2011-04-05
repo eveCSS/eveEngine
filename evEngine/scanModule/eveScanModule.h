@@ -99,6 +99,7 @@ private:
 	bool catchedRedo;
 	bool catchedTrigger;
 	bool catchedDetecTrigger;
+	bool delayedStart;
 	double settleTime;
 	double triggerDelay;
 	QHash<stageT, void(eveScanModule::*)()> stageHash;

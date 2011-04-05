@@ -14,6 +14,7 @@
 #include "eveEventProperty.h"
 
 
+
 eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int chainid, int smid) :
 	QObject(parent){
 
@@ -31,6 +32,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	catchedRedo = false;
 	catchedTrigger=false;
 	catchedDetecTrigger=false;
+	delayedStart = false;
 
 	settleTime = parser->getSMTagDouble(chainId, smId, "settletime", 0.0);
 	triggerDelay = parser->getSMTagDouble(chainId, smId, "triggerdelay", 0.0);
@@ -195,12 +197,18 @@ void eveScanModule::stgInit() {
 			--signalCounter;
 		}
 		else {
-			// doing device diagnostics here is unsafe, since the last device might not be
-			// ready yet, if an sigExecStage has been emitted by the start button first
-			currentStageReady=true;
-			emit sigExecStage();
-			emit SMready();
-			sendError(DEBUG, 0, "stgInit done");
+			// we need to check all devices before proceeding
+			bool allInitDone = true;
+			if (allInitDone) foreach (eveSMDevice *device, *preScanList) if (!device->isDone()) allInitDone = false;
+			if (allInitDone) foreach (eveSMDevice *device, *postScanList) if (!device->isDone()) allInitDone = false;
+			if (allInitDone) foreach (eveSMAxis *axis, *axisList) if (!axis->isDone()) allInitDone = false;
+			if (allInitDone) foreach (eveSMChannel *channel, *channelList) if (!channel->isDone()) allInitDone = false;
+			if (allInitDone){
+				currentStageReady=true;
+				emit sigExecStage();
+				emit SMready();
+				sendError(DEBUG, 0, "stgInit done");
+			}
 		}
 	}
 }
@@ -705,10 +713,11 @@ void eveScanModule::execStage() {
 		// call stage method
 		(this->*stageHash.value(currentStage))();
 	}
-	// the stages which do not proceed if they are ready
+	// the stages which usually do not proceed if they are ready
 	else if ((currentStage == eveStgINIT) || (currentStage == eveStgREADPOS) || (currentStage == eveStgGOTOSTART)){
-		if (currentStageReady == false)
+		if (currentStageReady == false){
 			(this->*stageHash.value(currentStage))();
+		}
 		else {
 			currentStage = (stageT)(((int) currentStage)+1);
 			currentStageReady = false;
@@ -718,6 +727,10 @@ void eveScanModule::execStage() {
 	}
 }
 
+/**
+ * set Status to eveSmEXECUTING which will make the states to proceed after init.
+ * delayed start not necessary
+ */
 void eveScanModule::start() {
 
 	if (smStatus == eveSmNOTSTARTED){
@@ -790,12 +803,7 @@ bool eveScanModule::startSM(int smid) {
 
 	bool found = false;
 	if (smId == smid){
-		if (smStatus == eveSmNOTSTARTED){
-			sendError(DEBUG, 0, "starting scan");
-			smStatus = eveSmEXECUTING;
-			manager->setStatus(smId, smStatus);
-			emit sigExecStage();
-		}
+		if (smStatus == eveSmNOTSTARTED) start();
 		found = true;
 	}
 	else {
@@ -814,10 +822,7 @@ void eveScanModule::startChain() {
 
 	sendError(DEBUG, 0, "start signal received");
 	if (smStatus == eveSmNOTSTARTED){
-		sendError(DEBUG, 0, "starting scan");
-		smStatus = eveSmEXECUTING;
-		manager->setStatus(smId, smStatus);
-		emit sigExecStage();
+		start();
 	}
 	else {
 		resumeChain();

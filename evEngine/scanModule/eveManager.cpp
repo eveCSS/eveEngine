@@ -47,9 +47,9 @@ void eveManager::handleMessage(eveMessage *message){
 			// answer with the current playlist
 			addMessage(playlist->getCurrentPlayList());
 			// load the next playlist entry, if Engine is idle and no XML is loaded
-			if (engineStatus->getEngineStatus() == eveEngIDLENOXML)
+			if (engineStatus->isNoXmlLoaded())
 				if (loadPlayListEntry()){
-					if (engineStatus->getAutoStart())
+					if (engineStatus->isAutoStart())
 						if (!sendStart())
 							sendError(INFO,0,"cannot process START command with current engine status");
 				}
@@ -127,9 +127,8 @@ void eveManager::handleMessage(eveMessage *message){
 			}
 			// load the next entry from playlist, if whole chain is done
 			if (engineStatus->getEngineStatus() == eveEngIDLENOXML) {
-				deviceList->clearAll();
 				if (loadPlayListEntry()){
-					if (engineStatus->getAutoStart())
+					if (engineStatus->isAutoStart())
 						if (!sendStart())
 							sendError(INFO,0,"cannot process START command with current engine status");
 				}
@@ -164,11 +163,11 @@ void eveManager::shutdown(){
 bool eveManager::loadPlayListEntry(){
 
 	// we load a new playlist entry if not already done
-	if (!engineStatus->isXmlLoaded()){
+	if (engineStatus->isNoXmlLoaded()){
 		if (!playlist->isEmpty()){
 			// load next playlist entry
 			evePlayListData* plEntry = playlist->takeFirst();
-			if (!engineStatus->setLoadingXML(plEntry->name)) return false;
+			engineStatus->setLoadingXML(plEntry->name);
 			addMessage(engineStatus->getEngineStatusMessage());
 			// load XML, send the appropriate engineStatus-Message, send playlist if successful
 			if (engineStatus->setXMLLoaded(createSMs(plEntry->data))){

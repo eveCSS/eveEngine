@@ -371,7 +371,7 @@ void eveScanManager::newEvent(eveEventProperty* evprop) {
 
 	switch (evprop->getActionType()){
 	case eveEventProperty::START:
-		// ignore all startevents before storage is ready
+		// TODO ignore all startevents before storage is ready
 			if (evprop->isChainAction()){
 				if (rootSM) rootSM->startChain();
 			}

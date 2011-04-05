@@ -84,6 +84,7 @@ void eveSMDevice::transportReady(int status) {
 				delete valueTrans;
 				sendError(ERROR, 0, "Unable to connect Value Transport");
 			}
+			ready = true;
 			emit deviceDone();
 		}
 	}
@@ -116,6 +117,7 @@ void eveSMDevice::transportReady(int status) {
  */
 void eveSMDevice::readValue(bool queue) {
 
+	ready = true;
 	if (haveValue){
 		if (setPrevious){
 			ready = false;
@@ -145,6 +147,7 @@ void eveSMDevice::readValue(bool queue) {
  */
 void eveSMDevice::writeValue(bool queue) {
 
+	ready = true;
 	if (haveValue){
 		if (deviceStatus == eveDEVICEIDLE){
 			if (value.isValid()) {
