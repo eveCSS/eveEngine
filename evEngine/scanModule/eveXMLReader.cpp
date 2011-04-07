@@ -19,6 +19,7 @@
 eveXMLReader::eveXMLReader(eveManager *parentObject){
 	parent = parentObject;
 	domDocument = new QDomDocument();
+	repeatCount=0;
 	// TODO create Hashes
 //	idHash = new QHash<QString, QString>;
 //	motorHash = new QHash<QString, QDomElement>;
@@ -59,7 +60,7 @@ bool eveXMLReader::read(QByteArray xmldata, eveDeviceList *devList)
     }
     QDomElement version = root.firstChildElement("version");
     if (version.isNull()){
-		sendError(ERROR,0,QString("eveXMLReader::read: no version tag found %1"));
+		sendError(ERROR,0,QString("eveXMLReader::read: no version tag found"));
         return false;
     }
     QString thisVersion = QString("%1.%2.%3").arg((int)EVE_VERSION).arg((int)EVE_REVISION).arg((int)EVE_MODIFICATION);
@@ -72,6 +73,15 @@ bool eveXMLReader::read(QByteArray xmldata, eveDeviceList *devList)
 		sendError(ERROR,0,QString("eveXMLReader::read: incompatible xml revisions file: %1, application: %2").arg(version.text()).arg(thisVersion));
         return false;
     }
+    QDomElement repeatcount = root.firstChildElement("repeatcount");
+    if (repeatcount.isNull()){
+		sendError(ERROR,0,QString("eveXMLReader::read: no repeatcount tag found"));
+        return false;
+    }
+    bool ok = true;
+    repeatCount = repeatcount.text().toInt(&ok);
+    if (!ok) repeatCount=0;
+
     // build indices
     // one Hash with DomElement / chain-id
     // one Hash with DomElement / sm-id for every chain
@@ -97,7 +107,6 @@ bool eveXMLReader::read(QByteArray xmldata, eveDeviceList *devList)
 		     		(smIdHash.value(chainNo))->insert(smNo, domSM);
      		     	QDomElement domParent = domSM.firstChildElement("parent");
      		     	if (!domParent.isNull()) {
-     		     		bool ok;
      		     		if (domParent.text().toInt(&ok) == 0)
 							if (ok) rootSMHash.insert(chainNo,smNo);
      		     	}

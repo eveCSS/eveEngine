@@ -18,8 +18,7 @@
 eveBasicStatusTracker::eveBasicStatusTracker() {
 	loadedXML = false;
 	engineStatus = eveEngIDLENOXML;
-
-
+	repeatCount = 0;
 }
 
 eveBasicStatusTracker::~eveBasicStatusTracker() {
@@ -74,9 +73,22 @@ bool eveBasicStatusTracker::setChainStatus(eveChainStatusMessage* message) {
 	return engStatusChng;
 }
 
+/**
+ * \brief set the repeatCount to a number in range 0-65535
+ */
+void eveBasicStatusTracker::setRepeatCount(int count) {
+	if (count < 0)
+		repeatCount=0;
+	else if (count > 0xffff)
+		repeatCount = 0xffff;
+	else
+		repeatCount = count;
+}
+
 eveEngineStatusMessage * eveBasicStatusTracker::getEngineStatusMessage() {
 	// TODO change int engineStatus to engineStatusT
-	return new eveEngineStatusMessage((int)engineStatus, XmlName);
+	unsigned int status = ((unsigned int)engineStatus) | (repeatCount << 16);
+	return new eveEngineStatusMessage(status, XmlName);
 }
 
 
@@ -208,7 +220,7 @@ bool eveManagerStatusTracker::setAutoStart(bool autostart) {
 
 eveEngineStatusMessage * eveManagerStatusTracker::getEngineStatusMessage() {
 
-	int status = (int)engineStatus;
+	unsigned int status = ((unsigned int)engineStatus) | (repeatCount << 16);
 	if (autoStart) status |= EVEENGINESTATUS_AUTOSTART;
 	return new eveEngineStatusMessage(status, XmlName);
 }

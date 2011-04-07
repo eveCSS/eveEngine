@@ -22,6 +22,7 @@
  * \brief init and register with messageHub
  */
 eveManager::eveManager() {
+	currentPlEntry = NULL;
 	deviceList = new eveDeviceList();
 	playlist = new evePlayListManager();
 	eveMessageHub * mHub = eveMessageHub::getmHub();
@@ -32,6 +33,10 @@ eveManager::eveManager() {
 eveManager::~eveManager() {
 	delete playlist;
 	delete engineStatus;
+	if (currentPlEntry != NULL){
+		delete currentPlEntry;
+		currentPlEntry = NULL;
+	}
 	// we already unregistered with mhub
 }
 
@@ -164,14 +169,25 @@ bool eveManager::loadPlayListEntry(){
 
 	// we load a new playlist entry if not already done
 	if (engineStatus->isNoXmlLoaded()){
-		if (!playlist->isEmpty()){
+		bool isRepeat = false;
+		if (engineStatus->getRepeatCount() > 0){
+			engineStatus->decrRepeatCount();
+			isRepeat = true;
+		}
+		if (isRepeat || !playlist->isEmpty()){
 			// load next playlist entry
-			evePlayListData* plEntry = playlist->takeFirst();
-			engineStatus->setLoadingXML(plEntry->name);
+			if (!isRepeat) {
+				if (currentPlEntry != NULL){
+					delete currentPlEntry;
+					currentPlEntry = NULL;
+				}
+				currentPlEntry = playlist->takeFirst();
+			}
+			engineStatus->setLoadingXML(currentPlEntry->name);
 			addMessage(engineStatus->getEngineStatusMessage());
 			// load XML, send the appropriate engineStatus-Message, send playlist if successful
-			if (engineStatus->setXMLLoaded(createSMs(plEntry->data))){
-				addMessage(new eveCurrentXmlMessage(plEntry->name, plEntry->author, plEntry->data));
+			if (engineStatus->setXMLLoaded(createSMs(currentPlEntry->data, isRepeat))){
+				addMessage(new eveCurrentXmlMessage(currentPlEntry->name, currentPlEntry->author, currentPlEntry->data));
 				addMessage(playlist->getCurrentPlayList());
 				addMessage(engineStatus->getEngineStatusMessage());
 				startChains();
@@ -179,7 +195,6 @@ bool eveManager::loadPlayListEntry(){
 			else {
 				addMessage(engineStatus->getEngineStatusMessage());
 			}
-			delete plEntry;
 		}
 		else {
 			// Playlist is empty, there is nothing we can do
@@ -192,10 +207,13 @@ bool eveManager::loadPlayListEntry(){
 /**
  * \brief create threads and scanModule Objects,
  *
+ * \param xmldata scml data
+ * \param isRepeat true if we repeat the scan decribed in xmldata, otherwise false
+ *
  * for now, we cannot call this method if there are still chains running
  * from previous XML-Files
  */
-bool eveManager::createSMs(QByteArray xmldata) {
+bool eveManager::createSMs(QByteArray xmldata, bool isRepeat) {
 
 	eveXMLReader* scmlParser = new eveXMLReader(this);
 	deviceList->clearAll();
@@ -206,6 +224,9 @@ bool eveManager::createSMs(QByteArray xmldata) {
     	sendError(ERROR,0,"eveManager::createSMs: error parsing XML");
     	return false;
     }
+	sendError(DEBUG,0,QString("eveManager::createSMs: RepeatCount is %1").arg(scmlParser->getRepeatCount()));
+	if (!isRepeat) engineStatus->setRepeatCount(scmlParser->getRepeatCount());
+
 	// create a thread for every chain in the xml-File
 
 	QStringList fileNameList;

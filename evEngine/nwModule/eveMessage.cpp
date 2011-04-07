@@ -227,7 +227,7 @@ eveCurrentXmlMessage::~eveCurrentXmlMessage()
  * \param status status of currently processing scanmodule
  */
 eveEngineStatusMessage::eveEngineStatusMessage(int status, QString xmlname, int prio, int dest) :
-	eveMessage(EVEMESSAGETYPE_ENGINESTATUS, 0, 0)
+	eveMessage(EVEMESSAGETYPE_ENGINESTATUS, prio, dest)
 {
 	XmlId = QString(xmlname);
 	estatus = status;

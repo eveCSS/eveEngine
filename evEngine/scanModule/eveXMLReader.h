@@ -40,6 +40,7 @@ public:
 	QList<int> getChainIdList(){return chainIdList;};
 	int getNested(int, int);
 	int getAppended(int, int);
+	int getRepeatCount(){return repeatCount;};
 	QList<eveSMDevice*>* getPreScanList(eveScanModule*, int, int);
 	QList<eveSMDevice*>* getPostScanList(eveScanModule*, int, int);
 	QList<eveSMAxis*>* getAxisList(eveScanModule*, int, int);
@@ -62,6 +63,7 @@ private:
 	void createDeviceDefinition(QDomNode);
 	//void createEventDefinition(QDomNode);
 	int getIntValueOfTag(int, int, QString);
+	int repeatCount;
 	QList<int> chainIdList;
 	QList<eveSMDevice*>* getSMDeviceList(eveScanModule*, int, int, QString);
 	eveEventProperty* getEvent(eveEventProperty::actionTypeT, QDomElement);

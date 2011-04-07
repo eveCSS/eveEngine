@@ -258,7 +258,7 @@ class eveEngineStatusMessage : public eveMessage
 public:
 	eveEngineStatusMessage(int, QString, int prio=0, int dest=0);
 	virtual ~eveEngineStatusMessage();
-	int getStatus(){return estatus;};
+	unsigned int getStatus(){return estatus;};
 	QString getXmlId(){return XmlId;};
 	eveTime getTime(){return timestamp;};
 	bool compare(eveMessage *);

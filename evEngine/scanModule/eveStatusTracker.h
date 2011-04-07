@@ -27,7 +27,9 @@ public:
 	void addStorageId(int id){ chidWithStorageList.append(id);};
 	virtual eveEngineStatusMessage* getEngineStatusMessage();
 	engineStatusT getEngineStatus(){return engineStatus;};
-
+	int getRepeatCount(){return repeatCount;};
+	void setRepeatCount(int count);
+	void decrRepeatCount(){if (repeatCount > 0) --repeatCount;};
 	//bool smChanged();
 	//bool chainChanged();
 	//bool isPaused();
@@ -41,6 +43,7 @@ protected:
 	engineStatusT engineStatus;
 	QString XmlName;
 	bool loadedXML;
+	unsigned int repeatCount;
 
 };
 

@@ -43,9 +43,10 @@ signals:
 
 private:
 	bool loadPlayListEntry();
-	bool createSMs(QByteArray);
+	bool createSMs(QByteArray, bool);
 	void startChains();
 	// eveMessageHub * mHub;
+	evePlayListData* currentPlEntry;
 	eveDeviceList *deviceList;
 	eveManager *manager;
 	evePlayListManager *playlist;
