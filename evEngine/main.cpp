@@ -15,6 +15,14 @@
 #include "eveError.h"
 #include "eveParameter.h"
 
+// loglevel 0: send no error messages
+// loglevel 1: send FATAL errors
+// loglevel 2: send FATAL,ERROR errors
+// loglevel 3: send FATAL,ERROR,MINOR errors
+// loglevel 4: send FATAL,ERROR,MINOR,INFO errors (default)
+// loglevel 5: send FATAL,ERROR,MINOR,INFO,DEBUG errors
+#define DEFAULT_LOGLEVEL 4
+
 int main(int argc, char *argv[])
 {
 	bool useGui = true;
@@ -23,7 +31,7 @@ int main(int argc, char *argv[])
 	QString logFileName;
 	QString interfaces("all");
 	QString eveRoot;
-	int loglevel;
+	int loglevel=-1;
 	int portNumber = 12345;
 	bool skipOne = false;
 
@@ -52,6 +60,7 @@ int main(int argc, char *argv[])
 			if (parameter.isEmpty()) {
 				parameter = argumentNext.trimmed();
 				skipOne = true;
+				loglevel = DEFAULT_LOGLEVEL+1;
 			}
 			loglevel = parameter.toInt(&ok);
 			if (ok) continue;
@@ -137,6 +146,9 @@ int main(int argc, char *argv[])
 		paralist->setParameter("use_network", "yes");
 	else
 		paralist->setParameter("use_network", "no");
+
+	if ((loglevel < 0) || (loglevel > 5 )) loglevel = DEFAULT_LOGLEVEL;
+	paralist->setParameter("loglevel",QString("%1").arg(loglevel));
 
 	paralist->setParameter("port", QString().setNum(portNumber));
 	paralist->setParameter("interfaces", interfaces);

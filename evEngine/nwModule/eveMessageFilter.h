@@ -48,6 +48,7 @@ private:
 	eveEngineStatusMessage *engineStatusCache;
 	evePlayListMessage *playlistCache;
 	eveCurrentXmlMessage *currentXmlCache;
+	eveErrorMessage *filenameCache;
 
 };
 

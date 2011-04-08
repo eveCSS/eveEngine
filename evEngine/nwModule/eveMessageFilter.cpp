@@ -3,6 +3,7 @@
 #include "eveMessageFilter.h"
 #include "eveNetObject.h"
 #include "eveError.h"
+#include "eveParameter.h"
 
 
 eveMessageFilter::eveMessageFilter(eveNetObject *nwPtr)
@@ -14,6 +15,7 @@ eveMessageFilter::eveMessageFilter(eveNetObject *nwPtr)
 	engineStatusCache = NULL;
 	playlistCache = NULL;
 	currentXmlCache = NULL;
+	filenameCache = NULL;
 	seqTimer = new QTimer(this);
     connect(seqTimer, SIGNAL(timeout()), this, SLOT(timeout()));
     seqTimer->start(EVEMESSAGEFILTER_TIMEOUT);
@@ -33,7 +35,7 @@ eveMessageFilter::~eveMessageFilter()
 /**
  * \brief receives and handles the next message
  * \param message current message
- * \return true if the filter condition matched, else false
+ * \return true if the filter condition matched (we do not want to send the message), else false
  *
  * Actual filter method receives the message and compares it to the last message
  * If this is an error message and the last EVEMESSAGEFILTER_LOWLIMIT messages
@@ -43,7 +45,21 @@ eveMessageFilter::~eveMessageFilter()
  */
 bool eveMessageFilter::checkMessage(eveMessage *message)
 {
+	// skip DEBUG messages if not started with command line parameter debug
 	if (message->getType() == EVEMESSAGETYPE_ERROR){
+		eveErrorMessage* errorMessage = (eveErrorMessage*) message;
+		int loglevel = eveParameter::getParameter("loglevel").toInt();
+		if ((loglevel < 5) && (errorMessage->getSeverity() == EVEMESSAGESEVERITY_DEBUG))
+			return true;
+		else if ((loglevel < 4) && (errorMessage->getSeverity() == EVEMESSAGESEVERITY_INFO))
+			return true;
+		else if ((loglevel < 3) && (errorMessage->getSeverity() == EVEMESSAGESEVERITY_MINOR))
+			return true;
+		else if ((loglevel < 2) && (errorMessage->getSeverity() == EVEMESSAGESEVERITY_ERROR))
+			return true;
+		else if ((loglevel < 1))
+			return true;
+
 		++messageCount;
 		if (messageCount > EVEMESSAGEFILTER_LOWLIMIT){
 			if (!errorMessageCacheList.isEmpty()){
@@ -76,6 +92,7 @@ QList<eveMessage * > * eveMessageFilter::getCache()
 	if (playlistCache) cachelist->append(playlistCache);
 	if (engineStatusCache) cachelist->append(engineStatusCache);
 	if (chainStatusCache) cachelist->append(chainStatusCache);
+	if (filenameCache) cachelist->append(filenameCache);
 
 	return cachelist;
 }
@@ -94,11 +111,17 @@ void eveMessageFilter::queueMessage(eveMessage *message)
 
 	switch (message->getType()) {
 		case EVEMESSAGETYPE_ERROR:
-			// we keep the last few errors
-			errorMessageCacheList.append(message);
-			while (errorMessageCacheList.count() > EVEMESSAGEFILTER_QUEUELENGTH) {
-				eveMessage *delMessage = errorMessageCacheList.takeFirst();
-				delete delMessage;
+			if (((eveErrorMessage*) message)->getErrorType() == EVEERRORMESSAGETYPE_FILENAME){
+				if (filenameCache) delete filenameCache;
+				filenameCache = (eveErrorMessage*) message;
+			}
+			else {
+				// we keep the last few errors
+				errorMessageCacheList.append(message);
+				while (errorMessageCacheList.count() > EVEMESSAGEFILTER_QUEUELENGTH) {
+					eveMessage *delMessage = errorMessageCacheList.takeFirst();
+					delete delMessage;
+				}
 			}
 			break;
 		case EVEMESSAGETYPE_ENGINESTATUS:
@@ -162,5 +185,6 @@ void eveMessageFilter::clearCache(){
 	chainStatusCache = NULL;
 	if (currentXmlCache) delete currentXmlCache;
 	currentXmlCache = NULL;
-
+	if (filenameCache) delete filenameCache;
+	filenameCache = NULL;
 }

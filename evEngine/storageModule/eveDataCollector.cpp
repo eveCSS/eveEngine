@@ -105,7 +105,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 		break;
 	}
 	// predefined info message with filename
-	if (fileTest) sman->sendError(INFO, 0x000a, fileName);
+	if (fileTest) sman->sendError(INFO, EVEERRORMESSAGETYPE_FILENAME, fileName);
 
 	if (pluginName.isEmpty() || (pluginName == "ASCII")){
 		if (fileType.isEmpty() || (fileType == "ASCII")){

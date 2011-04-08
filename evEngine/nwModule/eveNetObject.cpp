@@ -67,7 +67,7 @@ void eveNetObject::acceptSocket(){
 	QTcpSocket *newSocket = netListener->nextPendingConnection();
 
 	if (newSocket != 0) {
-		eveSocket * eSocket = new eveSocket(newSocket, this);
+		eveSocket* eSocket = new eveSocket(newSocket, this);
 		socketList.insert(eSocket);
 		eveError::log(1, QString("eveNetObject: accepted socket"));
 		QList<eveMessage * > * calist = mFilter->getCache();
@@ -101,6 +101,7 @@ void eveNetObject::handleMessage(eveMessage * message)
 {
 	if (!message) return;
 
+	// clear the message cache when the scan is done
 	if ((message->getType() == EVEMESSAGETYPE_ENGINESTATUS) &&
 			(((eveEngineStatusMessage*)message)->getStatus() == eveEngIDLENOXML))
 			mFilter->clearCache();
