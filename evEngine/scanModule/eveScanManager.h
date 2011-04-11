@@ -10,6 +10,7 @@
 
 #include <QList>
 #include <QHash>
+#include <QTimer>
 #include <QDomElement>
 #include "eveMessageChannel.h"
 #include "eveManager.h"
@@ -55,14 +56,16 @@ public slots:
 	void init();
 	void smDone();
 	void newEvent(eveEventProperty*);
+	void sendRemainingTime();
 
 private:
-	void sendStatus(int, chainStatusT);
+	void sendStatus(int, int);
 	void addToHash(QHash<QString, QString>*, QString, eveXMLReader*);
 	QHash<int, int> requestHash;
 	QHash<QString, QString> chainHash;
 	QHash<QString, QString>* savePluginHash;
 	QList<eveEventProperty*> eventPropList;
+	chainStatusT currentStatus;
 	int nextEventId;
 	int chainId;
 	int storageChannel;
@@ -73,6 +76,7 @@ private:
 	int posCounter;
 	bool doBreak;
 	bool shutdownPending;
+	QTimer *sendStatusTimer;
 };
 
 #endif /* EVESCANMANAGER_H_ */

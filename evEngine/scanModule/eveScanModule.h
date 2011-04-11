@@ -42,6 +42,7 @@ public:
 	void sendError(int, int, int, QString);
 	void sendMessage(eveMessage*);
 	eveSMAxis* findAxis(QString);
+	int getRemainingTime();
 	void gotoStart();
 	void readPos();
 	void start();
@@ -85,6 +86,8 @@ private:
 	void sendNextPos(){manager->nextPos();};
 	int chainId;
 	int smId;
+	int totalSteps;
+	int currentPosition;
 	smStatusT smStatus, smLastStatus;
 	stageT currentStage;
 	engineStatusT engineStatus;
@@ -95,7 +98,6 @@ private:
 	int triggerDetecRid;
 	bool triggerConfirm;
 	bool triggerDetecConf;
-	bool isRoot;
 	bool catchedRedo;
 	bool catchedTrigger;
 	bool catchedDetecTrigger;
@@ -112,6 +114,7 @@ private:
 	QList<eveSMAxis *> *axisList;
 	QList<eveSMChannel *> *channelList;
 	QList<eveEventProperty*>* eventList;
+	QTime scanTimer;
 };
 
 #endif /* EVESCANMODULE_H_ */

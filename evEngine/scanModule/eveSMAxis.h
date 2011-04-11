@@ -48,6 +48,7 @@ public:
 	eveDevInfoMessage* getDeviceInfo();
 	eveDataMessage* getPositionMessage();
 	void sendError(int, int, int, QString);
+	int getTotalSteps(){return posCalc->getTotalSteps();};
 
 public slots:
 	void transportReady(int);

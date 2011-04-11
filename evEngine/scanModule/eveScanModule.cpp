@@ -21,7 +21,6 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	manager = parent;
 	nestedSM = NULL;
 	appendedSM = NULL;
-	isRoot = false;
 	currentStage = eveStgINIT;
 	currentStageReady = false;
 	currentStageCounter = 0;
@@ -33,6 +32,8 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	catchedTrigger=false;
 	catchedDetecTrigger=false;
 	delayedStart = false;
+	totalSteps = -1;
+	currentPosition = 0;
 
 	settleTime = parser->getSMTagDouble(chainId, smId, "settletime", 0.0);
 	triggerDelay = parser->getSMTagDouble(chainId, smId, "triggerdelay", 0.0);
@@ -77,11 +78,13 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	    connect (device, SIGNAL(deviceDone()), this, SLOT(execStage()), Qt::QueuedConnection);
 	}
 
-	// get all used motors
+	// get all used axes and their total steps
     axisList = parser->getAxisList(this, chainId, smId);
 	foreach (eveSMAxis *axis, *axisList){
 	    connect (axis, SIGNAL(axisDone()), this, SLOT(execStage()), Qt::QueuedConnection);
+		if (axis->getTotalSteps() > totalSteps) totalSteps = axis->getTotalSteps();
 	}
+	sendError(DEBUG, 0, QString("Scan will have approx. %1 steps").arg(totalSteps));
 
 	// get all used detector channels
     channelList = parser->getChannelList(this, chainId, smId);
@@ -331,7 +334,7 @@ void eveScanModule::stgGotoStart() {
 			sendError(DEBUG, 0, "stgGotoStart done");
 			currentStageReady=true;
 			emit sigExecStage();
-			// if we are not executing, we are called from parent scan
+			// if we are not executing, we were called from parent scan
 			if (smStatus != eveSmEXECUTING) emit SMready();
 		}
 	}
@@ -401,6 +404,7 @@ void eveScanModule::stgSettleTime() {
 		//sendError(DEBUG,0,"stgSettleTime Done");
 		currentStageReady=true;
 		emit sigExecStage();
+		scanTimer.start();
 	}
 }
 
@@ -581,25 +585,33 @@ void eveScanModule::stgNextPos() {
 			--signalCounter;
 		}
 		else {
+			// check if all axes are done
+			bool allDone = true;
 			foreach (eveSMAxis *axis, *axisList){
-				eveDataMessage* posMesg = axis->getPositionMessage();
-				if (posMesg == NULL)
-					sendError(ERROR,0,QString("%1: no position data available").arg(axis->getName()));
-				else {
-					bool ok = false;
-					bool iok = false;
-					double dval = posMesg->toVariant().toDouble(&ok);
-					int ival = posMesg->toVariant().toInt(&iok);
-					if (ok && iok) sendError(INFO,0,QString("%1: at position %2 (%3)").arg(axis->getName()).arg(dval).arg(ival));
-					sendMessage(posMesg);
-				}
+				if(!axis->isDone()) allDone = false;
 			}
-			// go back to stage TRIGREAD
-			currentStage = eveStgTRIGREAD;
-			currentStageReady=false;
-			currentStageCounter=0;
-			sendError(INFO,0,"stgNextPos Done");
-			emit sigExecStage();
+			if (allDone){
+				++ currentPosition;
+				foreach (eveSMAxis *axis, *axisList){
+					eveDataMessage* posMesg = axis->getPositionMessage();
+					if (posMesg == NULL)
+						sendError(ERROR,0,QString("%1: no position data available").arg(axis->getName()));
+					else {
+						bool ok = false;
+						bool iok = false;
+						double dval = posMesg->toVariant().toDouble(&ok);
+						int ival = posMesg->toVariant().toInt(&iok);
+						if (ok && iok) sendError(INFO,0,QString("%1: at position %2 (%3)").arg(axis->getName()).arg(dval).arg(ival));
+						sendMessage(posMesg);
+					}
+				}
+				// go back to stage TRIGREAD
+				currentStage = eveStgTRIGREAD;
+				currentStageReady=false;
+				currentStageCounter=0;
+				sendError(INFO,0,"stgNextPos Done");
+				emit sigExecStage();
+			}
 		}
 	}
 }
@@ -1089,6 +1101,16 @@ eveSMAxis* eveScanModule::findAxis(QString axisid){
 	return NULL;
 }
 
+int eveScanModule::getRemainingTime(){
+
+	int remaining = -1;
+	if ((totalSteps > 0) && (currentPosition > 0)){
+		int elapsed = scanTimer.elapsed()/1000;
+		remaining = elapsed*totalSteps/currentPosition - elapsed;
+		sendError(DEBUG, 0, QString("sending remaining time %1").arg(remaining));
+	}
+	return remaining;
+}
 
 void eveScanModule::sendError(int severity, int errorType,  QString message){
 

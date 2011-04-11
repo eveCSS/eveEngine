@@ -42,6 +42,7 @@ public:
 	eveVariant& getCurrentPos(){return currentPos;};
 	bool isAtEndPos(){return isAtEnd;};
 	bool setOffset(eveVariant);
+	int getTotalSteps(){return totalSteps;};
 
 private:
 	enum {NONE, STARTSTOP, FILE, PLUGIN, LIST} stepmode;
@@ -54,6 +55,7 @@ private:
 	void setPos(QString, eveVariant*);
 
 	int posCounter;
+	int totalSteps;
 	void (evePosCalc::*stepFunction)();
 	eveVariant startPosAbs, endPosAbs, startPos, endPos, currentPos, stepWidth, offSet, nullVal;
 	eveType axisType;

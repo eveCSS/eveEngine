@@ -71,9 +71,16 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 
 	if (savePluginHash->contains("savefilename")) useStorage = true;
 
+	sendStatusTimer = new QTimer(this);
+	sendStatusTimer->setInterval(5000);
+	sendStatusTimer->setSingleShot(false);
+	connect(sendStatusTimer, SIGNAL(timeout()), this, SLOT(sendRemainingTime()));
+	sendStatusTimer->start(3000);
+
 }
 
 eveScanManager::~eveScanManager() {
+	//delete sendStatusTimer;
 }
 
 /**
@@ -203,7 +210,8 @@ void eveScanManager::smRedo() {
 void eveScanManager::smDone() {
 
 	if (rootSM && rootSM->isDone()){
-		sendStatus(0, eveChainDONE);
+		currentStatus = eveChainDONE;
+		sendStatus(0, 0);
 		// call shutdown to end this thread
 		//QTimer::singleShot(0, this, SLOT(shutdown()));
 		shutdown();
@@ -222,6 +230,14 @@ void eveScanManager::sendMessage(eveMessage *message){
 		sentData = true;
 	}
 	addMessage(message);
+}
+
+void eveScanManager::sendRemainingTime(){
+
+	if (currentStatus == eveChainSmEXECUTING){
+		int remainTime = rootSM->getRemainingTime();
+		if (remainTime > -1) sendStatus(0, remainTime);
+	}
 }
 
 /**
@@ -278,29 +294,32 @@ void eveScanManager::setStatus(int smid, smStatusT status){
 	// TODO
 	// makes not much  sense to have different types smStatusT and chainStatusT
 	if (status == eveSmINITIALIZING)
-		sendStatus(smid, eveChainSmINITIALIZING);
+		currentStatus = eveChainSmINITIALIZING;
 	else if (status == eveSmNOTSTARTED)
-		sendStatus(smid, eveChainSmIDLE);
+		currentStatus = eveChainSmIDLE;
 	else if (status == eveSmEXECUTING)
-		sendStatus(smid, eveChainSmEXECUTING);
+		currentStatus = eveChainSmEXECUTING;
 	else if (status == eveSmPAUSED)
-		sendStatus(smid, eveChainSmPAUSED);
+		currentStatus = eveChainSmPAUSED;
 	else if (status == eveSmTRIGGERWAIT)
-		sendStatus(smid, eveChainSmTRIGGERWAIT);
+		currentStatus = eveChainSmTRIGGERWAIT;
 	else if (status == eveSmAPPEND)
-		sendStatus(smid, eveChainSmDONE);
+		currentStatus = eveChainSmDONE;
 	else if (status == eveSmDONE)
-		sendStatus(smid, eveChainSmDONE);
+		currentStatus = eveChainSmDONE;
+
+	sendStatus (smid, -1);
 }
 /**
  *
  * @param smid id of scanmodule
  * @param status current chain status
+ * @param remainTime remaining time until scan is done (defaults to -1)
  */
-void eveScanManager::sendStatus(int smid, chainStatusT status){
+void eveScanManager::sendStatus(int smid, int remainTime){
 
 	// fill in our storage channel
-	addMessage(new eveChainStatusMessage(status, chainId, smid, posCounter, eveTime::getCurrent(), 0, 0, storageChannel));
+	addMessage(new eveChainStatusMessage(currentStatus, chainId, smid, posCounter, eveTime::getCurrent(), remainTime, 0, storageChannel));
 }
 
 void eveScanManager::addToHash(QHash<QString, QString>* hash, QString key, eveXMLReader* parser){

@@ -5,6 +5,7 @@
  *      Author: eden
  */
 
+#include <math.h>
 #include <QTextStream>
 #include <QFileInfo>
 #include <QFile>
@@ -25,6 +26,7 @@ evePosCalc::evePosCalc(eveScanModule* sm, QString stepfunction, bool abs, eveTyp
 	scanModule = sm;
 	readyToGo = false;
 	absolute = abs;
+	totalSteps = -1;
 	if (stepfunction.toLower() == "add"){
 		stepmode = STARTSTOP;
 		stepFunction = &evePosCalc::stepfuncAdd;
@@ -197,6 +199,7 @@ void evePosCalc::setStepWidth(QString stepwidth) {
 	}
 
 	if (!ok) sendError(ERROR, QString("unable to set %1 as stepwidth").arg(stepwidth));
+	checkValues();
 }
 
 /**
@@ -239,10 +242,13 @@ void evePosCalc::setStepFile(QString stepfilename) {
 	}
     if ((axisType == eveINT) && (posIntList.count() > 0)){
     	startPosAbs = posIntList.at(0);
+    	totalSteps = posIntList.count();
     } else if ((axisType == eveDOUBLE) && (posDoubleList.count() > 0)){
     	startPosAbs = posDoubleList.at(0);
+    	totalSteps = posDoubleList.count();
     } else if ((axisType == eveSTRING) && (positionList.count() > 0)){
     	startPosAbs = positionList.at(0);
+    	totalSteps = positionList.count();
     }
 }
 
@@ -286,10 +292,13 @@ void evePosCalc::setPositionList(QString poslist) {
 	}
     if ((axisType == eveINT) && (posIntList.count() > 0)){
     	startPosAbs = posIntList.at(0);
+    	totalSteps = posIntList.count();
     } else if ((axisType == eveDOUBLE) && (posDoubleList.count() > 0)){
     	startPosAbs = posDoubleList.at(0);
+    	totalSteps = posDoubleList.count();
     } else if ((axisType == eveSTRING) && (positionList.count() > 0)){
     	startPosAbs = positionList.at(0);
+    	totalSteps = positionList.count();
     }
 }
 
@@ -435,14 +444,36 @@ void evePosCalc::stepfuncDummy(){
 void evePosCalc::checkValues()
 {
 	if (stepmode == STARTSTOP){
-		// TODO readyToGo is unused, start-/endPosAbs are Null until after reset()
+		// TODO readyToGo is unused, start-/endPos are Null until after reset()
 		readyToGo = false;
-		if (startPosAbs.isNull() || endPosAbs.isNull() || stepWidth.isNull()) return;
+		bool ok1, ok2;
 
-		if ((startPosAbs.getType() == eveINT) || (startPosAbs.getType() == eveDOUBLE)){
-			if (((startPosAbs > endPosAbs) && (stepWidth > 0)) || ((startPosAbs < endPosAbs) && (stepWidth < 0))){
+		if (startPos.isNull() || endPos.isNull() || stepWidth.isNull()) return;
+
+		if ((startPos.getType() == eveINT) || (startPos.getType() == eveDOUBLE)){
+			if (((startPos > endPos) && (stepWidth > 0)) || ((startPos < endPos) && (stepWidth < 0))){
 				sendError(ERROR, "sign of stepwidth does not match startpos/endpos-values, using -1* stepwidth");
 				stepWidth = stepWidth * eveVariant(-1);
+			}
+			if (startPos.getType() == eveINT) {
+				int stepw = abs(stepWidth.toInt(&ok1));
+				if (ok1 && (stepw > 0)){
+					int distance = abs(endPos.toInt(&ok1)-startPos.toInt(&ok2));
+					if (ok1 && ok2){
+						totalSteps = distance/stepw;
+						if ((distance%stepw) != 0) ++totalSteps;
+					}
+				}
+			}
+			else if (startPos.getType() == eveDOUBLE) {
+				double stepw = fabs(stepWidth.toDouble(&ok1));
+				if (ok1 && (stepw > 0.0)){
+					double distance = fabs(endPos.toDouble(&ok1)-startPos.toDouble(&ok2));
+					if (ok1 && ok2){
+						totalSteps = (int) (distance/stepw);
+						if (((double)totalSteps)*stepw < distance) ++totalSteps;
+					}
+				}
 			}
 		}
 		readyToGo = true;
