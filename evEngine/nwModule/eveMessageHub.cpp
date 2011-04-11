@@ -127,6 +127,7 @@ void eveMessageHub::unregisterChannel(int channelId)
 void eveMessageHub::newMessage(int messageSource)
 {
 	eveMessage *message;
+
 	QReadLocker locker(&channelLock);
 
 	if (!mChanHash.contains(messageSource)){
@@ -134,7 +135,7 @@ void eveMessageHub::newMessage(int messageSource)
 		return;
 	}
 
-	if ((message = mChanHash.value(messageSource)->getMessage())!= NULL ){
+	while ((message = mChanHash.value(messageSource)->getMessage())!= NULL ){
 
 		switch (message->getType()) {
 			case EVEMESSAGETYPE_ERROR:

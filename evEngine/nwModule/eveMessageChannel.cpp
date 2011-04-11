@@ -42,6 +42,7 @@ void eveMessageChannel::addMessage(eveMessage * message)
 
 	QWriteLocker locker(&sendLock);
 	sendMessageList.append(message);
+
 	emit messageWaiting(channelId);
 }
 
