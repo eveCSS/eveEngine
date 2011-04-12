@@ -36,6 +36,7 @@ signals:
 	void finished();
 	void closeAll();
 	void closeParent();
+	void messageWaiting(int);
 
 private:
 	void addError(int, int,  QString);

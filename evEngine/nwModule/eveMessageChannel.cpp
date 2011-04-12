@@ -22,13 +22,11 @@ eveMessageChannel::~eveMessageChannel()
  */
 eveMessage * eveMessageChannel::getMessage()
 {
-	QWriteLocker locker(&sendLock);
-
-	if (sendMessageList.isEmpty()){
-		return NULL;
+	eveMessage *message=NULL;
+	if (!sendMessageList.isEmpty()) {
+		message = sendMessageList.takeFirst();
+		emit messageTaken();
 	}
-	eveMessage* message = sendMessageList.takeFirst();
-	emit messageTaken();
 	return message;
 }
 

@@ -41,6 +41,8 @@ public:
 	bool sendQueueIsEmpty();
 	void enableInput(){QWriteLocker locker(&recLock); acceptInput=true;};
 	void disableInput(){QWriteLocker locker(&recLock); acceptInput=false;};
+	bool getLock(){return sendLock.tryLockForWrite();};
+	void releaseLock(){sendLock.unlock();};
 
 public slots:
 	virtual void newQueuedMessage();

@@ -17,6 +17,8 @@ eveMessageHub::eveMessageHub()
 	mHub = this;
 	currentXmlId = "none";
 	reqMan = new eveRequestManager();
+	connect (this, SIGNAL(messageWaiting(int)), this, SLOT(newMessage(int)), Qt::QueuedConnection);
+
 }
 
 void eveMessageHub::init()
@@ -131,11 +133,22 @@ void eveMessageHub::newMessage(int messageSource)
 	QReadLocker locker(&channelLock);
 
 	if (!mChanHash.contains(messageSource)){
-		addError(4,0,QString("unable to process message from unregistered source %1").arg(messageSource));
+		// addError(DEBUG,0,QString("unable to process message from unregistered source %1").arg(messageSource));
 		return;
 	}
 
-	while ((message = mChanHash.value(messageSource)->getMessage())!= NULL ){
+	// try to get the lock
+	if (mChanHash.value(messageSource)->getLock()){
+		message = mChanHash.value(messageSource)->getMessage();
+		mChanHash.value(messageSource)->releaseLock();
+	}
+	else {
+		// we couldn't get the lock, try again later
+		message = NULL;
+		emit messageWaiting(messageSource);
+	}
+
+	while (message != NULL ){
 
 		switch (message->getType()) {
 			case EVEMESSAGETYPE_ERROR:
@@ -219,7 +232,6 @@ void eveMessageHub::newMessage(int messageSource)
 				QTimer::singleShot(0, this, SLOT(close()));
 				break;
 			case EVEMESSAGETYPE_LIVEDESCRIPTION:
-				addError(DEBUG, 0, QString("received Live Description %1").arg(((eveMessageText*)message)->getText()));
 				if (haveStorage()){
 					if (sendToStorage(message)) message = NULL;
 				}
@@ -305,6 +317,16 @@ void eveMessageHub::newMessage(int messageSource)
 		if (message != NULL) {
 			addError(ERROR, 0, QString("newMessage: unable to forward message, type: %1").arg(message->getType()));
 			delete message;
+		}
+		// get the next message, if we get the lock
+		if (mChanHash.value(messageSource)->getLock()){
+			message = mChanHash.value(messageSource)->getMessage();
+			mChanHash.value(messageSource)->releaseLock();
+		}
+		else {
+			// we couldn't get the lock, try again later
+			message = NULL;
+			emit messageWaiting(messageSource);
 		}
 	}
 }
