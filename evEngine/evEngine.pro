@@ -19,7 +19,6 @@ HEADERS += mathModule/eveMathManager.h \
     storageModule/eveFileTest.h \
     storageModule/eveAsciiFileWriter.h \
     storageModule/eveFileWriter.h \
-    storageModule/eveDeviceDataCollector.h \
     storageModule/eveDataCollector.h \
     storageModule/eveStorageManager.h \
     storageModule/eveStorageThread.h \
@@ -70,7 +69,6 @@ SOURCES += mathModule/eveMathManager.cpp \
     storageModule/eveFileTest.cpp \
     storageModule/eveAsciiFileWriter.cpp \
     storageModule/eveFileWriter.cpp \
-    storageModule/eveDeviceDataCollector.cpp \
     storageModule/eveDataCollector.cpp \
     storageModule/eveStorageManager.cpp \
     storageModule/eveStorageThread.cpp \
