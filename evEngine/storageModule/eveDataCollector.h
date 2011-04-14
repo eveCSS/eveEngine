@@ -22,6 +22,7 @@ public:
 	virtual ~eveDataCollector();
 	void addData(eveDataMessage*);
 	void addDevice(eveDevInfoMessage *);
+	void addComment(eveMessageText *);
 
 private:
 	bool fwInitDone;

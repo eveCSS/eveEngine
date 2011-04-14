@@ -24,6 +24,7 @@ public:
 	virtual int setCols(int, QString, QString, QStringList) = 0;
 	virtual int open(int) = 0;
 	virtual int addData(int, eveDataMessage*) = 0;
+	virtual int addComment(int, QString)=0;
 	virtual int close(int) = 0;
 	virtual int setXMLData(QByteArray*) = 0;
 	virtual QString errorText() = 0;

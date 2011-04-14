@@ -39,6 +39,7 @@ int eveAsciiFileWriter::init(int setID, QString filename, QString format, QHash<
 	fileName = filename;
 	fileFormat = format;
 	errorString.clear();
+    comment.clear();
 	return SUCCESS;
 }
 
@@ -182,6 +183,22 @@ void eveAsciiFileWriter::nextPosition(){
 }
 
 /**
+ * @brief add a comment to be written at end of file
+ */
+int eveAsciiFileWriter::addComment(int setID, QString newComment){
+	if (setId != setID) {
+		errorString=QString("AsciiFileWriter does not support multiple Data Sets, give each chain a different Filename!");
+		return ERROR;
+	}
+	else {
+		comment.append(newComment);
+		comment.append(QString("; "));
+	}
+	errorString.clear();
+	return SUCCESS;
+}
+
+/**
  * @brief			close File
  * @param setID		dataset-identification (chain-id)
  * @return			error severity
@@ -192,10 +209,13 @@ int eveAsciiFileWriter::close(int setID) {
 		return ERROR;
 	}
 	if (fileOpen) {
+		if (comment.length() > 0){
+		    QTextStream out(filePtr);
+		    out << "\nComment: " << comment << "\n";
+		}
 		filePtr->close();
 		fileOpen = false;
 	}
-
 	errorString.clear();
 	return SUCCESS;
 }

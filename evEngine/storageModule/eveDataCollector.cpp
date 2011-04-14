@@ -258,6 +258,22 @@ void eveDataCollector::addData(eveDataMessage* message) {
 }
 
 /**
+ * @brief add comment to filewriter
+ * @param message comment text
+ */
+void eveDataCollector::addComment(eveMessageText *message) {
+
+	if (fwInitDone){
+		if (fileWriter->addComment(chainId, message->getText()) != SUCCESS){
+			manager->sendError(ERROR, 0, QString("FileWriter: addComment error: %1").arg(fileWriter->errorText()));
+		}
+	}
+	else {
+		manager->sendError(ERROR, 0, QString("DataCollector: cannot add comment before init: %1").arg(message->getText()));
+	}
+}
+
+/**
  * @brief add a new device
  * @param message device information
  */

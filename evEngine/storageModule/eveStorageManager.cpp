@@ -86,6 +86,13 @@ void eveStorageManager::handleMessage(eveMessage *message){
 				sendError(ERROR, 0, QString("handleMessage: received data message with invalid chainId: %1").arg(id));
 		}
 		break;
+		case EVEMESSAGETYPE_LIVEDESCRIPTION:
+			foreach (eveDataCollector* dc, chainIdDCHash){
+				sendError(DEBUG, 0, QString("got Livedescription: %1").arg(((eveMessageText*)message)->getText()));
+				//TODO save the livedescription as comment
+				dc->addComment((eveMessageText*)message);
+			}
+			break;
 		default:
 			sendError(ERROR,0,QString("eveStorageManager::handleMessage: unknown message, type: %1").arg(message->getType()));
 			break;

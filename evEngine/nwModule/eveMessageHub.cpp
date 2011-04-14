@@ -233,7 +233,12 @@ void eveMessageHub::newMessage(int messageSource)
 				break;
 			case EVEMESSAGETYPE_LIVEDESCRIPTION:
 				if (haveStorage()){
+					((eveMessageText*)message)->setDestination(EVECHANNEL_STORAGE);
 					if (sendToStorage(message)) message = NULL;
+				}
+				else {
+					delete message;
+					message = NULL;
 				}
 				break;
 			case EVEMESSAGETYPE_REQUEST:
