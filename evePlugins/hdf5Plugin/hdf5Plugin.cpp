@@ -84,6 +84,7 @@ int hdf5Plugin::init(int setID, QString filename, QString format, QHash<QString,
 	fileName = filename;
 	fileFormat = format;
 	errorString.clear();
+	comment.clear();
 
 	if (!isFileOpen){
 		try
@@ -293,6 +294,23 @@ int hdf5Plugin::addData(int setID, eveDataMessage* data)
 }
 
 /**
+ * @brief add a comment to be written at end of file
+ */
+int hdf5Plugin::addComment(int setID, QString newComment){
+	if (!setIdList.contains(setID)) {
+		errorString = QString("HDF5Plugin:addComment: setID %1 has not been initialized").arg(setID);
+		return ERROR;
+	}
+	else {
+		comment.append(newComment);
+		comment.append(QString("; "));
+	}
+	errorString.clear();
+	return SUCCESS;
+}
+
+
+/**
  * @brief			close File
  * @param setID		dataset-identification (chain-id)
  * @return			error severity
@@ -315,6 +333,13 @@ int hdf5Plugin::close(int setID)
 	foreach (columnInfo* colInfo, *columnHash){
 		if (!colInfo->isNotInit){
 			try {
+				// write the comment
+				if (comment.length() > 0) {
+					hsize_t stringDim = 1;
+					StrType st = StrType(PredType::C_S1, comment.toLocal8Bit().length());
+					Attribute attrib = colInfo->dset.createAttribute("Live-Comment", st, DataSpace(1, &stringDim));
+					attrib.write(st, qPrintable(comment));
+				}
 				colInfo->dset.extend( colInfo->currentOffset );
 				colInfo->dset.close();
 			}
