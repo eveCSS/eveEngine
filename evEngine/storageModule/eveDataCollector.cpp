@@ -49,6 +49,8 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 		sman->sendError(ERROR,0,QString("eveDataCollector: empty filename not allowed, using dummy"));
 		fileName = "dummy-filename";
 	}
+	// do macro expansion if necessary
+	if (fileName.contains("${")) fileName = macroExpand(fileName);
 	if (!suffix.isEmpty() && (!fileName.endsWith(suffix))) {
 		if (!(fileName.endsWith(".") || suffix.startsWith("."))) fileName.append(".");
 		fileName.append(suffix);
@@ -293,3 +295,35 @@ void eveDataCollector::addDevice(eveDevInfoMessage* message) {
 	else
 		manager->sendError(ERROR, 0, "DataCollector: can't add devices, file initialization unsuccessful or file already opened");
 }
+
+/**
+ * @brief	expand predefined macros
+ * @eString	string containing macros
+ * @return expanded string
+ */
+QString eveDataCollector::macroExpand(QString eString){
+
+	QDateTime now=QDateTime::currentDateTime();
+
+	if (eString.contains("${WEEK}")){
+		eString.replace(QString("${WEEK}"), QString("%1").arg(now.date().weekNumber()));
+	}
+	if (eString.contains("${DATE}")){
+		eString.replace(QString("${DATE}"), QString("%1").arg(now.toString("yyyyMMdd")));
+	}
+	if (eString.contains("${DATE-}")){
+		eString.replace(QString("${DATE-}"), QString("%1").arg(now.toString("yyyy-MM-dd")));
+	}
+	if (eString.contains("${TIME}")){
+		eString.replace(QString("${TIME}"), QString("%1").arg(now.toString("hhmmss")));
+	}
+	if (eString.contains("${TIME-}")){
+		eString.replace(QString("${TIME-}"), QString("%1").arg(now.toString("hh-mm-ss")));
+	}
+	if (eString.contains("${")) {
+		eString.replace(QRegExp("\\$\\{.*\\}"), "unknownMacro");
+		manager->sendError(MINOR, 0, "DataCollector: unknown filename macro");
+	}
+	return eString;
+}
+

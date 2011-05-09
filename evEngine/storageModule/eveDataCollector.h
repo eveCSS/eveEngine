@@ -25,6 +25,7 @@ public:
 	void addComment(eveMessageText *);
 
 private:
+	QString macroExpand(QString);
 	bool fwInitDone;
 	bool fwOpenDone;
 	int chainId;
