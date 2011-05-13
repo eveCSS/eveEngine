@@ -18,6 +18,7 @@
 #include "eveSMBaseDevice.h"
 #include "eveEventProperty.h"
 #include "eveAverage.h"
+#include "eveCalc.h"
 
 class eveScanModule;
 
@@ -45,6 +46,9 @@ public:
 	eveDevInfoMessage* getDeviceInfo();
 	eveDataMessage* getValueMessage();
 	void sendError(int, int, int, QString);
+	void addPositioner(eveCalc* pos){positionerList.append(pos);};
+	void loadPositioner(int pc);
+
 
 public slots:
 	void transportReady(int);
@@ -66,12 +70,14 @@ private:
 	bool haveUnit;
 	bool channelOK;
 	int signalCounter;
+	QList<eveCalc *> positionerList;
 	QList<eveTransportT> transportList;
 	QList<eveEventProperty* >* eventList;
 	eveChannelStatusT channelStatus;
 	QString unit;
 	bool sendreadyevent;
 	eveType channelType;
+	eveVariant currentValue;
 	eveAverage* valueCalc;
 	eveScanModule* scanModule;
 	eveBaseTransport* valueTrans;

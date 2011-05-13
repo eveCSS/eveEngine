@@ -308,6 +308,7 @@ void eveSMChannel::transportReady(int status) {
 		else {
 			curValue->setXmlId(xmlId);
 			curValue->setName(name);
+			currentValue = curValue->toVariant();
 			signalReady();
 		}
 	}
@@ -453,6 +454,13 @@ eveDevInfoMessage* eveSMChannel::getDeviceInfo(){
 
 	return new eveDevInfoMessage(xmlId, name, sl);
 }
+
+void eveSMChannel::loadPositioner(int pc){
+	foreach (eveCalc* positioner, positionerList){
+		positioner->addValue(xmlId, pc, currentValue);
+	}
+}
+
 
 void eveSMChannel::newEvent(eveEventProperty* evprop) {
 

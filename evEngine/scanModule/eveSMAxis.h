@@ -14,6 +14,7 @@
 #include "evePosCalc.h"
 #include "eveCaTransport.h"
 #include "eveSMBaseDevice.h"
+#include "eveCalc.h"
 
 /**
  * \brief motor axis for a specific SM
@@ -49,6 +50,10 @@ public:
 	eveDataMessage* getPositionMessage();
 	void sendError(int, int, int, QString);
 	int getTotalSteps(){return posCalc->getTotalSteps();};
+	void addPositioner(eveCalc* pos){positioner = pos;};
+	void loadPositioner(int pc){if(positioner)positioner->addValue(xmlId, pc, currentPosition);};
+	bool havePositioner(){if(positioner)return true; return false;};
+	bool execPositioner();
 
 public slots:
 	void transportReady(int);
@@ -60,6 +65,7 @@ private:
 	void sendError(int, int, QString);
 	void initAll();
 	void signalReady();
+	eveCalc* positioner;
 	bool isTimer;
 	bool ready;
 	bool inDeadband;

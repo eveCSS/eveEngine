@@ -48,6 +48,8 @@ eveSMBaseDevice(sm){
 	axisStop = false;
 	curPosition = NULL;
 	unit="";
+	positioner = NULL;
+
 
 	if ((motorAxisDef->getGotoCmd() != NULL) && (motorAxisDef->getGotoCmd()->getTrans() != NULL)){
 		eveTransportDef* transdef = (eveTransportDef*)motorAxisDef->getGotoCmd()->getTrans();
@@ -398,6 +400,18 @@ void eveSMAxis::gotoPos(eveVariant newpos, bool queue) {
 			signalReady();
 		}
 	}
+}
+
+bool eveSMAxis::execPositioner(){
+	if (positioner == NULL) return false;
+	if (positioner->calculate()){
+		gotoPos(positioner->getXResult(), false);
+		return true;
+	}
+	else {
+		sendError(MINOR,0,"unable to calculate target position for postscan positioning");
+	}
+	return false;
 }
 
 /**

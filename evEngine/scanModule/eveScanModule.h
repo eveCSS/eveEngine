@@ -16,7 +16,7 @@
 #include "eveSMChannel.h"
 #include "eveXMLReader.h"
 #include "eveScanManager.h"
-//#include "eveMessageChannel.h"
+#include "eveCalc.h"
 
 class eveScanManager;
 
@@ -108,7 +108,8 @@ private:
 	eveScanManager* manager;
 	eveScanModule* nestedSM;
 	eveScanModule* appendedSM;
-	QHash<QString, QString>* postPosPlugin;
+	QList<eveCalc *> positionerList;
+	QList<QHash<QString, QString>* >* posPluginDataList;
 	QList<eveSMDevice *> *preScanList;
 	QList<eveSMDevice *> *postScanList;
 	QList<eveSMAxis *> *axisList;

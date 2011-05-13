@@ -52,7 +52,7 @@ public:
 	bool getSMTagBool(int, int, QString, bool);
 	double getSMTagDouble(int, int, QString, double);
 	QHash<QString, QString>* getChainPlugin(int, QString);
-	QHash<QString, QString>* getPositioningPlugin(int, int, QString);
+	QList<QHash<QString, QString>* >* getPositionerPluginList(int, int);
 	QList<eveMathConfig*>* getFilteredMathConfigs(int);
 
 private:

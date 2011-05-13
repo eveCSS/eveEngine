@@ -775,13 +775,14 @@ QHash<QString, QString>* eveXMLReader::getChainPlugin(int chain, QString tagname
 	return pluginHash;
 }
 
-QHash<QString, QString>* eveXMLReader::getPositioningPlugin(int chain, int smid, QString tagname){
+QList<QHash<QString, QString>* >* eveXMLReader::getPositionerPluginList(int chain, int smid){
 
-	QHash<QString, QString>* pluginHash = new QHash<QString, QString>;
+	QList<QHash<QString, QString>* >* posPluginDataList = new QList<QHash<QString, QString>* >;
 	if (smIdHash.contains(chain)){
 		QDomElement domSMRoot = smIdHash.value(chain)->value(smid);
 		QDomElement	domElement = domSMRoot.firstChildElement("positioning");
-		if (!domElement.isNull()){
+		while (!domElement.isNull()){
+			QHash<QString, QString>* pluginHash = new QHash<QString, QString>;
 			QDomElement	domParam = domElement.firstChildElement("axis_id");
 			if (!domParam.isNull()) pluginHash->insert("axis_id", domParam.text().trimmed());
 			domParam = domElement.firstChildElement("channel_id");
@@ -792,9 +793,11 @@ QHash<QString, QString>* eveXMLReader::getPositioningPlugin(int chain, int smid,
 			if (!domPlugin.isNull()){
 				getPluginData(domPlugin, pluginHash);
 			}
+			domElement = domElement.nextSiblingElement("positioning");
+			posPluginDataList->append(pluginHash);
 		}
 	}
-	return pluginHash;
+	return posPluginDataList;
 }
 
 void eveXMLReader::getPluginData(QDomElement domPlugin, QHash<QString, QString>* pluginHash){
@@ -1313,13 +1316,15 @@ void eveXMLReader::getMathConfigFromPlot(int chid, int smid, QList<eveMathConfig
 			QDomElement domYAxis = domPlot.firstChildElement("yaxis");
 			ok = (ok && (xAxisId.length() > 0));
 			while (ok && !domYAxis.isNull()){
+				normalizeId.clear();
+				yAxisId.clear();
 				domElement = domYAxis.firstChildElement("id");
 				if (!domElement.isNull()) yAxisId = domElement.text();
 				domElement = domYAxis.firstChildElement("normalize_id");
 				if (!domElement.isNull()) normalizeId = domElement.text();
 				if (yAxisId.length() > 0){
 					sendError(DEBUG, 0, QString("MathConfig: %1, %2, %3, Plot: %4, init: %5").arg(xAxisId).arg(yAxisId).arg(normalizeId).arg(plotId).arg(init));
-					eveMathConfig *mathConfig = new eveMathConfig(chid, plotId, init, xAxisId);
+					eveMathConfig *mathConfig = new eveMathConfig(plotId, init, xAxisId);
 					mathConfig->addScanModule(smid);
 					mathConfig->addYAxis(yAxisId, normalizeId);
 					mathConfigList->append(mathConfig);

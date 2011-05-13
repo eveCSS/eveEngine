@@ -95,7 +95,34 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 
 	eventList = parser->getSMEventList(chainId, smId);
 
-	postPosPlugin = parser->getPositioningPlugin(chainId, smId, "positioning");
+	// get the postscan positioner plugins
+	posPluginDataList = parser->getPositionerPluginList(chainId, smId);
+	while (!posPluginDataList->isEmpty()){
+		QHash<QString, QString>* positionerHash = posPluginDataList->takeFirst();
+		QString algorithm = positionerHash->value("algorithm", QString());
+		QString xAxisId = positionerHash->value("axis_id", QString());
+		QString channelId = positionerHash->value("channel_id", QString());
+		QString normalizeId = positionerHash->value("normalize_id", QString());
+		delete positionerHash;
+
+		if (!algorithm.isEmpty() && !xAxisId.isEmpty() && !channelId.isEmpty()){
+			eveCalc* positioner = new eveCalc(manager, algorithm, xAxisId, channelId, normalizeId);
+			positionerList.append(positioner);
+			foreach (eveSMAxis *axis, *axisList){
+				if (axis->getXmlId() == xAxisId) {
+					axis->addPositioner(positioner);
+				}
+			}
+			foreach (eveSMChannel *channel, *channelList){
+				if ((channel->getXmlId() == channelId) ||
+					(channel->getXmlId() == normalizeId)) {
+						channel->addPositioner(positioner);
+				}
+			}
+		}
+
+	}
+	delete posPluginDataList;
 
 	// connect signals
     connect (this, SIGNAL(sigExecStage()), this, SLOT(execStage()), Qt::QueuedConnection);
@@ -113,10 +140,12 @@ eveScanModule::~eveScanModule() {
 		foreach (eveSMDevice *device, *postScanList) delete device;
 		foreach (eveSMAxis *axis, *axisList) delete axis;
 		foreach (eveSMChannel *channel, *channelList) delete channel;
+		foreach (eveCalc *positioner, positionerList) delete positioner;;
 		delete preScanList;
 		delete postScanList;
 		delete axisList;
 		delete channelList;
+
 	}
 	catch (std::exception& e)
 	{
@@ -304,6 +333,9 @@ void eveScanModule::stgGotoStart() {
 		sendNextPos();
 		currentStageCounter = 1;
 		signalCounter = 0;
+		foreach (eveCalc *positioner, positionerList) {
+			positioner->reset();
+		}
 		foreach (eveSMAxis *axis, *axisList){
 			sendError(DEBUG, 0, QString("Moving axis %1").arg(axis->getName()));
 			axis->gotoStartPos(false);
@@ -328,6 +360,7 @@ void eveScanModule::stgGotoStart() {
 					bool ok = false;
 					double dval = posMesg->toVariant().toDouble(&ok);
 					if (ok) sendError(INFO,0,QString("%1: at position %2").arg(axis->getName()).arg(dval));
+					axis->loadPositioner(manager->getPositionCount());
 					sendMessage(posMesg);
 				}
 			}
@@ -493,6 +526,7 @@ void eveScanModule::stgTrigRead() {
 						bool ok = false;
 						double dval = dmesg->toVariant().toDouble(&ok);
 						if (ok) sendError(DEBUG, 0, QString("%1: value %2").arg(channel->getName()).arg(dval));
+						channel->loadPositioner(manager->getPositionCount());
 						sendMessage(dmesg);
 					}
 				}
@@ -602,6 +636,7 @@ void eveScanModule::stgNextPos() {
 						double dval = posMesg->toVariant().toDouble(&ok);
 						int ival = posMesg->toVariant().toInt(&iok);
 						if (ok && iok) sendError(INFO,0,QString("%1: at position %2 (%3)").arg(axis->getName()).arg(dval).arg(ival));
+						axis->loadPositioner(manager->getPositionCount());
 						sendMessage(posMesg);
 					}
 				}
@@ -651,17 +686,49 @@ void eveScanModule::stgPostscan() {
  */
 void eveScanModule::stgEndPos() {
 
+//	if (currentStageCounter == 0){
+//		currentStageCounter=1;
+//		QTimer::singleShot(1000, this, SLOT(execStage()));
+//	}
+//	else {
+//		sendError(INFO,0,"stgEndPos");
+//
+//		// set true if stage done
+//		currentStageReady=true;
+//
+//		emit sigExecStage();
+//	}
 	if (currentStageCounter == 0){
-		currentStageCounter=1;
-		QTimer::singleShot(1000, this, SLOT(execStage()));
+		sendError(DEBUG,0,"stgEndPos");
+		currentStageCounter = 1;
+		signalCounter = 0;
+		foreach (eveSMAxis *axis, *axisList){
+			if (axis->execPositioner()) ++signalCounter;
+		}
+		emit sigExecStage();
 	}
 	else {
-		sendError(INFO,0,"stgEndPos");
-
-		// set true if stage done
-		currentStageReady=true;
-
-		emit sigExecStage();
+		if (signalCounter > 0){
+			--signalCounter;
+		}
+		else {
+			//TODO check if motors are really done
+			foreach (eveSMAxis *axis, *axisList){
+				if (axis->havePositioner()){
+					eveDataMessage* posMesg = axis->getPositionMessage();
+					if (posMesg != NULL){
+						bool ok;
+						double dval = posMesg->toVariant().toDouble(&ok);
+						if (ok) sendError(INFO,0,QString("%1: at position %2").arg(axis->getName()).arg(dval));
+					}
+					else
+						sendError(MINOR,0,QString("Positioning: %1: no position data available").arg(axis->getName()));
+				}
+			}
+			sendError(DEBUG, 0, "stgEndPos done");
+			currentStageReady=true;
+			emit sigExecStage();
+		}
 	}
 }
 
