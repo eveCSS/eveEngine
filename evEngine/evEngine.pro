@@ -4,7 +4,8 @@ QT += core \
     network \
     gui \
     xml
-HEADERS += mathModule/eveMathManager.h \
+HEADERS += mathModule/eveCalc.h \
+    mathModule/eveMathManager.h \
     mathModule/eveMathThread.h \
     scanModule/eveAverage.h \
     scanModule/eveSMBaseDevice.h \
@@ -54,7 +55,8 @@ HEADERS += mathModule/eveMathManager.h \
     nwModule/evePlayListManager.h \
     mathModule/eveMath.h \
     mathModule/eveMathConfig.h
-SOURCES += mathModule/eveMathManager.cpp \
+SOURCES += mathModule/eveCalc.cpp \
+    mathModule/eveMathManager.cpp \
     mathModule/eveMathThread.cpp \
     scanModule/eveAverage.cpp \
     scanModule/eveSMBaseDevice.cpp \
