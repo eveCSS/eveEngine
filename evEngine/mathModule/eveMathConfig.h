@@ -16,30 +16,34 @@
  */
 class eveMathConfig {
 public:
-	eveMathConfig(int, int, bool, QString);
+	eveMathConfig(int, bool, QString);
 	virtual ~eveMathConfig();
 	void addYAxis(QString, QString);
 	void addScanModule(int);
-	bool haveNormalize();
+	// bool haveNormalize();
 	QString& getXAxis(){return xAxisId;};
 	QString& getDetector(){return detectorId;};
 	QString& getNormalizeDetector(){return normalizeId;};
-	bool containsSmId(int smid){return smidlist.contains(smid);};
-	int getChainId(){return chid;};
+	//bool containsSmId(int smid){return smidlist.contains(smid);};
+	//int getChainId(){return chId;};
 	int getPlotWindowId(){return plotWindowId;};
 	bool hasEqualDevices(eveMathConfig);
 	bool hasInit(){return init;};
 	int getFirstScanModuleId();
-	QList<int> getAllScanModuleIds();
+	QList<int> getAllScanModuleIds(){return smidlist;};
 
 protected:
-	int plotWindowId;
 	QString xAxisId;
 	QString detectorId;
 	QString normalizeId;
-	QList<int> smidlist;
-	int chid;
+
+private:
+	//int chId;
 	bool init;
+	int plotWindowId;
+	QList<int> smidlist;
+
+
 };
 
 #endif /* EVEMATHCONFIG_H_ */

@@ -7,8 +7,8 @@
 
 #include "eveMathConfig.h"
 
-eveMathConfig::eveMathConfig(int chid, int plotWindowId, bool init, QString xAxisId) {
-	this->chid = chid;
+eveMathConfig::eveMathConfig(int plotWindowId, bool init, QString xAxisId) {
+//	this->chId = chid;
 	this->plotWindowId = plotWindowId;
 	this->xAxisId = xAxisId;
 	this->init = init;
@@ -27,22 +27,18 @@ void eveMathConfig::addScanModule(int smid) {
 	if (!smidlist.contains(smid)) smidlist.append(smid);
 }
 
-bool eveMathConfig::haveNormalize() {
-	if (normalizeId.length() > 0)
-		return true;
-	else
-		return false;
-}
+//bool eveMathConfig::haveNormalize() {
+//	if (normalizeId.length() > 0)
+//		return true;
+//	else
+//		return false;
+//}
 
 int eveMathConfig::getFirstScanModuleId() {
 	if (!smidlist.isEmpty())
 		return smidlist.first();
 	else
 		return 0;
-}
-
-QList<int> eveMathConfig::getAllScanModuleIds() {
-	return smidlist;
 }
 
 bool eveMathConfig::hasEqualDevices(eveMathConfig other){

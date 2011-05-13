@@ -16,12 +16,15 @@
 #include "eveMathConfig.h"
 #include "eveMath.h"
 
+class eveMath;
+
 class eveMathManager: public eveMessageChannel {
 public:
 	eveMathManager(int , QList<eveMathConfig*>* );
 	virtual ~eveMathManager();
-	void sendError(int, int, QString);
+	void sendError(int, int, int, QString);
 	void sendMessage(eveDataMessage* message);
+	void sendError(int, int, QString);
 	void shutdown();
 
 private:

@@ -8,56 +8,28 @@
 #ifndef EVEMATH_H_
 #define EVEMATH_H_
 
-#include <QVector>
 #include "eveVariant.h"
 #include "eveMessage.h"
 #include "eveMathConfig.h"
-//#include "eveMathManager.h"
+#include "eveMathManager.h"
+#include "eveCalc.h"
 
 class eveMathManager;
 
-enum MathAlgorithm {MIN, MAX, CENTER, EDGE, FWHM, STD_DEVIATION, MEAN, SUM};
-
-class eveMath  : public eveMathConfig {
+class eveMath  : public eveCalc {
 public:
-	static QList<MathAlgorithm> getAlgorithms();
-	eveMath(int);
 	eveMath(eveMathConfig mathConfig, eveMathManager *);
-	eveMath(int, int, double, double);
 	virtual ~eveMath();
-	void reset();
 	void addValue(QString, int smid, int pos, eveVariant);
-	QList<eveDataMessage*> getResultMessage(MathAlgorithm, int);
-	void setAlgorithm(MathAlgorithm alg){if (!usedAlgorithm.contains(alg))usedAlgorithm.append(alg);};
-	bool haveAlgorithm(MathAlgorithm alg){return usedAlgorithm.contains(alg);};
-	bool isModified(){return modified;};
-
+	QList<eveDataMessage*> getResultMessage(MathAlgorithm, int, int);
+	QList<int> getAllScanModuleIds(){return smidlist;};
+	bool hasInit(){return initBeforeStart;};
 
 private:
-	void calculate(MathAlgorithm );
-	bool checkValue(double value);
-	eveDataModType toDataMod(MathAlgorithm);
-	MathAlgorithm algorithm;
-	bool modified;
-	bool doNormalize;
-	bool doYNorm;
-	eveMathManager* mmanager;
-	QList<MathAlgorithm> usedAlgorithm;
-	QVector<double> xdataArray;
-	QVector<double> ydataArray;
-	int xpos, ypos, zpos;
-	double position;
-	double xdata;
-	double ydata;
-	double zdata;
-	double xresult;
-	double yresult;
-	double minimum;
-	double maximum;
-	double sum;
-	double std_deviation;
-	int maxIndex;
-	int minIndex;
-};
+	QList<int> smidlist;
+	bool initBeforeStart;
+	eveMathManager* manager;
+}
+;
 
 #endif /* EVEMATH_H_ */

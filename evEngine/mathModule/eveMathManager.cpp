@@ -66,10 +66,9 @@ void eveMathManager::handleMessage(eveMessage *message){
 			if (((eveChainStatusMessage*)message)->getChainId() == chid){
 				if (((eveChainStatusMessage*)message)->getStatus()== eveChainSmDONE){
 					int smid = ((eveChainStatusMessage*)message)->getSmId();
-					QList<eveMath*> smidMathList = mathHash.values(smid);
-					foreach (eveMath* math, smidMathList){
+					foreach (eveMath* math, mathHash.values(smid)){
 						foreach (MathAlgorithm algorithm, eveMath::getAlgorithms()){
-							foreach (eveDataMessage* sendmessage, math->getResultMessage(algorithm, smid)){
+							foreach (eveDataMessage* sendmessage, math->getResultMessage(algorithm, chid, smid)){
 								addMessage(sendmessage);
 							}
 						}
@@ -77,8 +76,7 @@ void eveMathManager::handleMessage(eveMessage *message){
 				}
 				else if (((eveChainStatusMessage*)message)->getStatus()== eveChainSmEXECUTING){
 					int smid = ((eveChainStatusMessage*)message)->getSmId();
-					QList<eveMath*> smidMathList = mathHash.values(smid);
-					foreach (eveMath* math, smidMathList){
+					foreach (eveMath* math, mathHash.values(smid)){
 						if (math->hasInit()) math->reset();
 					}
 				}
@@ -128,6 +126,18 @@ void eveMathManager::shutdown(){
 void eveMathManager::sendError(int severity, int errorType,  QString errorString){
 	addMessage(new eveErrorMessage(severity, EVEMESSAGEFACILITY_MATH, errorType, errorString));
 }
+
+/**
+ * \brief add an error message
+ * @param severity error severity (info, error, fatal, etc.)
+ * @param facility who sends this errormessage
+ * @param errorType predefined error type or 0
+ * @param errorString String describing the error
+ */
+void eveMathManager::sendError(int severity, int facility, int errorType,  QString errorString){
+	addMessage(new eveErrorMessage(severity, facility, errorType, errorString));
+}
+
 
 /**
  *\brief queue the specified message to the send queue
