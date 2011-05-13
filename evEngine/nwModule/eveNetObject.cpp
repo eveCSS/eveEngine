@@ -158,3 +158,8 @@ void eveNetObject::shutdown(){
 void eveNetObject::log(QString string){
 	eveError::log(1, string);
 }
+
+void eveNetObject::sendError(int severity, int facility, int errorType,  QString errorString){
+	// bypass filter and send error Message
+	sendMessage(new eveErrorMessage(severity, facility, errorType, errorString));
+}

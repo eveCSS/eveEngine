@@ -27,6 +27,7 @@ public:
 	void log(QString);
 	void handleMessage(eveMessage *);
 	void sendMessage(eveMessage *);
+	void sendError(int, int, int, QString);
 
 signals:
 	void initDelayed();

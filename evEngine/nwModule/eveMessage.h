@@ -113,7 +113,7 @@ struct evePlayListEntry {
 	QString author;
 };
 
-enum eveDataModType {DMTunmodified, DMTcenter, DMTedge, DMTmin, DMTmax, DMTfwhm, DMTmean, DMTstandarddev, DMTsum, DMTnormalized};
+enum eveDataModType {DMTunmodified, DMTcenter, DMTedge, DMTmin, DMTmax, DMTfwhm, DMTmean, DMTstandarddev, DMTsum, DMTnormalized, DMTpeak, DMTunknown};
 enum eveAcqStatus {ACQSTATok, ACQSTATmaxattempt};
 // TODO
 // remove all the clone() stuff except where virtual constructors are needed and use explicit copy constructors where needed

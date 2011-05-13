@@ -37,14 +37,15 @@ public:
 	virtual ~eveScanManager();
 	virtual void shutdown();
 	void sendError(int, int, QString);
+	void sendError(int, int, int, QString);
 	void sendMessage(eveMessage*);
-	virtual void sendError(int, int, int, QString);
 	void setStatus(int, smStatusT);
 	void handleMessage(eveMessage *);
 	void nextPos();
 	void registerEvent(int, eveEventProperty*, bool chain=false);
 	int sendRequest(int, QString);
 	void cancelRequest(int smid, int rid);
+	int getPositionCount(){return posCounter;};
 
 public slots:
 	void smStart();

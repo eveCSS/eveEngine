@@ -28,7 +28,7 @@ public:
 	virtual ~eveManager();
 	void handleMessage(eveMessage *);
 	void sendError(int, int, QString);
-	virtual void sendError(int, int, int, QString);
+	void sendError(int, int, int, QString);
 	void shutdown();
 	bool sendStart();
 	//eveDeviceList * getDeviceDefs(){return deviceList;};

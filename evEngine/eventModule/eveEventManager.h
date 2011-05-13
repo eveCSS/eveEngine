@@ -25,6 +25,7 @@ public:
 	void shutdown();
 	void handleMessage(eveMessage *);
 	void sendError(int, int, QString);
+	void sendError(int, int, int, QString);
 
 private:
 	bool shutdownPending;

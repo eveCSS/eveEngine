@@ -25,10 +25,10 @@ public:
 	void shutdown();
 	void handleMessage(eveMessage *);
 	void sendError(int, int, QString);
+	void sendError(int, int, int, QString);
 	int getChannelId(){return channelId;};
 
 private:
-	void sendError(int, int, int, QString);
 	bool configStorage(eveStorageMessage*);
 	QHash<int, int> chainIdChannelHash;
 	QHash<int, eveDataCollector* > chainIdDCHash;

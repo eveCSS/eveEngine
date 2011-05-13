@@ -286,7 +286,13 @@ bool eveManager::sendStart(){
 void eveManager::sendError(int severity, int errorType,  QString errorString){
 	sendError(severity, EVEMESSAGEFACILITY_MANAGER, errorType, errorString);
 }
-
+/**
+ * \brief add an error message
+ * @param severity error severity (info, error, fatal, etc.)
+ * @param facility who sends this errormessage
+ * @param errorType predefined error type or 0
+ * @param errorString String describing the error
+ */
 void eveManager::sendError(int severity, int facility, int errorType,  QString errorString){
 	addMessage(new eveErrorMessage(severity, facility, errorType, errorString));
 }

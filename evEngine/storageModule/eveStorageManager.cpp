@@ -109,11 +109,10 @@ void eveStorageManager::handleMessage(eveMessage *message){
 void eveStorageManager::sendError(int severity, int errorType,  QString errorString){
 	sendError(severity, EVEMESSAGEFACILITY_STORAGE, errorType, errorString);
 }
-
 /**
- *
+ * \brief add an error message
  * @param severity error severity (info, error, fatal, etc.)
- * @param facility where the error occured
+ * @param facility who sends this errormessage
  * @param errorType predefined error type or 0
  * @param errorString String describing the error
  */

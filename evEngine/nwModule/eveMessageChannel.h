@@ -38,6 +38,7 @@ public:
 	virtual eveMessage * getMessage();
 	virtual bool queueMessage(eveMessage *);
 	virtual void addMessage(eveMessage * message);
+	virtual void sendError(int, int, int, QString);
 	bool sendQueueIsEmpty();
 	void enableInput(){QWriteLocker locker(&recLock); acceptInput=true;};
 	void disableInput(){QWriteLocker locker(&recLock); acceptInput=false;};

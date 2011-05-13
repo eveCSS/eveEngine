@@ -139,3 +139,14 @@ void eveMessageChannel::shutdown()
 	eveError::log(4,"eveMessageChannel::shutdown: no child implementation, shutdown this thread \n");
 	QThread::currentThread()->quit();
 }
+
+/**
+ * \brief add an error message
+ * @param severity error severity (info, error, fatal, etc.)
+ * @param facility who sends this errormessage
+ * @param errorType predefined error type or 0
+ * @param errorString String describing the error
+ */
+void eveMessageChannel::sendError(int severity, int facility, int errorType,  QString errorString){
+	addMessage(new eveErrorMessage(severity, facility, errorType, errorString));
+}
