@@ -1,5 +1,9 @@
+
+#include <stdio.h>
+
 #include <QtGui>
 #include <QApplication>
+
 
 #include <QMainWindow>
 #include <QWidget>
@@ -25,7 +29,7 @@
 
 int main(int argc, char *argv[])
 {
-	bool useGui = true;
+	bool useGui = false;
 	bool useNet = true;
 	QString xmlFileName;
 	QString logFileName;
@@ -34,6 +38,9 @@ int main(int argc, char *argv[])
 	int loglevel=-1;
 	int portNumber = 12345;
 	bool skipOne = false;
+	QTextEdit *textDisplay = 0;
+	QMainWindow *mainWin = 0;
+	QAction *exitAct =0;
 
 	// poor mans argument parsing
 	for ( int i = 1; i < argc; i++ ) {
@@ -111,23 +118,25 @@ int main(int argc, char *argv[])
 
 	QApplication app(argc, argv, useGui);
 
-    QMainWindow *mainWin = new QMainWindow();
-	QWidget *myCenWid = new QWidget(mainWin);
-	mainWin->setCentralWidget(myCenWid);
+	if (useGui) {
+		mainWin = new QMainWindow();
+		QWidget *myCenWid = new QWidget(mainWin);
+		mainWin->setCentralWidget(myCenWid);
 
-	QTextEdit *textDisplay = new QTextEdit(myCenWid);
-	QGridLayout *mgLayout = new QGridLayout(myCenWid);
-	mgLayout->addWidget(textDisplay, 1, 0);
+		textDisplay = new QTextEdit(myCenWid);
+		QGridLayout *mgLayout = new QGridLayout(myCenWid);
+		mgLayout->addWidget(textDisplay, 1, 0);
 
-	mainWin->setWindowTitle("Debug Window");
+		mainWin->setWindowTitle("Debug Window");
 
-	QAction *exitAct = new QAction("E&xit", mainWin);
-	QMenu *fileMenu = mainWin->menuBar()->addMenu("&File");
-	mainWin->menuBar()->addSeparator();
-	fileMenu->addAction(exitAct);
+		exitAct = new QAction("E&xit", mainWin);
+		QMenu *fileMenu = mainWin->menuBar()->addMenu("&File");
+		mainWin->menuBar()->addSeparator();
+		fileMenu->addAction(exitAct);
 
-	mainWin->resize(600, 800);
-	mainWin->show();
+		mainWin->resize(600, 800);
+		mainWin->show();
+	}
 
 	// check if environment variable EVE_ROOT is set
 	if (eveRoot.isEmpty()) {
@@ -157,8 +166,11 @@ int main(int argc, char *argv[])
 	eveError *error = new eveError(textDisplay);
 	eveMessageHub *mHub = new eveMessageHub();
 	mHub->init();
-	mainWin->connect(exitAct, SIGNAL(triggered()), mHub, SLOT(close()), Qt::QueuedConnection);
-	mainWin->connect(mHub, SIGNAL(closeParent()), mainWin, SLOT(close()), Qt::QueuedConnection);
+
+	if (useGui) {
+		mainWin->connect(exitAct, SIGNAL(triggered()), mHub, SLOT(close()), Qt::QueuedConnection);
+		mainWin->connect(mHub, SIGNAL(closeParent()), mainWin, SLOT(close()), Qt::QueuedConnection);
+	}
 
     return app.exec();
 }

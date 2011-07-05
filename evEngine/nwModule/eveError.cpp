@@ -2,6 +2,7 @@
 #include "eveError.h"
 #include "eveMessage.h"
 #include <QWriteLocker>
+#include <iostream>
 
 eveError::eveError(QTextEdit * textDispl)
 {
@@ -32,11 +33,16 @@ void eveError::printLogMessage()
 {
 	QWriteLocker locker(&lock);
 	while (!logQueue.isEmpty()){
-		if (lineCount > 1000) {
-			lineCount = 0;
-			textDisplay->clear();
+		if (textDisplay != 0){
+			if (lineCount > 1000) {
+				lineCount = 0;
+				textDisplay->clear();
+			}
+			textDisplay->append(logQueue.takeFirst());
+			++lineCount;
 		}
-		textDisplay->append(logQueue.takeFirst());
-		++lineCount;
+		else{
+			std::cout <<  "> " << qPrintable(logQueue.takeFirst()) << "\n";
+		}
 	}
 }
