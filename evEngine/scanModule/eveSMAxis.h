@@ -9,6 +9,7 @@
 #define EVESMAXIS_H_
 
 #include <QList>
+#include <QDateTime>
 #include "eveDevice.h"
 #include "eveSetValue.h"
 #include "evePosCalc.h"
@@ -54,6 +55,7 @@ public:
 	void loadPositioner(int pc){if(positioner)positioner->addValue(xmlId, pc, currentPosition);};
 	bool havePositioner(){if(positioner)return true; return false;};
 	bool execPositioner();
+	void setTimer(QDateTime start);
 
 public slots:
 	void transportReady(int);

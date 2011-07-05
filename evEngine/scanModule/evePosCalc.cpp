@@ -376,7 +376,10 @@ void evePosCalc::stepfuncAdd(){
 	}
 	else {
 		if ((currentPos.getType() == eveDateTimeT) && (stepWidth.getType() == eveDOUBLE)){
-			currentPos.setValue(currentPos.toDateTime().addMSecs((int)(stepWidth.toDouble(NULL)*1000.0)));
+			sendError(DEBUG, QString("adding stepwidth %1 to current position %2").arg(stepWidth.toDouble()*1000.0).arg(currentPos.toDateTime().toString()));
+			QDateTime dt = currentPos.toDateTime().addMSecs((qint64)(stepWidth.toDouble(NULL)*1000.0));
+			currentPos.setValue(currentPos.toDateTime().addMSecs((qint64)(stepWidth.toDouble(NULL)*1000.0)));
+			sendError(DEBUG, QString("new daytime %2, new current position %1").arg(currentPos.toDateTime().toString()).arg(dt.toString()));
 		}
 		else {
 			currentPos = currentPos + stepWidth;

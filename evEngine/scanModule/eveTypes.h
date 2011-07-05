@@ -30,6 +30,12 @@ typedef enum {
                 eveUnknownT
 }eveType;
 
+// eclipse indigo parser needs this
+#ifndef NULL
+	#define NULL 0
+#endif
+
+
 #define eveINT eveInt32T
 #define eveDOUBLE eveFloat64T
 #define eveSTRING eveStringT

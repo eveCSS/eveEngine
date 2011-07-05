@@ -5,6 +5,7 @@
  *      Author: eden
  */
 
+#include <stdio.h>
 #include <exception>
 #include <QTimer>
 #include "eveSMAxis.h"
@@ -359,7 +360,12 @@ void eveSMAxis::gotoStartPos(bool queue) {
 	ready = false;
 	// currentPosition does not change for motors, but must be fetched
 	// for timer
-	if (isTimer) currentPosition.setValue(QDateTime::currentDateTime());
+	if (isTimer){
+		// TODO improve this: here we set current position to 0 when not DateTime
+		if (!currentPosition.setValue(((eveTimer*)gotoTrans)->getStartTime()))
+			if (!currentPosition.setValue((int)0))
+				sendError(ERROR, 0, QString("SMAxis: Unable to set Start Pos to current DateTime or 0"));
+	}
 	posCalc->setOffset(currentPosition);
 	posCalc->reset();
 	gotoPos(posCalc->getStartPos(), queue);
@@ -492,3 +498,8 @@ void eveSMAxis::sendError(int severity, int facility, int errorType, QString mes
 	scanModule->sendError(severity, facility, errorType, message);
 }
 
+void eveSMAxis::setTimer(QDateTime start) {
+	if (isTimer){
+		((eveTimer*)gotoTrans)->setStartTime(start);
+	}
+}

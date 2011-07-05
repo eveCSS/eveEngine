@@ -12,7 +12,9 @@
  *
  */
 #include <QTimer>
+#include <QDateTime>
 #include <QString>
+#include "eveTypes.h"
 #include "eveBaseTransport.h"
 #include "eveDevice.h"
 #include "eveTime.h"
@@ -33,6 +35,8 @@ public:
 	eveDataMessage *getData();
 	QStringList* getInfo();
 	void sendError(int, int,  QString);
+	void setStartTime(QDateTime start){startTime = start;startInitialized =true;};
+	QDateTime getStartTime(){return startTime;};
 	int execQueue();
 
 public slots:
@@ -40,11 +44,14 @@ public slots:
 
 
 private:
+	int getMSecsUntil(QDateTime);
 	eveSMBaseDevice* baseDev;
 	bool haveMonitor;
+	bool startInitialized;
 	eveType datatype;
 	QTimer timer;
 	int timerId;
+	QDateTime startTime;
 	QString accessname;
 	QDateTime targetTime;
 	eveTransStatusT transStatus;

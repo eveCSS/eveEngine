@@ -4,7 +4,7 @@
  *  Created on: 19.10.2009
  *      Author: eden
  */
-
+#include <stdio.h>
 #include "eveCounter.h"
 #include <QDateTime>
 #include "eveError.h"
@@ -78,8 +78,6 @@ int eveCounter::writeData(eveVariant writedata, bool queue){
 
 void eveCounter::sendError(int severity, int errorType,  QString message){
 
-	// for now we write output to local console too
-	eveError::log(severity, QString("Counter %1(%2): %3").arg(name).arg(accessname).arg(message));
 	printf("Counter: %d, %s\n", severity, qPrintable(QString("PV %1(%2): %3").arg(name).arg(accessname).arg(message)));
 }
 

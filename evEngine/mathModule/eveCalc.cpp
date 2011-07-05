@@ -8,6 +8,7 @@
 #include "eveCalc.h"
 #include <cmath>
 #include <exception>
+#include <values.h>
 
 #define MATH EVEMESSAGEFACILITY_MATH
 
@@ -79,12 +80,17 @@ void eveCalc::reset(){
 	zpos = -1;
 	position = -1;
 	count = -1;
-	ymin = 1.0e300;
-	ymax = 1.0e-300;
+	ymin = DBL_MAX;
+	ymax = DBL_MIN;
 	sum = 0.0;
 	arrayModified = false;
 	minIndex = 0;
 	maxIndex = 0;
+	xresult = NAN;
+	yresult = NAN;
+	ydata = NAN;
+	zdata = NAN;
+
 }
 
 /**
@@ -98,19 +104,19 @@ void eveCalc::reset(){
 bool eveCalc::addValue(QString deviceId, int pos, eveVariant dataVar){
 	bool retval = false;
 
-	manager->sendError(MINOR, MATH, 0, QString("Calc new value for %1, val %2 pos %3 (%4 / %5 / %6)").arg(deviceId).arg(dataVar.toDouble()).arg(pos).arg(xAxisId).arg(detectorId).arg(normalizeId));
-
 	if (deviceId == xAxisId) {
 		// set position at first invocation
 		if (position == -1) position = pos -1;
-		xpos = pos;
 	}
+	// do calculations only if all three values may be converted to double
+	// motor or detector as DateTime => no calculation
 	if (dataVar.canConvert(QVariant::Double)){
 		bool ok = false;
 		double data = dataVar.toDouble(&ok);
 		if (ok){
 			if (deviceId == xAxisId) {
 				xdata = data;
+				xpos = pos;
 			}
 			else if (deviceId == detectorId) {
 				ydata = data;
@@ -128,8 +134,6 @@ bool eveCalc::addValue(QString deviceId, int pos, eveVariant dataVar){
 					manager->sendError(MINOR, MATH, 0, QString("position  %1 has already been done").arg(position));
 					return retval;
 				}
-
-				manager->sendError(MINOR, MATH, 0, QString("Calc values: %1 / %2 / %3 (%4 / %5 / %6)").arg(xdata).arg(ydata).arg(zdata).arg(xAxisId).arg(detectorId).arg(normalizeId));
 
 				++position;
 				if (xpos != position){
@@ -169,6 +173,12 @@ bool eveCalc::addValue(QString deviceId, int pos, eveVariant dataVar){
 					}
 				}
 			}
+		}
+		else 	if (dataVar.canConvert(QVariant::DateTime)){
+			manager->sendError(DEBUG, MATH, 0, QString("got DateTime as data value, skipping calculations"));
+		}
+		else {
+			manager->sendError(MINOR, MATH, 0, QString("unable to convert dataformat to double, skipping calculations"));
 		}
 	}
 	return retval;
@@ -218,6 +228,7 @@ bool eveCalc::setResult(MathAlgorithm algo){
 		}
 	}
 	else if (algo == SUM){
+		if (count < 1) return false;
 		xresult = 0.;
 		yresult = sum;
 		return true;
@@ -324,7 +335,7 @@ bool eveCalc::calculate(MathAlgorithm algo){
 					if (fabs(yresult-ydataArray.at(i)) > halfMax) break;
 				}
 				xresult = xdataArray.at(lowerIndex) + (xdataArray.at(upperIndex) - xdataArray.at(lowerIndex))/2.0;
-				yresult = 0.0;
+				yresult = NAN;
 				fwhm = fabs(xdataArray.at(upperIndex) - xdataArray.at(lowerIndex));
 				retval = true;
 			}
@@ -343,7 +354,7 @@ bool eveCalc::calculate(MathAlgorithm algo){
 				}
 				if (index >= 0){
 					xresult = (xdataArray.at(index+1) + xdataArray.at(index))/2.0;
-					yresult = 0.0;
+					yresult = NAN;
 					retval = true;
 				}
 			}
@@ -351,33 +362,33 @@ bool eveCalc::calculate(MathAlgorithm algo){
 		case FWHM:
 			if (calculate(CENTER)){
 				yresult = fwhm;
-				xresult = 0.0;
+				xresult = NAN;
 				retval = true;
 			}
 			break;
 		case STD_DEVIATION:
 			if (ydataArray.size() > 1) {
-				int count = ydataArray.count();
+				int cnt = ydataArray.count();
 				double psum = 0.;
-				double mean = sum / count;
+				double mean = sum / cnt;
 				foreach (double val, ydataArray){
 					psum += pow((val-mean),2.0);
 				}
-				xresult = 0.0;
-				yresult = sqrt(psum / (double)(count -1));
+				xresult = NAN;
+				yresult = sqrt(psum / (double)(cnt -1));
 				retval = true;
 			}
 			break;
 		case MEAN:
 			if (ydataArray.size() > 0) {
-				xresult = 0.0;
+				xresult = NAN;
 				yresult = (sum / ((double)ydataArray.size()));
 				retval = true;
 			}
 			break;
 		case SUM:
 			if (ydataArray.size() > 0) {
-				xresult = 0.0;
+				xresult = NAN;
 				yresult = sum;
 				retval = true;
 			}

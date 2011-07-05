@@ -14,7 +14,6 @@
 #include "eveEventProperty.h"
 
 
-
 eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int chainid, int smid) :
 	QObject(parent){
 
@@ -336,8 +335,13 @@ void eveScanModule::stgGotoStart() {
 		foreach (eveCalc *positioner, positionerList) {
 			positioner->reset();
 		}
+		QDateTime startTime = QDateTime::currentDateTime();
+		foreach (eveSMChannel *channel, *channelList){
+			channel->setTimer(startTime);
+		}
 		foreach (eveSMAxis *axis, *axisList){
 			sendError(DEBUG, 0, QString("Moving axis %1").arg(axis->getName()));
+			axis->setTimer(startTime);
 			axis->gotoStartPos(false);
 			++signalCounter;
 		}

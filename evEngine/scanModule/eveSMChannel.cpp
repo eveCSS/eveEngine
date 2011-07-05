@@ -5,6 +5,7 @@
  *      Author: eden
  */
 
+#include <stdio.h>
 #include "eveSMChannel.h"
 #include "eveEventRegisterMessage.h"
 #include "eveError.h"
@@ -41,6 +42,7 @@ eveSMBaseDevice(scanmodule) {
 	channelType=definition->getChannelType();
 	eventList = eventlist;
 	unit = "";
+	isTimer = false;
 
 	if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
       eveTransportDef* transdef = (eveTransportDef*)definition->getValueCmd()->getTrans();
@@ -51,6 +53,7 @@ eveSMBaseDevice(scanmodule) {
       else if (transdef->getTransType() == eveTRANS_LOCAL) {
           if (transdef->getName() == "Timer"){
              valueTrans = new eveTimer(this, xmlId, name, transdef);
+             isTimer = true;
           }
           else if (transdef->getName() == "Counter"){
              valueTrans = new eveCounter(this, xmlId, name, transdef);
@@ -472,6 +475,12 @@ void eveSMChannel::newEvent(eveEventProperty* evprop) {
 	if (evprop->getActionType() == eveEventProperty::REDO){
 		sendError(DEBUG, 0, "received redo event");
 		redo = true;
+	}
+}
+
+void eveSMChannel::setTimer(QDateTime start) {
+	if (isTimer){
+		((eveTimer*)valueTrans)->setStartTime(start);
 	}
 }
 

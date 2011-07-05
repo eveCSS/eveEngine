@@ -7,6 +7,7 @@
 
 #include "eveTimer.h"
 #include "eveError.h"
+#include <limits.h>
 
 eveTimer::eveTimer(eveSMBaseDevice *parent, QString xmlid, QString name, eveTransportDef* transdef) : eveBaseTransport(parent, xmlid, name), timer(parent){
 
@@ -20,6 +21,7 @@ eveTimer::eveTimer(eveSMBaseDevice *parent, QString xmlid, QString name, eveTran
 	//method = transdef->getMethod();
 	timer.setSingleShot(true);
 	timerId = timer.timerId();
+	startInitialized = false;
 }
 
 eveTimer::~eveTimer() {
@@ -58,19 +60,39 @@ int eveTimer::readData(bool queue){
 	eveTime currentTime = eveTime::getCurrent();
 	// TODO
 	// for some reason the first conversion doesn't work (mSecs are always 0)
-	//QDateTime dt = QDateTime(currentTime.getDateTime());
-	//eveTime testTime = eveTime::eveTimeFromDateTime(dt);
+	//QDateTime now = QDateTime(currentTime.getDateTime());
+	//eveTime testTime = eveTime::eveTimeFromDateTime(now);
 	// for now we do this
-	QDateTime dt = QDateTime::currentDateTime();
+	QDateTime now = QDateTime::currentDateTime();
 
 	if (datatype == eveDateTimeT){
-		newData = new eveDataMessage(xmlId, name, status, DMTunmodified, currentTime, dt);
+		// absolute time
+		newData = new eveDataMessage(xmlId, name, status, DMTunmodified, currentTime, now);
 	}
-	else if (datatype == eveInt32T){
+	else if (datatype == eveINT){
+		// not absolute time
 		QVector<int> iArray;
-		iArray.append(currentTime.seconds());
-		iArray.append(currentTime.nanoSeconds());
+		if (startInitialized){
+			iArray.append(getMSecsUntil(now));
+		}
+		else {
+			iArray.append(0);
+		}
+		// TODO
+		// hdf plugin expects an int array of size 2; change it
+		iArray.append(0);
 		newData = new eveDataMessage(xmlId, name, status, DMTunmodified, currentTime, iArray);
+	}
+	else if (datatype == eveDOUBLE){
+		// not absolute time
+		QVector<double> dArray;
+		if (startInitialized){
+			dArray.append(((double)getMSecsUntil(now))/1000.0);
+		}
+		else {
+			dArray.append(0.0);
+		}
+		newData = new eveDataMessage(xmlId, name, status, DMTunmodified, currentTime, dArray);
 	}
 	else {
 		sendError(MINOR, 0, QString("unknown datatype (%1) for Timer").arg((int)datatype));
@@ -86,9 +108,10 @@ int eveTimer::readData(bool queue){
  */
 int eveTimer::writeData(eveVariant writedata, bool queue){
 
+	QDateTime currentDT = QDateTime::currentDateTime();
+
 	if (writedata.getType() == eveDateTimeT){
 
-		QDateTime currentDT = QDateTime::currentDateTime();
 		QDateTime writeDT = writedata.toDateTime();
 
 		sendError(DEBUG, 0, QString("eveTimer: now: %1 goto: %2").arg(currentDT.time().toString("hh:mm:ss.zzz")).arg(writeDT.time().toString("hh:mm:ss.zzz")));
@@ -111,6 +134,9 @@ int eveTimer::writeData(eveVariant writedata, bool queue){
 			sendError(DEBUG, 0, QString("Error converting data to integer (msecs)"));
 		}
 		else {
+			mSecs -= getMSecsUntil(currentDT);
+			if (mSecs < 0 ) mSecs=0;
+			sendError(DEBUG, 0, QString("eveTimer: load timer with %1 msecs").arg(mSecs));
 			QTimer::singleShot (mSecs, this, SLOT (waitDone()));
 		}
 	}
@@ -122,6 +148,9 @@ int eveTimer::writeData(eveVariant writedata, bool queue){
 		}
 		else {
 			int mSecs = (int)(mSecsD * 1000.0);
+			mSecs -= getMSecsUntil(currentDT);
+			if (mSecs < 0 ) mSecs=0;
+			sendError(DEBUG, 0, QString("eveTimer: load timer with %1 msecs").arg(mSecs));
 			QTimer::singleShot (mSecs, this, SLOT (waitDone()));
 		}
 	}
@@ -152,4 +181,21 @@ QStringList* eveTimer::getInfo(){
 	QStringList *sl = new QStringList();
 	sl->append(QString("Access:local:%1").arg(accessname));
 	return sl;
+}
+
+int eveTimer::getMSecsUntil(QDateTime now){
+	qint64 delta = startTime.daysTo(now) * 86400000;
+	delta += startTime.time().msecsTo(now.time());
+
+	if (delta > INT_MAX){
+		sendError(ERROR, 0, QString("integer overflow (%1) for Timer").arg(delta));
+		return INT_MAX;
+	}
+	else if (delta <= INT_MIN){
+		sendError(ERROR, 0, QString("integer overflow (%1) for Timer").arg(delta));
+		return INT_MIN;
+	}
+
+	return (int) delta;
+
 }

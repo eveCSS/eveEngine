@@ -48,6 +48,7 @@ public:
 	void sendError(int, int, int, QString);
 	void addPositioner(eveCalc* pos){positionerList.append(pos);};
 	void loadPositioner(int pc);
+	void setTimer(QDateTime start);
 
 
 public slots:
@@ -62,6 +63,7 @@ private:
 	void sendError(int, int, QString);
 	void read(bool);
 	void signalReady();
+	bool isTimer;
 	bool redo;
 	bool ready;
 	bool haveValue;

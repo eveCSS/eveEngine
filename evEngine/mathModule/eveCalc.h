@@ -9,6 +9,7 @@
 #define EVECALC_H_
 
 #include <QVector>
+#include "eveTypes.h"
 #include "eveVariant.h"
 #include "eveMessage.h"
 #include "eveMessageChannel.h"

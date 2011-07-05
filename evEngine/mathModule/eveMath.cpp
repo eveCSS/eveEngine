@@ -50,6 +50,7 @@ void eveMath::addValue(QString deviceId, int smid, int pos, eveVariant dataVar){
 QList<eveDataMessage*> eveMath::getResultMessage(MathAlgorithm algo, int chid, int smid){
 	QList<eveDataMessage*> messageList;
 
+	messageList.clear();
 	QVector<double> data;
 	if (calculate(algo)) {
 		eveDataMessage *message;
