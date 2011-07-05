@@ -62,6 +62,7 @@ protected:
 private:
 	int status;
 	bool acceptInput;
+	bool unregistered;
 	QList<eveMessage*> sendMessageList;
 	QList<eveMessage*> receiveMessageList;
 	QList<eveMessage*> receiveFastMessageList;

@@ -8,6 +8,7 @@
 eveMessageChannel::eveMessageChannel(QObject *parent)
 {
 	acceptInput = true;
+	unregistered = false;
 	connect(this, SIGNAL(messageArrived()), this, SLOT(newQueuedMessage()) ,Qt::QueuedConnection);
 }
 
@@ -54,11 +55,19 @@ bool eveMessageChannel::sendQueueIsEmpty()
 	return sendMessageList.isEmpty();
 }
 
+/**
+ * \brief unregister if sendqueue is empty
+ * \return true if sendqueue is empty, else false
+ */
 bool eveMessageChannel::unregisterIfQueueIsEmpty()
 {
+	// if already successfully unregistered return true
+	if (unregistered) return true;
+
 	QWriteLocker locker(&sendLock);
 	if (sendMessageList.isEmpty()){
 		eveMessageHub::getmHub()->unregisterChannel(channelId);
+		unregistered = true;
 		return true;
 	}
 	else {

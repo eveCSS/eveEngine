@@ -107,7 +107,6 @@ void eveScanManager::shutdown(){
 	eveError::log(1, QString("eveScanManager: shutdown"));
 
 	if (!shutdownPending) {
-		shutdownPending = true;
 		disconnect (manager, SIGNAL(startSMs()), this, SLOT(smStart()));
 		disconnect (manager, SIGNAL(stopSMs()), this, SLOT(smStop()));
 		disconnect (manager, SIGNAL(breakSMs()), this, SLOT(smBreak()));
@@ -134,10 +133,10 @@ void eveScanManager::shutdown(){
 		QThread::currentThread()->quit();
 	}
 	else {
-		// call us again
-		connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
-		// QTimer::singleShot(500, this, SLOT(shutdown()));
+		// connect with messageTaken to call shutdown again until successfully unregistered
+		if (!shutdownPending) connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
 	}
+	shutdownPending = true;
 }
 
 
