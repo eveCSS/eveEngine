@@ -120,11 +120,10 @@ int main(int argc, char *argv[])
 //			interfaces = argument.remove(0,2).trimmed();
 //			if (interfaces.size() > 0) continue;
 //		}
-		else {
-			printf ("\"%s\"?\n", argv[i]);
-	        printf ("usage: %s [-d<number> => debuglevel, -m<number> => messagelevel, -f<xml-File>, -g => Gui on (default off), -n => no network, -p<port>, -e<root directory>\n",argv[0]);
-	        return (1);
-		}
+
+		printf ("\"%s\"?\n", argv[i]);
+	    printf ("usage: %s [-d<number> => debuglevel, -m<number> => messagelevel, -f<xml-File>, -g => Gui on (default off), -n => no network, -p<port>, -e<root directory>\n",argv[0]);
+	    return (1);
     }
 
 	QApplication app(argc, argv, useGui);
