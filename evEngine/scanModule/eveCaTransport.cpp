@@ -684,6 +684,15 @@ QStringList* eveCaTransport::getInfo(){
  * start executing previously queued commands
  */
 int eveCaTransport::execQueue(){
-	eveCaTransport::caflush();
+
+	QWriteLocker locker(&contextLock);
+	if (contextCounter.contains(ca_current_context())){
+		eveError::log(4, "CaTransport: context found, flushing CA");
+		eveCaTransport::caflush();
+	}
+	else {
+		eveError::log(4, "CaTransport: no context found, not flushing CA");
+	}
+
 	return 0;
 }
