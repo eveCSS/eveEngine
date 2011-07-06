@@ -46,7 +46,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 	//addMessage(new eveRequestMessage(eveRequestManager::getRequestManager()->newId(channelId),EVEREQUESTTYPE_OKCANCEL, "Sie haben HALT gedrueckt"));
 
 	if (fileName.isEmpty()){
-		sman->sendError(ERROR,0,QString("eveDataCollector: empty filename not allowed, using dummy"));
+		sman->sendError(ERROR,0,QString("eveDataCollector: empty filename not allowed, using dummy-filename"));
 		fileName = "dummy-filename";
 	}
 	// do macro expansion if necessary
@@ -59,16 +59,9 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 	// if filename is relative and EVE_ROOT is defined, we use EVE_ROOT as root directory
 	if (QFileInfo(fileName).isRelative()){
 		QString eve_root = eveParameter::getParameter("eveRoot");
-		QStringList envList = QProcess::systemEnvironment();
-		foreach (QString env, envList){
-			if (env.startsWith("EVE_ROOT")){
-				QStringList pieces = env.split("=");
-				if (pieces.count() == 2) eve_root = pieces.at(1);
-				break;
-			}
-		}
 		if (!eve_root.isEmpty()){
 			QFileInfo eve_rootInfo = QFileInfo(eve_root);
+			// note: the "/" will be translated to "\" on windows
 			if (!eve_rootInfo.completeBaseName().isEmpty()) eve_root += "/";
 			fileName = QFileInfo(eve_root + fileName).absoluteFilePath();
 		}
