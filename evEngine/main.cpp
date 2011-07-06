@@ -22,10 +22,10 @@
 // loglevel 0: send no error messages
 // loglevel 1: send FATAL errors
 // loglevel 2: send FATAL,ERROR errors
-// loglevel 3: send FATAL,ERROR,MINOR errors
-// loglevel 4: send FATAL,ERROR,MINOR,INFO errors (default)
+// loglevel 3: send FATAL,ERROR,MINOR errors (default)
+// loglevel 4: send FATAL,ERROR,MINOR,INFO errors
 // loglevel 5: send FATAL,ERROR,MINOR,INFO,DEBUG errors
-#define DEFAULT_LOGLEVEL 4
+#define DEFAULT_LOGLEVEL 3
 
 int main(int argc, char *argv[])
 {
@@ -36,6 +36,7 @@ int main(int argc, char *argv[])
 	QString interfaces("all");
 	QString eveRoot;
 	int loglevel=-1;
+	int debuglevel=0;
 	int portNumber = 12345;
 	bool skipOne = false;
 	QTextEdit *textDisplay = 0;
@@ -63,6 +64,16 @@ int main(int argc, char *argv[])
 			continue;
 		}
 		else if ( argument.startsWith("-d") ){
+			parameter = argument.remove(0,2).trimmed();
+			if (parameter.isEmpty()) {
+				parameter = argumentNext.trimmed();
+				skipOne = true;
+			}
+			debuglevel = parameter.toInt(&ok);
+			if (debuglevel < 0) debuglevel = 0 ;
+			if (ok) continue;
+		}
+		else if ( argument.startsWith("-m") ){
 			parameter = argument.remove(0,2).trimmed();
 			if (parameter.isEmpty()) {
 				parameter = argumentNext.trimmed();
@@ -111,7 +122,7 @@ int main(int argc, char *argv[])
 //		}
 		else {
 			printf ("\"%s\"?\n", argv[i]);
-	        printf ("usage: %s [-d<debug level> => loglevel, -f<xml-File>, -g => Gui on (default), -n => no network, -p<port>, -e<root directory>\n",argv[0]);
+	        printf ("usage: %s [-d<number> => debuglevel, -m<number> => messagelevel, -f<xml-File>, -g => Gui on (default off), -n => no network, -p<port>, -e<root directory>\n",argv[0]);
 	        return (1);
 		}
     }
@@ -163,8 +174,8 @@ int main(int argc, char *argv[])
 	paralist->setParameter("interfaces", interfaces);
 	if (!eveRoot.isEmpty()) paralist->setParameter("eveRoot", eveRoot);
 
-	eveError *error = new eveError(textDisplay);
-	eveMessageHub *mHub = new eveMessageHub();
+	eveError *error = new eveError(textDisplay, debuglevel);
+	eveMessageHub *mHub = new eveMessageHub(useGui);
 	mHub->init();
 
 	if (useGui) {
