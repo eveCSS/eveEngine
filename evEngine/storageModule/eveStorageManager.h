@@ -34,6 +34,7 @@ private:
 	QHash<int, eveDataCollector* > chainIdDCHash;
 	QString fileName;
 	QByteArray* xmlData;
+	bool shutdownPending;
 
 
 };

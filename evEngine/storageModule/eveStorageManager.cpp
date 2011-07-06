@@ -17,6 +17,7 @@ eveStorageManager::eveStorageManager(QString filename, QByteArray* xmldata) {
 	// register with messageHub
 	xmlData = new QByteArray(*xmldata);
 	fileName = filename;
+	shutdownPending = false;
 	channelId = eveMessageHub::getmHub()->registerChannel(this, EVECHANNEL_STORAGE);
 }
 
@@ -128,20 +129,17 @@ void eveStorageManager::shutdown(){
 	eveError::log(1, QString("eveStorageManager: shutdown"));
 
 	// stop input Queue
-	disableInput();
+	if (!shutdownPending) {
+		shutdownPending = true;
+		disableInput();
+		connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
+	}
 
 	// TODO
 	// wait until all data has been saved
 
 	// make sure mHub reads all outstanding messages before closing the channel
-	if (unregisterIfQueueIsEmpty()){
-		QThread::currentThread()->quit();
-	}
-	else {
-		// call us if an outstanding message has been taken
-		connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
-		//QTimer::singleShot(50, this, SLOT(shutdown()));
-	}
+	shutdownThreadIfQueueIsEmpty();
 }
 
 /**

@@ -52,6 +52,8 @@ private:
 	evePlayListManager *playlist;
 	eveManagerStatusTracker *engineStatus;
 	QList<QThread * > scanThreadList;
+	bool shutdownPending;
+
 };
 
 #endif /* EVEMANAGER_H_ */

@@ -160,15 +160,11 @@ void eveEventManager::shutdown(){
 			delete monitorHash.take(monevent);
 			delete monevent;
 		}
+		connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
 	}
 
 	// make sure mHub reads all outstanding messages before closing the channel
-	if (unregisterIfQueueIsEmpty()){
-		QThread::currentThread()->quit();
-	}
-	else {
-		// call us if an outstanding message has been taken
-		connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
-	}
+	shutdownThreadIfQueueIsEmpty();
+
 }
 

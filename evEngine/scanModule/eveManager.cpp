@@ -28,6 +28,8 @@ eveManager::eveManager() {
 	eveMessageHub * mHub = eveMessageHub::getmHub();
 	channelId = mHub->registerChannel(this, EVECHANNEL_MANAGER);
 	engineStatus = new eveManagerStatusTracker();
+	shutdownPending = false;
+
 }
 
 eveManager::~eveManager() {
@@ -149,16 +151,15 @@ void eveManager::handleMessage(eveMessage *message){
 void eveManager::shutdown(){
 
 	eveError::log(1, QString("eveManager: shutdown"));
-	// stop input Queue
-	disableInput();
+
+	if (!shutdownPending){
+		shutdownPending = true;
+		disableInput();
+		connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
+	}
+
 	// make sure mHub reads all outstanding messages before closing the channel
-	if (unregisterIfQueueIsEmpty()){
-		QThread::currentThread()->quit();
-	}
-	else {
-		// call us again
-		QTimer::singleShot(500, this, SLOT(shutdown()));
-	}
+	shutdownThreadIfQueueIsEmpty();
 }
 
 /**

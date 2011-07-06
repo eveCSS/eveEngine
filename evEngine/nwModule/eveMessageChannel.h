@@ -56,7 +56,7 @@ signals:
 
 protected:
 	virtual void handleMessage(eveMessage*);
-	bool unregisterIfQueueIsEmpty();
+	bool shutdownThreadIfQueueIsEmpty();
 	int channelId;
 
 private:

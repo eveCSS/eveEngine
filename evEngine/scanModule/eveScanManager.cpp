@@ -104,9 +104,10 @@ void eveScanManager::init() {
  */
 void eveScanManager::shutdown(){
 
-	eveError::log(1, QString("eveScanManager: shutdown"));
+	eveError::log(4, QString("eveScanManager: shutdown"));
 
 	if (!shutdownPending) {
+		shutdownPending = true;
 		disconnect (manager, SIGNAL(startSMs()), this, SLOT(smStart()));
 		disconnect (manager, SIGNAL(stopSMs()), this, SLOT(smStop()));
 		disconnect (manager, SIGNAL(breakSMs()), this, SLOT(smBreak()));
@@ -125,18 +126,12 @@ void eveScanManager::shutdown(){
 		// delete all SMs
 		if (rootSM) delete rootSM;
 		rootSM = NULL;
+
+		connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
 	}
 
 	// make sure mHub reads all outstanding messages before closing the channel
-	if (unregisterIfQueueIsEmpty()){
-		eveError::log(1, QString("eveScanManager: shutdown done"));
-		QThread::currentThread()->quit();
-	}
-	else {
-		// connect with messageTaken to call shutdown again until successfully unregistered
-		if (!shutdownPending) connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
-	}
-	shutdownPending = true;
+	if (shutdownThreadIfQueueIsEmpty()) eveError::log(4, QString("eveScanManager: shutdown done"));
 }
 
 

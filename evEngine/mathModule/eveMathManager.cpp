@@ -112,9 +112,8 @@ void eveMathManager::shutdown(){
 	}
 
 	// make sure mHub reads all outstanding messages before closing the channel
-	if (unregisterIfQueueIsEmpty()){
-		QThread::currentThread()->quit();
-	}
+	shutdownThreadIfQueueIsEmpty();
+
 }
 
 /**

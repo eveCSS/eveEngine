@@ -59,7 +59,7 @@ bool eveMessageChannel::sendQueueIsEmpty()
  * \brief unregister if sendqueue is empty
  * \return true if sendqueue is empty, else false
  */
-bool eveMessageChannel::unregisterIfQueueIsEmpty()
+bool eveMessageChannel::shutdownThreadIfQueueIsEmpty()
 {
 	// if already successfully unregistered return true
 	if (unregistered) return true;
@@ -68,6 +68,7 @@ bool eveMessageChannel::unregisterIfQueueIsEmpty()
 	if (sendMessageList.isEmpty()){
 		eveMessageHub::getmHub()->unregisterChannel(channelId);
 		unregistered = true;
+		QThread::currentThread()->quit();
 		return true;
 	}
 	else {
