@@ -98,8 +98,6 @@ void eveMathManager::handleMessage(eveMessage *message){
  */
 void eveMathManager::shutdown(){
 
-	eveError::log(1, QString("eveMathManager: shutdown"));
-
 	if (!shutdownPending) {
 		shutdownPending = true;
 

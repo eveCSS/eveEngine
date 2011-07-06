@@ -4,8 +4,9 @@
 #include <QWriteLocker>
 #include <iostream>
 
-eveError::eveError(QTextEdit * textDispl)
+eveError::eveError(QTextEdit * textDispl, int loglvl)
 {
+	loglevel = loglvl;
 	errorOut = this;
 	textDisplay = textDispl;
 	connect (this, SIGNAL(newlogMessage()), this, SLOT(printLogMessage()), Qt::QueuedConnection);
@@ -24,9 +25,11 @@ void eveError::log(int debug, QString string)
 
 void eveError::queueLog(int debug, QString string)
 {
-	QWriteLocker locker(&lock);
-	logQueue.append(string);
-	emit newlogMessage();
+	if (debug <= loglevel){
+		QWriteLocker locker(&lock);
+		logQueue.append(string);
+		emit newlogMessage();
+	}
 }
 
 void eveError::printLogMessage()

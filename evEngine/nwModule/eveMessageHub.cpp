@@ -1,5 +1,6 @@
 
 #include <QTimer>
+#include <QApplication>
 #include "eveMessageHub.h"
 #include "eveNwThread.h"
 #include "eveManagerThread.h"
@@ -10,8 +11,9 @@
 
 eveMessageHub* eveMessageHub::mHub=NULL;
 
-eveMessageHub::eveMessageHub()
+eveMessageHub::eveMessageHub(bool gui)
 {
+	useGui = gui;
 	nextChannel = EVECHANNELS_RESERVED;
 	engineStatus = EVEENGINESTATUS_IDLENOXML;
 	mHub = this;
@@ -364,7 +366,7 @@ void eveMessageHub::addError(int severity, int errorType,  QString errorString)
 void eveMessageHub::close()
 {
 
-	eveError::log(0, "MessageHub shut down");
+	eveError::log(4, "MessageHub shut down");
 	emit closeAll();
 	QTimer::singleShot(500, this, SLOT(waitUntilDone()));
 }
@@ -380,9 +382,13 @@ void eveMessageHub::waitUntilDone()
 		addError(INFO, 0, "eveMessageHub: still waiting for threads to shutdown");
 		return;
 	}
-	eveError::log(0, "MessageHub shutdown, done");
-	printf("MessageHub shutdown, done\n");
-	emit closeParent();
+	eveError::log(4, "MessageHub shutdown, done");
+	if (useGui) {
+		emit closeParent();
+	}
+	else {
+		QApplication::exit(0);
+	}
 }
 
 /**

@@ -26,7 +26,7 @@ eveMessage * eveMessageChannel::getMessage()
 	eveMessage *message=NULL;
 	if (!sendMessageList.isEmpty()) {
 		message = sendMessageList.takeFirst();
-		emit messageTaken();
+		if (sendMessageList.count() < 10 ) emit messageTaken();
 	}
 	return message;
 }
@@ -46,16 +46,6 @@ void eveMessageChannel::addMessage(eveMessage * message)
 }
 
 /**
- * \brief is sendqueue empty
- * \return true if sendqueue is empty, else false
- */
-bool eveMessageChannel::sendQueueIsEmpty()
-{
-	QWriteLocker locker(&sendLock);
-	return sendMessageList.isEmpty();
-}
-
-/**
  * \brief unregister if sendqueue is empty
  * \return true if sendqueue is empty, else false
  */
@@ -72,7 +62,7 @@ bool eveMessageChannel::shutdownThreadIfQueueIsEmpty()
 		return true;
 	}
 	else {
-		eveError::log(1, QString("eveMessageChannel: %1 more Messages before shutdown").arg(sendMessageList.size()));
+		eveError::log(5, QString("eveMessageChannel: %1 more Messages before shutdown").arg(sendMessageList.size()));
 		emit messageWaiting(channelId);
 		return false;
 	}

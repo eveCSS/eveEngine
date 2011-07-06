@@ -126,8 +126,6 @@ void eveStorageManager::sendError(int severity, int facility, int errorType,  QS
  */
 void eveStorageManager::shutdown(){
 
-	eveError::log(1, QString("eveStorageManager: shutdown"));
-
 	// stop input Queue
 	if (!shutdownPending) {
 		shutdownPending = true;

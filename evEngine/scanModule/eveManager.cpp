@@ -150,8 +150,6 @@ void eveManager::handleMessage(eveMessage *message){
 }
 void eveManager::shutdown(){
 
-	eveError::log(1, QString("eveManager: shutdown"));
-
 	if (!shutdownPending){
 		shutdownPending = true;
 		disableInput();

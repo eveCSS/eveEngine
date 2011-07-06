@@ -19,7 +19,7 @@ class eveMessageHub: public QObject
     Q_OBJECT
 
 public:
-	eveMessageHub();
+	eveMessageHub(bool);
 	virtual ~eveMessageHub();
 	int registerChannel(eveMessageChannel *, int);
 	void unregisterChannel(int);
@@ -58,7 +58,7 @@ private:
 	QString currentXmlId;
 	eveRequestManager *reqMan;
 	QReadWriteLock channelLock;
-
+	bool useGui;
 
 
 };

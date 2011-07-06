@@ -144,8 +144,6 @@ void eveEventManager::sendError(int severity, int facility, int errorType,  QStr
  */
 void eveEventManager::shutdown(){
 
-	eveError::log(1, QString("eveEventManager: shutdown"));
-
 	if (!shutdownPending) {
 		shutdownPending = true;
 
