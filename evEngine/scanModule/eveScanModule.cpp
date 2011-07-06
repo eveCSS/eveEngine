@@ -30,6 +30,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	catchedRedo = false;
 	catchedTrigger=false;
 	catchedDetecTrigger=false;
+	triggerDetecConf = false;
 	delayedStart = false;
 	totalSteps = -1;
 	currentPosition = 0;
@@ -89,7 +90,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     channelList = parser->getChannelList(this, chainId, smId);
 	foreach (eveSMChannel *channel, *channelList){
 	    connect (channel, SIGNAL(channelDone()), this, SLOT(execStage()), Qt::QueuedConnection);
-	    triggerDetecConf = channel->hasConfirmTrigger();
+	    if (channel->hasConfirmTrigger()) triggerDetecConf = true;
 	}
 
 	eventList = parser->getSMEventList(chainId, smId);
