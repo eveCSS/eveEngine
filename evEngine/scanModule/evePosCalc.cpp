@@ -121,8 +121,8 @@ void evePosCalc::setPos(QString position, eveVariant* posVariant) {
 
 	if ((axisType == eveDateTimeT) && absolute){
 		// absolute: we accept only "yyyy-MM-dd HH:mm:ss(.zzz)" or "HH:mm:ss(.zzz)" format
-		if (!position.contains(QRegExp("^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}([.]\\d{1,3})?$")) &&
-									!position.contains(QRegExp("^\\d{2}:\\d{2}:\\d{2}([.]\\d{1,3})?$"))){
+		if (!position.contains(QRegExp("^\\d{4}-\\d{1,2}-\\d{1,2} \\d{1,2}:\\d{1,2}:\\d{1,2}([.]\\d{1,3})?$")) &&
+									!position.contains(QRegExp("^\\d{1,2}:\\d{1,2}:\\d{1,2}([.]\\d{1,3})?$"))){
 			sendError(ERROR, QString("invalid absolute datetime format %1, using current time").arg(position));
 			posVariant->setValue(QDateTime::currentDateTime());
 			return;
@@ -130,7 +130,7 @@ void evePosCalc::setPos(QString position, eveVariant* posVariant) {
 	}
 	else if ((axisType == eveDateTimeT) && !absolute){
 		// relative: we accept only a number for seconds or HH:mm:ss format
-		if (position.contains(QRegExp("^\\d{2}:\\d{2}:\\d{2}([.]\\d{1,3})?$"))){
+		if (position.contains(QRegExp("^\\d{1,2}:\\d{1,2}:\\d{1,2}([.]\\d{1,3})?$"))){
 			QString format;
 			if (position.contains("."))
 				format = "hh:mm:ss.z";
@@ -178,7 +178,7 @@ void evePosCalc::setStepWidth(QString stepwidth) {
 	bool ok=false;
 	if (axisType == eveDateTimeT){
 		// stepwidth is a double, we accept a number or HH:mm:ss(.mmm) format
-		QRegExp regex = QRegExp("^(\\d{2}):(\\d{2}):(\\d{2}([.]\\d{1,3})?)$");
+		QRegExp regex = QRegExp("^(\\d{1,2}):(\\d{1,2}):(\\d{1,2}([.]\\d{1,3})?)$");
 		if (stepwidth.contains(regex) && (regex.numCaptures() > 3)){
 			QStringList list = regex.capturedTexts();
 			int hours = list.at(1).toInt(&ok);
