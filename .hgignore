@@ -14,7 +14,7 @@ Makefile$
 Makefile.Debug$
 Makefile.Release$
 \.project$
-\..cproject$
+\.cproject$
 .*\.hd5$
 .*\.hdf$
 .*\.so$
