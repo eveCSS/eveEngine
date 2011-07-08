@@ -133,9 +133,9 @@ void evePosCalc::setPos(QString position, eveVariant* posVariant) {
 		if (position.contains(QRegExp("^\\d{1,2}:\\d{1,2}:\\d{1,2}([.]\\d{1,3})?$"))){
 			QString format;
 			if (position.contains("."))
-				format = "hh:mm:ss.z";
+				format = "h:m:s.z";
 			else
-				format = "hh:mm:ss";
+				format = "h:m:s";
 			posVariant->setValue(QDateTime::fromString(position,format));
 			return;
 		}
