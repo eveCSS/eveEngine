@@ -1,0 +1,20 @@
+
+syntax: regexp
+^evEngine/evEngine$
+^evTestClient/evTestClient$
+^Test/Test$
+^Test-FileName/Test-FileName$
+^Test-Plugin-Storage/Test-Plugin-Storage$
+^Test-Variant/Test-Variant$
+\.settings$
+debug$
+release$
+testfiles$
+Makefile$
+Makefile.Debug$
+Makefile.Release$
+\.project$
+\..cproject$
+.*\.hd5$
+.*\.hdf$
+.*\.so$
