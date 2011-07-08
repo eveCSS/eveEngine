@@ -12,6 +12,7 @@
  *
  */
 #include <QMultiHash>
+#include <QList>
 #include "eveMessageChannel.h"
 #include "eveMathConfig.h"
 #include "eveMath.h"
@@ -32,6 +33,7 @@ private:
 	int chid;
 	QMultiHash<int, eveMath*> mathHash;
 	bool shutdownPending;
+	QList<int> pauseList;
 
 };
 

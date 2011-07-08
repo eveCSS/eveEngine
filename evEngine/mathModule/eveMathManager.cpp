@@ -74,10 +74,19 @@ void eveMathManager::handleMessage(eveMessage *message){
 						}
 					}
 				}
+				else if (((eveChainStatusMessage*)message)->getStatus()== eveChainSmPAUSED){
+					int smid = ((eveChainStatusMessage*)message)->getSmId();
+					if (!pauseList.contains(smid)) pauseList.append(smid);
+				}
 				else if (((eveChainStatusMessage*)message)->getStatus()== eveChainSmEXECUTING){
 					int smid = ((eveChainStatusMessage*)message)->getSmId();
-					foreach (eveMath* math, mathHash.values(smid)){
-						if (math->hasInit()) math->reset();
+					if (pauseList.contains(smid)){
+						pauseList.removeOne(smid);
+					}
+					else {
+						foreach (eveMath* math, mathHash.values(smid)){
+							if (math->hasInit()) math->reset();
+						}
 					}
 				}
 				else if (((eveChainStatusMessage*)message)->getStatus()== eveChainDONE){
