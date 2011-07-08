@@ -20,6 +20,7 @@ eveMessageChannel::~eveMessageChannel()
  * \brief get the message from the internal send queue
  *
  * called by MessageHub to receive a message after messageWaiting has been signaled
+ * messageHub has locked sendLock before calling this
  */
 eveMessage * eveMessageChannel::getMessage()
 {
@@ -95,7 +96,6 @@ bool eveMessageChannel::queueMessage(eveMessage * message)
  */
 void eveMessageChannel::newQueuedMessage()
 {
-	QReadWriteLock recLock;
 	bool fastEmpty = true, normalEmpty = true;
 	eveMessage * message;
 
