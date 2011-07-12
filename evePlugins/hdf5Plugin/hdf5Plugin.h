@@ -37,7 +37,7 @@ class hdf5Plugin : public QObject, eveFileWriter{
 public:
 	hdf5Plugin();
 	virtual ~hdf5Plugin();
-	int init(int, QString, QString, QHash<QString, QString>*);
+	int init(int, QString, QString, QHash<QString, QString>&);
 	int setCols(int, QString, QString, QStringList);
 	int open(int);
 	int close(int);

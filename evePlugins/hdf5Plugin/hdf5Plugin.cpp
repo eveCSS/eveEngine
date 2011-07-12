@@ -62,7 +62,7 @@ int hdf5Plugin::open(int setID)
  * @param parameter	Plugin-parameter from xml
  * @return			error severity
  */
-int hdf5Plugin::init(int setID, QString filename, QString format, QHash<QString, QString>* parameter){
+int hdf5Plugin::init(int setID, QString filename, QString format, QHash<QString, QString>& parameter){
 	if (setIdList.contains(setID)) {
 		errorString = QString("HDF5Plugin: Data Set with id %1, is already initialized").arg(setID);
 		return MINOR;
@@ -76,8 +76,8 @@ int hdf5Plugin::init(int setID, QString filename, QString format, QHash<QString,
 		return ERROR;
 	}
 	setIdList.append(setID);
-	if (parameter->contains("extent")){
-		int tmp = parameter->value("extent").toInt();
+	if (parameter.contains("extent")){
+		int tmp = parameter.value("extent").toInt();
 		if ((tmp > 0) && (tmp < 1000000)) sizeIncrement = tmp;
 	}
 
