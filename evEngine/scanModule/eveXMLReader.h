@@ -51,7 +51,7 @@ public:
 	QString getSMTag(int, int, QString);
 	bool getSMTagBool(int, int, QString, bool);
 	double getSMTagDouble(int, int, QString, double);
-	QHash<QString, QString>* getChainPlugin(int, QString);
+	QHash<QString, QString> getChainPlugin(int, QString);
 	QList<QHash<QString, QString>* >* getPositionerPluginList(int, int);
 	QList<eveMathConfig*>* getFilteredMathConfigs(int);
 
@@ -73,7 +73,7 @@ private:
 	eveMotorAxis * createAxisDefinition(QDomNode, eveDeviceCommand *, eveDeviceCommand *);
 	void createOption(QDomNode);
 	eveBaseTransportDef* createTransportDefinition(QDomElement node);
-	void getPluginData(QDomElement, QHash<QString, QString>*);
+	void getPluginData(QDomElement, QHash<QString, QString>&);
 	eveDeviceList *deviceList;
 	eveManager *parent;
 	QHash<int, QDomElement> chainDomIdHash;

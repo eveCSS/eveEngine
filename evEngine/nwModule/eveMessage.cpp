@@ -1,4 +1,5 @@
 
+#include <iostream>
 #include <assert.h>
 #include "eveMessage.h"
 #include "eveError.h"
@@ -7,6 +8,7 @@ eveMessage::eveMessage()
 {
 	type = 0;
 	priority = EVEMESSAGEPRIO_NORMAL;
+	destination = 0;
 }
 
 /**
@@ -47,8 +49,15 @@ eveMessage::~eveMessage()
  */
 bool eveMessage::compare(eveMessage *message)
 {
-	// implement this in childs
+	if ((message->getType() == type) && (message->getPriority() == priority)
+				&& (message->getDestination() == destination)) return true;
 	return false;
+}
+void eveMessage::dump()
+{
+	std::cout << "eveMessage: destination: " << destination << " type: "
+			<< type << " prio: "<< priority << "\n";
+
 }
 
 
@@ -76,26 +85,17 @@ bool eveMessageText::compare(eveMessage *message)
 	if (messageText != ((eveMessageText*)message)->getText()) return false;
 	return true;
 }
-
-/*
- * Class eveMessageList
-eveMessageTextList::eveMessageTextList(int mType, QStringList mList)
-{
-	type = mType;
-	// check the allowed types; for now EVEMESSAGETYPE_PLAYLIST is the only candidate
-	assert(type != EVEMESSAGETYPE_PLAYLIST);
-	messageList = mList;
-}
-bool eveMessageTextList::compare(eveMessage *message)
-{
-	if (!message) return false;
-	if (type != message->getType()) return false;
-	if (messageList != ((eveMessageTextList*)message)->getList()) return false;
-	return true;
-}
+/**
+ * \brief dump content of eveMessageText to stdout
  */
+void eveMessageText::dump()
+{
+	((eveMessage*)this)->dump();
+	std::cout << "eveMessageText:  messageText: " << qPrintable(messageText) << "\n";
+}
 
 /**
+ * \brief Constructor a message holding an int
  * \param mtype the type of message
  * \param ival integer value of the message
  */
@@ -158,7 +158,7 @@ int eveMessageIntList::getInt(int index){
 	if (index == 0)	return ivalue1;
 	else if (index == 1)	return ivalue2;
 	else {
-		eveError::log(4,"eveMessageIntList::getInt: index out of range");
+		eveError::log(ERROR,"eveMessageIntList::getInt: index out of range");
 		return 0;
 	}
 }
@@ -244,14 +244,11 @@ bool eveEngineStatusMessage::compare(eveMessage *message)
 {
 	if (!message) return false;
 	if (type != message->getType()) return false;
-
-	// it is an eveEngineStatusMessage
-	// tbd
-	//if (estatus != ((eveEngineStatusMessage*)message)->getestatus()) return false;
-	eveError::log(4,"eveEngineStatusMessage::compare: not yet implemented");
+    if (estatus != ((eveEngineStatusMessage*)message)->getStatus()) return false;
+    if ((XmlId ==  ((eveEngineStatusMessage*)message)->getXmlId()) &&
+    		(timestamp == ((eveEngineStatusMessage*)message)->getTime())) return true;
 
 	return false;
-	// return true;
 }
 
 /*
@@ -302,6 +299,8 @@ bool eveChainStatusMessage::compare(eveMessage *message)
 {
 	if (!message) return false;
 	if (type != message->getType()) return false;
+	if (chainId != ((eveChainStatusMessage*)message)->getChainId()) return false;
+	if (smId != ((eveChainStatusMessage*)message)->getSmId()) return false;
 	if (cstatus == ((eveChainStatusMessage*)message)->getStatus()) return true;
 
 	return false;
@@ -469,8 +468,6 @@ bool eveErrorMessage::compare(eveMessage *message)
 /*
  * Class eveBaseDataMessage
  */
-/**
- */
 eveBaseDataMessage::eveBaseDataMessage(int mtype, int cid, int smid, QString xmlid, QString nam, int prio, int dest) :
 	eveMessage(mtype, prio, dest)
 {
@@ -500,7 +497,7 @@ eveBaseDataMessage* eveBaseDataMessage::clone(){
 /**
  * \brief compare is not implemented (nor used)
  */
-bool eveBaseDataMessage::compare(eveBaseDataMessage* with){
+bool eveBaseDataMessage::compare(eveMessage* with){
 	return false;
 }
 
@@ -673,7 +670,7 @@ eveDataMessage* eveDataMessage::clone(){
 			message = new eveDataMessage(xmlId, name, dataStatus, dataModifier, timestamp, dateTime, priority, destination);
 		break;
 		default:
-			eveError::log(4,"eveDataMessage unknown data type");
+			eveError::log(ERROR,"eveDataMessage unknown data type");
 			assert(true);
 		break;
 	}
@@ -683,6 +680,12 @@ eveDataMessage* eveDataMessage::clone(){
 	message->setName(name);
 	message->setPositionCount(posCount);
 	return message;
+}
+/**
+ * \brief compare is not implemented (nor used)
+ */
+bool eveDataMessage::compare(eveMessage* with){
+	return false;
 }
 
 eveVariant eveDataMessage::toVariant(){
@@ -718,7 +721,7 @@ eveVariant eveDataMessage::toVariant(){
 			result.setValue(dateTime);
 		break;
 		default:
-			eveError::log(4,"eveDataMessage unknown data type");
+			eveError::log(ERROR,"eveDataMessage unknown data type");
 		break;
 	}
 	return result;
@@ -756,7 +759,7 @@ eveDevInfoMessage* eveDevInfoMessage::clone() {
 /**
  * \brief compare is not implemented (nor used)
  */
-bool eveDevInfoMessage::compare(eveDevInfoMessage* with){
+bool eveDevInfoMessage::compare(eveMessage* with){
 	return false;
 }
 
@@ -770,10 +773,9 @@ evePlayListMessage::evePlayListMessage(const QList<evePlayListEntry> playlist, i
 {
 	type = EVEMESSAGETYPE_PLAYLIST;
 	priority = prio;
-	plList = new QList<evePlayListEntry>(playlist);
+	plList = QList<evePlayListEntry>(playlist);
 }
 evePlayListMessage::~evePlayListMessage() {
-	delete plList;
 }
 
 /**
@@ -795,19 +797,39 @@ bool evePlayListMessage::compare(eveMessage *message)
  */
 evePlayListMessage* evePlayListMessage::clone()
 {
-	return new evePlayListMessage(*plList, priority);
+	return new evePlayListMessage(plList, priority);
+}
+/**
+ * \brief copy constructor
+ */
+evePlayListMessage::evePlayListMessage(evePlayListMessage& ref) : eveMessage(ref)
+{
+	plList = QList<evePlayListEntry>(ref.plList);
 }
 /**
  * \brief get playlist entry at specified index
  * \param index index
  * \return entry at index, returns an entry with pid=-1, if index is out of range
  */
-evePlayListEntry & evePlayListMessage::getEntry(int index){
+evePlayListEntry evePlayListMessage::getEntry(int index){
 
+	evePlayListEntry entry;
 	entry.pid=-1;
-	if ((index >= 0) && (index < plList->size()))
-		entry = plList->at(index);
+	if ((index >= 0) && (index < plList.size()))
+		entry = plList.at(index);
 	return entry;
+}
+
+/**
+ * \brief dump the content of this class
+ */
+void evePlayListMessage::dump(){
+
+	((eveMessage*)this)->dump();
+	foreach(evePlayListEntry entry, plList) {
+		std::cout << "evePlayListMessage:  Author: " << qPrintable(entry.author) << " Name: "
+				<< qPrintable(entry.name) << " pid: "<< entry.pid << "\n";
+	}
 }
 
 /*
@@ -821,22 +843,19 @@ evePlayListEntry & evePlayListMessage::getEntry(int index){
  * @param prio priority
  * @param dest destination channel
  */
-eveStorageMessage::eveStorageMessage(int chid, int channel, QHash<QString, QString>* parameter, int prio, int dest) :
+eveStorageMessage::eveStorageMessage(int chid, int channel, QHash<QString, QString>& parameter, int prio, int dest) :
 	eveMessage(EVEMESSAGETYPE_STORAGECONFIG, prio, dest)
 {
 	chainId = chid;
 	channelId = channel;
-	paraHash = parameter;
-	filename = paraHash->value("savefilename", QString());
+	paraHash = QHash<QString, QString>(parameter);
+	filename = paraHash.value("savefilename", QString());
 }
 eveStorageMessage::~eveStorageMessage() {
-	if (paraHash != NULL) delete paraHash;
 }
 
-QHash<QString, QString>*  eveStorageMessage::takeHash(){
-	QHash<QString, QString>* tmp = paraHash;
-	paraHash = NULL;
-	return tmp;
+QHash<QString, QString>&  eveStorageMessage::getHash(){
+	return paraHash;
 }
 
 /**
@@ -857,7 +876,18 @@ bool eveStorageMessage::compare(eveMessage *message)
  */
 eveStorageMessage* eveStorageMessage::clone()
 {
-	QHash<QString, QString>* tmp = NULL;
-	if (paraHash != NULL) tmp = new QHash<QString, QString>(*paraHash);
-	return new eveStorageMessage(chainId, channelId, tmp, priority, destination);
+	return new eveStorageMessage(chainId, channelId, paraHash, priority, destination);
+}
+/**
+ * \brief print content to stdout
+ */
+void eveStorageMessage::dump()
+{
+	((eveMessage*)this)->dump();
+	std::cout << "eveStorageMessage: chainId: " << chainId << " channel: " << channelId
+				<< " filename: " << qPrintable(filename) << "\n";
+	foreach(QString key, paraHash.keys()) {
+		std::cout << "evePlayListMessage:  key: " << qPrintable(key) << " Value: "
+				<< qPrintable(paraHash.value(key)) << "\n";
+	}
 }

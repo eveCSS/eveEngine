@@ -762,9 +762,9 @@ QString eveXMLReader::getChainString(int chain, QString tagname){
 	return empty;
 }
 
-QHash<QString, QString>* eveXMLReader::getChainPlugin(int chain, QString tagname){
+QHash<QString, QString> eveXMLReader::getChainPlugin(int chain, QString tagname){
 
-	QHash<QString, QString>* pluginHash = new QHash<QString, QString>;
+	QHash<QString, QString> pluginHash;
 	if (chainDomIdHash.contains(chain)) {
 		QDomElement domElement = chainDomIdHash.value(chain);
 		domElement = domElement.firstChildElement(tagname);
@@ -791,7 +791,7 @@ QList<QHash<QString, QString>* >* eveXMLReader::getPositionerPluginList(int chai
 			if (!domParam.isNull()) pluginHash->insert("normalize_id", domParam.text().trimmed());
 			QDomElement	domPlugin = domElement.firstChildElement("plugin");
 			if (!domPlugin.isNull()){
-				getPluginData(domPlugin, pluginHash);
+				getPluginData(domPlugin, *pluginHash);
 			}
 			domElement = domElement.nextSiblingElement("positioning");
 			posPluginDataList->append(pluginHash);
@@ -800,15 +800,15 @@ QList<QHash<QString, QString>* >* eveXMLReader::getPositionerPluginList(int chai
 	return posPluginDataList;
 }
 
-void eveXMLReader::getPluginData(QDomElement domPlugin, QHash<QString, QString>* pluginHash){
+void eveXMLReader::getPluginData(QDomElement domPlugin, QHash<QString, QString>& pluginHash){
 
 	if (domPlugin.hasAttribute("name")) {
-		pluginHash->insert("pluginname", domPlugin.attribute("name").trimmed());
+		pluginHash.insert("pluginname", domPlugin.attribute("name").trimmed());
 	}
 	QDomElement domElement = domPlugin.firstChildElement("parameter");
 	while (!domElement.isNull()) {
 		if (domElement.hasAttribute("name")) {
-			pluginHash->insert(domElement.attribute("name").trimmed(), domElement.text().trimmed());
+			pluginHash.insert(domElement.attribute("name").trimmed(), domElement.text().trimmed());
 		}
 		domElement = domElement.nextSiblingElement("parameter");
 	}
@@ -952,7 +952,7 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 			prependElement=false;
 			QHash<QString, QString> paraHash;
 			QDomElement domContr = domElement.firstChildElement("plugin");
-			getPluginData(domContr, &paraHash);
+			getPluginData(domContr, paraHash);
 			if (domContr.attribute("name").trimmed().length() > 1)
 				poscalc->setStepPlugin(domContr.attribute("name"), paraHash);
 			else

@@ -24,7 +24,7 @@ eveEventManager::~eveEventManager() {
  */
 void eveEventManager::handleMessage(eveMessage *message){
 
-	eveError::log(4, "eveEventManager: message arrived");
+	eveError::log(DEBUG, "eveEventManager: message arrived", EVEMESSAGEFACILITY_EVENT);
 	switch (message->getType()) {
 		case EVEMESSAGETYPE_EVENTREGISTER:
 			registerEvent((eveEventRegisterMessage*)message);

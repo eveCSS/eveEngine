@@ -23,15 +23,15 @@
  */
 eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* message, QByteArray* xmldata) {
 
-	QHash<QString, QString>* paraHash = message->takeHash();
+	QHash<QString, QString> paraHash = message->getHash();
 	QString emptyString("");
 	chainId = message->getChainId();
 	fileName = message->getFileName();
-	fileType = paraHash->value("format", emptyString);
-	QString suffix = paraHash->value("suffix", emptyString);
-	pluginName = paraHash->value("pluginname", emptyString);
-	pluginPath = paraHash->value("location", emptyString);
-	bool saveXML = paraHash->value("savescandescription", emptyString).startsWith("true");
+	fileType = paraHash.value("format", emptyString);
+	QString suffix = paraHash.value("suffix", emptyString);
+	pluginName = paraHash.value("pluginname", emptyString);
+	pluginPath = paraHash.value("location", emptyString);
+	bool saveXML = paraHash.value("savescandescription", emptyString).startsWith("true");
 	manager = sman;
 	fileWriter = NULL;
 	fwInitDone = false;
@@ -39,7 +39,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 	bool fileTest = false;
 	bool doAutoNumber = false;
 
-	if (paraHash->value("autonumber", emptyString).toLower() == "true") doAutoNumber = true;;
+	if (paraHash.value("autonumber", emptyString).toLower() == "true") doAutoNumber = true;;
 
 	// TODO
 	//we send dummy data for testing purpose only
@@ -211,7 +211,6 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 		else
 			delete xmldata;
 	}
-	delete paraHash;
 }
 
 eveDataCollector::~eveDataCollector() {

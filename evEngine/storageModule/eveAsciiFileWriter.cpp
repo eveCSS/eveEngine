@@ -28,7 +28,7 @@ eveAsciiFileWriter::~eveAsciiFileWriter() {
  * @param parameter	Plugin-parameter from xml
  * @return			error severity
  */
-int eveAsciiFileWriter::init(int setID, QString filename, QString format, QHash<QString, QString>* parameter){
+int eveAsciiFileWriter::init(int setID, QString filename, QString format, QHash<QString, QString>& parameter){
 	if (initDone) {
 		errorString = QString("AsciiFileWriter does not support multiple Data Sets, initialize only once");
 		return ERROR;

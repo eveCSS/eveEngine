@@ -172,9 +172,10 @@ int main(int argc, char *argv[])
 	paralist->setParameter("port", QString().setNum(portNumber));
 	paralist->setParameter("interfaces", interfaces);
 	if (!eveRoot.isEmpty()) paralist->setParameter("eveRoot", eveRoot);
+	if (!xmlFileName.isEmpty()) paralist->setParameter("startFile",xmlFileName );
 
 	eveError *error = new eveError(textDisplay, debuglevel);
-	eveMessageHub *mHub = new eveMessageHub(useGui);
+	eveMessageHub *mHub = new eveMessageHub(useGui, useNet);
 	mHub->init();
 
 	if (useGui) {

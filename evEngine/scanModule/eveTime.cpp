@@ -67,7 +67,7 @@ eveTime eveTime::getCurrent(){
 
 /**
  *
- * @return seconds since 1.1.1970 00:00:00
+ * @return seconds since 1.1.1990 00:00:00
  */
 quint32 eveTime::seconds(){
 	time_t_wrapper ttw = (epicsTime) *this;

@@ -6,6 +6,7 @@
  */
 
 #include "eveStatusTracker.h"
+#include "eveError.h"
 
 // from Message.h
 //#define EVEENGINESTATUS_IDLENOXML 0x00 		// Idle, no XML-File loaded
@@ -22,7 +23,7 @@ eveBasicStatusTracker::eveBasicStatusTracker() {
 }
 
 eveBasicStatusTracker::~eveBasicStatusTracker() {
-	// TODO Auto-generated destructor stub
+	// Auto-generated destructor stub
 }
 
 /**
@@ -63,7 +64,8 @@ bool eveBasicStatusTracker::setChainStatus(eveChainStatusMessage* message) {
 					XmlName.clear();
 					chainStatus.clear();
 					chidWithStorageList.clear();
-					emit engineIdle();
+					// signal end of work, used to kill engine in batch mode
+					if (repeatCount == 0)emit engineIdle();
 				}
 			}
 			break;
@@ -85,19 +87,22 @@ void eveBasicStatusTracker::setRepeatCount(int count) {
 		repeatCount = count;
 }
 
+/**
+ * \brief set the repeatCount to a number in range 0-65535
+ * \return a message containing the current engine status
+ */
 eveEngineStatusMessage * eveBasicStatusTracker::getEngineStatusMessage() {
-	// TODO change int engineStatus to engineStatusT
 	unsigned int status = ((unsigned int)engineStatus) | (repeatCount << 16);
 	return new eveEngineStatusMessage(status, XmlName);
 }
 
 
 eveStatusTracker::eveStatusTracker() {
-	// TODO Auto-generated constructor stub
+	// Auto-generated constructor stub
 }
 
 eveStatusTracker::~eveStatusTracker() {
-	// TODO Auto-generated destructor stub
+	// Auto-generated destructor stub
 }
 
 eveManagerStatusTracker::eveManagerStatusTracker() {
@@ -105,7 +110,7 @@ eveManagerStatusTracker::eveManagerStatusTracker() {
 }
 
 eveManagerStatusTracker::~eveManagerStatusTracker() {
-	// TODO Auto-generated destructor stub
+	// Auto-generated destructor stub
 }
 
 /**
@@ -224,4 +229,3 @@ eveEngineStatusMessage * eveManagerStatusTracker::getEngineStatusMessage() {
 	if (autoStart) status |= EVEENGINESTATUS_AUTOSTART;
 	return new eveEngineStatusMessage(status, XmlName);
 }
-

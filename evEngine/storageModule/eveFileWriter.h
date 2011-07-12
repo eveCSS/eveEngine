@@ -20,7 +20,7 @@ class eveFileWriter {
 public:
 	// eveFileWriter();
 	virtual ~eveFileWriter() {};
-	virtual int init(int, QString, QString, QHash<QString, QString>*) = 0;
+	virtual int init(int, QString, QString, QHash<QString, QString>&) = 0;
 	virtual int setCols(int, QString, QString, QStringList) = 0;
 	virtual int open(int) = 0;
 	virtual int addData(int, eveDataMessage*) = 0;

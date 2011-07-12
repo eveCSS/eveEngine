@@ -54,7 +54,6 @@ void eveStorageManager::handleMessage(eveMessage *message){
 					// close input queue, if we are done
 					if (chainIdChannelHash.isEmpty()) disableInput();
 					eveChainStatusMessage* answer = new eveChainStatusMessage(eveChainSTORAGEDONE, id, 0, 0);
- 					//eveChainStatusMessage* answer = ((eveChainStatusMessage*)message)->clone();
 					answer->setStatus(eveChainSTORAGEDONE);
 					addMessage(answer);
 					if (chainIdChannelHash.isEmpty()) shutdown();

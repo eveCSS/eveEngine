@@ -1,6 +1,7 @@
 
 #include <QTimer>
 #include <QApplication>
+#include <QFile>
 #include "eveMessageHub.h"
 #include "eveNwThread.h"
 #include "eveManagerThread.h"
@@ -11,16 +12,17 @@
 
 eveMessageHub* eveMessageHub::mHub=NULL;
 
-eveMessageHub::eveMessageHub(bool gui)
+eveMessageHub::eveMessageHub(bool gui, bool net)
 {
 	useGui = gui;
+	useNet = net;
 	nextChannel = EVECHANNELS_RESERVED;
 	engineStatus = EVEENGINESTATUS_IDLENOXML;
 	mHub = this;
 	currentXmlId = "none";
 	reqMan = new eveRequestManager();
+	loglevel = eveParameter::getParameter("loglevel").toInt();
 	connect (this, SIGNAL(messageWaiting(int)), this, SLOT(newMessage(int)), Qt::QueuedConnection);
-
 }
 
 void eveMessageHub::init()
@@ -52,6 +54,27 @@ void eveMessageHub::init()
     	eventThread->start();
     	waitRegistration.wait(&mutex);
     }
+    // batch processing: execute startFile if any
+	QString fileName = eveParameter::getParameter("startFile");
+	if (!fileName.isEmpty()){
+		// read the file and send the content
+		QFile xmlFile(fileName);
+		if (xmlFile.open(QFile::ReadOnly)) {
+		    eveMessage* plmessage = new eveAddToPlMessage(fileName, QString("none"), xmlFile.readAll());
+
+		    // switch on autoplay
+			eveMessage* message = new eveMessageInt(EVEMESSAGETYPE_AUTOPLAY, 1);
+			if (!mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(message)) delete message;
+
+		    // add to playList
+			if (!mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(plmessage)) delete plmessage;
+			eveError::log(DEBUG, QString("Added %1 to playList").arg(fileName));
+		}
+		else
+		eveError::log(ERROR, QString("unable to execute file: %1").arg(fileName));
+
+	}
+
 
 }
 
@@ -121,7 +144,7 @@ void eveMessageHub::unregisterChannel(int channelId)
 }
 
 /**
- * \brief handle the various messages
+ * \brief get messages from message source and handle it
  * \param messageSource source of new message (registered id of messageChannel)
  *
  * message channels (usually running in a different thread) put a message in their
@@ -130,7 +153,7 @@ void eveMessageHub::unregisterChannel(int channelId)
  */
 void eveMessageHub::newMessage(int messageSource)
 {
-	eveMessage *message;
+	eveMessage *message=NULL;
 
 	QReadLocker locker(&channelLock);
 
@@ -146,7 +169,6 @@ void eveMessageHub::newMessage(int messageSource)
 	}
 	else {
 		// we couldn't get the lock, try again later
-		message = NULL;
 		emit messageWaiting(messageSource);
 	}
 
@@ -154,11 +176,24 @@ void eveMessageHub::newMessage(int messageSource)
 
 		switch (message->getType()) {
 			case EVEMESSAGETYPE_ERROR:
+			{
+				eveErrorMessage* emesg = (eveErrorMessage*)message;
+				eveError::log(emesg->getSeverity(), emesg->getErrorText(), emesg->getFacility());
+				if (loglevel < emesg->getSeverity()) {
+					delete message;
+					message = NULL;
+					break;
+				}
+			}
 			case EVEMESSAGETYPE_CURRENTXML:
 			case EVEMESSAGETYPE_ENGINESTATUS:
 				/* send errors and enginestatus to viewers if available */
-				if (mChanHash.contains(EVECHANNEL_NET)){
+				if (useNet || mChanHash.contains(EVECHANNEL_NET)){
 					if (mChanHash.value(EVECHANNEL_NET)->queueMessage(message))message = NULL;
+				}
+				else {
+					delete message;
+					message = NULL;
 				}
 				break;
 			case EVEMESSAGETYPE_CHAINSTATUS:
@@ -347,14 +382,13 @@ void eveMessageHub::newMessage(int messageSource)
  */
 void eveMessageHub::addError(int severity, int errorType,  QString errorString)
 {
-	QReadLocker locker(&channelLock);
-	if (mChanHash.contains(EVECHANNEL_NET)){
-		eveErrorMessage *errorMessage = new eveErrorMessage(severity, EVEMESSAGEFACILITY_MHUB, errorType, errorString);
-		if (!mChanHash.value(EVECHANNEL_NET)->queueMessage(errorMessage)) delete errorMessage;
-	}
-	else {
-		// no viewer connected, we log locally
-		eveError::log(severity, errorString);
+	eveError::log(severity, errorString, EVEMESSAGEFACILITY_MHUB);
+	if (useNet && (loglevel >= severity)) {
+		QReadLocker locker(&channelLock);
+		if (mChanHash.contains(EVECHANNEL_NET)){
+			eveErrorMessage *errorMessage = new eveErrorMessage(severity, EVEMESSAGEFACILITY_MHUB, errorType, errorString);
+			if (!mChanHash.value(EVECHANNEL_NET)->queueMessage(errorMessage)) delete errorMessage;
+		}
 	}
 }
 
@@ -366,7 +400,7 @@ void eveMessageHub::addError(int severity, int errorType,  QString errorString)
 void eveMessageHub::close()
 {
 
-	eveError::log(4, "MessageHub shut down");
+	eveError::log(DEBUG, "MessageHub shut down");
 	emit closeAll();
 	QTimer::singleShot(500, this, SLOT(waitUntilDone()));
 }
@@ -379,10 +413,10 @@ void eveMessageHub::waitUntilDone()
 	QReadLocker locker(&channelLock);
 	if (!mChanHash.isEmpty()){
 		QTimer::singleShot(500, this, SLOT(waitUntilDone()));
-		addError(INFO, 0, "eveMessageHub: still waiting for threads to shutdown");
+		eveError::log(DEBUG, "eveMessageHub: still waiting for threads to shutdown");
 		return;
 	}
-	eveError::log(4, "MessageHub shutdown, done");
+	eveError::log(DEBUG, "MessageHub shutdown, done");
 	if (useGui) {
 		emit closeParent();
 	}

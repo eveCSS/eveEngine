@@ -20,7 +20,7 @@ public:
 	eveAsciiFileWriter();
 	virtual ~eveAsciiFileWriter();
 
-	int init(int, QString, QString, QHash<QString, QString>*);
+	int init(int, QString, QString, QHash<QString, QString>&);
 	int setCols(int, QString, QString, QStringList);
 	int open(int);
 	int addData(int, eveDataMessage* );

@@ -36,7 +36,7 @@ void eveNetObject::init(){
 
 	// TODO
 	if (eveParameter::getParameter("interfaces") != "all")
-			eveError::log(1, "eveNetObject::init: selecting specific interfaces not yet implemented");
+			eveError::log(MINOR, "eveNetObject::init: selecting specific interfaces not yet implemented");
 
 	disconnect(this, SIGNAL(initDelayed()), this, SLOT(init()));
 
@@ -51,9 +51,9 @@ void eveNetObject::init(){
 		connect(netListener, SIGNAL(newConnection()), this, SLOT(acceptSocket()));
 
 		if (!netListener->listen(QHostAddress::Any, port ))
-			eveError::log(1, QString("Error listening on port %1; Error: %2").arg(port).arg(netListener->errorString()));
+			eveError::log(ERROR, QString("Error listening on port %1; Error: %2").arg(port).arg(netListener->errorString()));
 		else
-			eveError::log(1, QString("listening on port %1").arg(port));
+			eveError::log(DEBUG, QString("listening on port %1").arg(port));
 	}
 }
 
@@ -69,7 +69,7 @@ void eveNetObject::acceptSocket(){
 	if (newSocket != 0) {
 		eveSocket* eSocket = new eveSocket(newSocket, this);
 		socketList.insert(eSocket);
-		eveError::log(1, QString("eveNetObject: accepted socket"));
+		eveError::log(DEBUG, QString("eveNetObject: accepted socket"));
 		QList<eveMessage * > * calist = mFilter->getCache();
 		foreach (eveMessage * message, *calist){
 			QByteArray * sendByteArray = eveMessageFactory::getNewStream(message);
@@ -87,7 +87,7 @@ void eveNetObject::removeSocket(eveSocket* socket){
 
 	if (socket != 0) {
 		socketList.remove(socket);
-		eveError::log(1, QString("eveNetObject: removed socket"));
+		eveError::log(DEBUG, QString("eveNetObject: removed socket"));
 	}
 }
 
@@ -156,7 +156,7 @@ void eveNetObject::shutdown(){
 }
 
 void eveNetObject::log(QString string){
-	eveError::log(1, string);
+	eveError::log(INFO, string);
 }
 
 void eveNetObject::sendError(int severity, int facility, int errorType,  QString errorString){

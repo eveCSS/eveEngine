@@ -66,18 +66,17 @@ eveCaTransport::~eveCaTransport(){
 	if (contextCounter.contains(caThreadContext)){
 		int tmp = contextCounter.value(caThreadContext);
 		--tmp;
-		//sendError(DEBUG, 0, QString("CATrans Destr.: %1 (%2) channels done").arg(tmp).arg((int)caThreadContext));
 		if (tmp > 0){
 			contextCounter.insert(caThreadContext, tmp);
 		}
 		else {
-			eveError::log(4, " all channels done, destroy CA Context");
+			eveError::log(DEBUG, " all channels done, destroy CA Context");
 			if (caThreadContext == ca_current_context()){
 				ca_context_destroy();
 				contextCounter.remove(caThreadContext);
 			}
 			else
-				eveError::log(4, "thread / CA context mismatch");
+				eveError::log(ERROR, "thread / CA context mismatch");
 		}
 	}
 }
@@ -687,11 +686,11 @@ int eveCaTransport::execQueue(){
 
 	QWriteLocker locker(&contextLock);
 	if (contextCounter.contains(ca_current_context())){
-		eveError::log(4, "CaTransport: context found, flushing CA");
+		eveError::log(DEBUG, "CaTransport: context found, flushing CA");
 		eveCaTransport::caflush();
 	}
 	else {
-		eveError::log(4, "CaTransport: no context found, not flushing CA");
+		eveError::log(DEBUG, "CaTransport: no context found, not flushing CA");
 	}
 
 	return 0;

@@ -45,21 +45,7 @@ eveMessageFilter::~eveMessageFilter()
  */
 bool eveMessageFilter::checkMessage(eveMessage *message)
 {
-	// skip DEBUG messages if not started with command line parameter debug
 	if (message->getType() == EVEMESSAGETYPE_ERROR){
-		eveErrorMessage* errorMessage = (eveErrorMessage*) message;
-		int loglevel = eveParameter::getParameter("loglevel").toInt();
-		if ((loglevel < 5) && (errorMessage->getSeverity() == EVEMESSAGESEVERITY_DEBUG))
-			return true;
-		else if ((loglevel < 4) && (errorMessage->getSeverity() == EVEMESSAGESEVERITY_INFO))
-			return true;
-		else if ((loglevel < 3) && (errorMessage->getSeverity() == EVEMESSAGESEVERITY_MINOR))
-			return true;
-		else if ((loglevel < 2) && (errorMessage->getSeverity() == EVEMESSAGESEVERITY_ERROR))
-			return true;
-		else if ((loglevel < 1))
-			return true;
-
 		++messageCount;
 		if (messageCount > EVEMESSAGEFILTER_LOWLIMIT){
 			if (!errorMessageCacheList.isEmpty()){

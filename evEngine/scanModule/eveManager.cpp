@@ -17,6 +17,7 @@
 #include "eveScanThread.h"
 #include "eveStorageThread.h"
 #include "eveMathThread.h"
+#include "eveParameter.h"
 
 /**
  * \brief init and register with messageHub
@@ -29,7 +30,10 @@ eveManager::eveManager() {
 	channelId = mHub->registerChannel(this, EVECHANNEL_MANAGER);
 	engineStatus = new eveManagerStatusTracker();
 	shutdownPending = false;
-
+	// if we have a start file we do batch processing and stop engine if status is idle
+	if (!eveParameter::getParameter("startFile").isEmpty()){
+		connect(engineStatus, SIGNAL(engineIdle()), mHub, SLOT(close()), Qt::QueuedConnection);
+	}
 }
 
 eveManager::~eveManager() {
@@ -47,7 +51,7 @@ eveManager::~eveManager() {
  */
 void eveManager::handleMessage(eveMessage *message){
 
-	eveError::log(4, "eveManager: message arrived");
+	eveError::log(DEBUG, "eveManager: message arrived");
 	switch (message->getType()) {
 		case EVEMESSAGETYPE_ADDTOPLAYLIST:
 			playlist->addEntry(((eveAddToPlMessage*)message)->getXmlName(), ((eveAddToPlMessage*)message)->getXmlAuthor(), ((eveAddToPlMessage*)message)->getXmlData());

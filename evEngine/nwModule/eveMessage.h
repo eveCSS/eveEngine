@@ -60,11 +60,11 @@
 #define EVEMESSAGEPRIO_NORMAL 0x0
 #define EVEMESSAGEPRIO_HIGH 0x01
 
-#define EVEMESSAGESEVERITY_DEBUG 0x01
-#define EVEMESSAGESEVERITY_INFO 0x02
+#define EVEMESSAGESEVERITY_FATAL 0x01
+#define EVEMESSAGESEVERITY_ERROR 0x02
 #define EVEMESSAGESEVERITY_MINOR 0x03
-#define EVEMESSAGESEVERITY_ERROR 0x04
-#define EVEMESSAGESEVERITY_FATAL 0x05
+#define EVEMESSAGESEVERITY_INFO 0x04
+#define EVEMESSAGESEVERITY_DEBUG 0x05
 
 #define SUCCESS 0x00
 #define DEBUG EVEMESSAGESEVERITY_DEBUG
@@ -115,14 +115,10 @@ struct evePlayListEntry {
 
 enum eveDataModType {DMTunmodified, DMTcenter, DMTedge, DMTmin, DMTmax, DMTfwhm, DMTmean, DMTstandarddev, DMTsum, DMTnormalized, DMTpeak, DMTunknown};
 enum eveAcqStatus {ACQSTATok, ACQSTATmaxattempt};
-// TODO
-// remove all the clone() stuff except where virtual constructors are needed and use explicit copy constructors where needed
-
 
 /**
  * \brief base class for errorMessage, engineStatus, chainStatus, dataMessage ...
  */
-// TODO modify all constructors to init priority and destination properly
 class eveMessage
 {
 public:
@@ -136,6 +132,7 @@ public:
 	int getDestination(){return destination;};
 	void setDestination(int channel){destination = channel;};
 	virtual bool compare(eveMessage *);
+	void dump();
 	virtual eveMessage* clone(){return new eveMessage(type, priority, destination);};
 protected:
 	int destination;
@@ -153,27 +150,12 @@ public:
 	virtual ~eveMessageText(){};
 	QString& getText(){return messageText;};
 	bool compare(eveMessage *);
-	eveMessageText* clone(){return new eveMessageText(type,messageText, priority);};
+	void dump();
+	virtual eveMessageText* clone(){return new eveMessageText(type,messageText, priority);};
 
 private:
 	QString messageText;
 };
-
-/*
- * do we need this?
- *
-class eveMessageTextList : public eveMessage
-{
-public:
-	eveMessageTextList(int, QStringList);
-	virtual ~eveMessageTextList(){};
-	QStringList& getList(){return messageList;};
-	bool compare(eveMessage *);
-
-private:
-	QStringList messageList;
-};
-*/
 
 /**
  * \brief a message containing one integer
@@ -185,7 +167,7 @@ public:
 	virtual ~eveMessageInt(){};
 	int getInt(){return value;};
 	bool compare(eveMessage *);
-	eveMessageInt* clone(){return new eveMessageInt(type,value, priority, destination);}
+	virtual eveMessageInt* clone(){return new eveMessageInt(type,value, priority, destination);}
 
 private:
 	int value;
@@ -202,7 +184,7 @@ public:
 	virtual ~eveMessageIntList(){};
 	bool compare(eveMessage *);
 	int getInt(int);
-	eveMessageIntList* clone(){return new eveMessageIntList(type,ivalue1,ivalue2, priority);};
+	virtual eveMessageIntList* clone(){return new eveMessageIntList(type,ivalue1,ivalue2, priority);};
 
 private:
 	int ivalue1;
@@ -222,7 +204,7 @@ public:
 	QString getXmlAuthor(){return XmlAuthor;};
 	QByteArray getXmlData(){return XmlData;};
 	bool compare(eveMessage *);
-	virtual eveAddToPlMessage* clone(){return new eveAddToPlMessage(XmlName, XmlAuthor, XmlData, priority);};
+	virtual eveAddToPlMessage* clone(){return new eveAddToPlMessage(*this);};
 
 
 protected:
@@ -239,9 +221,12 @@ class eveCurrentXmlMessage : public eveAddToPlMessage
 public:
 	eveCurrentXmlMessage(QString, QString, QByteArray, int prio=0);
 	virtual ~eveCurrentXmlMessage();
-	eveCurrentXmlMessage* clone(){return new eveCurrentXmlMessage(XmlName, XmlAuthor, XmlData, priority);};
+	virtual eveCurrentXmlMessage* clone(){return new eveCurrentXmlMessage(XmlName, XmlAuthor, XmlData, priority);};
 };
 
+/**
+ *\brief status of engine
+ */
 enum engineStatusT {eveEngIDLENOXML=1, eveEngIDLEXML, eveEngLOADINGXML, eveEngEXECUTING, eveEngPAUSED, eveEngSTOPPED, eveEngHALTED} ;
 /**
  * \brief a message containing the status of the currently processing scanmodule
@@ -264,7 +249,7 @@ public:
 	QString getXmlId(){return XmlId;};
 	eveTime getTime(){return timestamp;};
 	bool compare(eveMessage *);
-	eveEngineStatusMessage* clone(){return new eveEngineStatusMessage(estatus, XmlId, priority, destination);};
+	virtual eveEngineStatusMessage* clone(){return new eveEngineStatusMessage(estatus, XmlId, priority, destination);};
 
 private:
 	eveTime timestamp;
@@ -272,6 +257,9 @@ private:
 	QString XmlId;
 };
 
+/**
+ *\brief status of chain or scanmodule
+ */
 enum chainStatusT {eveChainSmIDLE=1, eveChainSmINITIALIZING, eveChainSmEXECUTING, eveChainSmPAUSED, eveChainSmTRIGGERWAIT, eveChainSmDONE, eveChainDONE, eveChainSTORAGEDONE};
 /**
  * \brief a message containing the status of the currently processing chain
@@ -299,7 +287,7 @@ public:
 	eveTime getTime(){return timestamp;};
 	int getRemainingTime(){return remainingTime;};
 	bool compare(eveMessage *);
-	eveChainStatusMessage* clone(){return new eveChainStatusMessage(cstatus, chainId, smId, posCounter, timestamp, remainingTime, priority, destination);};
+	virtual eveChainStatusMessage* clone(){return new eveChainStatusMessage(*this);};
 
 private:
 	eveTime timestamp;
@@ -323,7 +311,7 @@ public:
 	int getReqType(){return requestType;};
 	QString& getReqText() {return requestString;};
 	bool compare(eveMessage *);
-	eveRequestMessage* clone(){return new eveRequestMessage(requestId, requestType, requestString);};
+	virtual eveRequestMessage* clone(){return new eveRequestMessage(requestId, requestType, requestString);};
 
 private:
 	int requestId;
@@ -346,6 +334,7 @@ public:
 	int getReqType(){return requestType;};
 	//int getAnswerInt(){return answerInt;};
 	bool compare(eveMessage *);
+	virtual eveRequestAnswerMessage* clone(){return new eveRequestAnswerMessage(*this);};
 
 private:
 	int requestId;
@@ -367,7 +356,7 @@ public:
 	virtual ~eveRequestCancelMessage(){};
 	int getReqId(){return requestId;};
 	bool compare(eveMessage *);
-	eveRequestCancelMessage* clone(){return new eveRequestCancelMessage(requestId);};
+	virtual eveRequestCancelMessage* clone(){return new eveRequestCancelMessage(requestId);};
 
 private:
 	int requestId;
@@ -388,7 +377,7 @@ public:
 	eveTime getTime(){return timestamp;};
 	QString getErrorText(){return errorString;};
 	bool compare(eveMessage *);
-	eveErrorMessage* clone(){return new eveErrorMessage(severity, facility, errorType, errorString, priority);};
+	virtual eveErrorMessage* clone(){return new eveErrorMessage(severity, facility, errorType, errorString, priority);};
 
 private:
 	int severity;
@@ -408,8 +397,7 @@ public:
 	eveBaseDataMessage(int, int, int, QString, QString, int prio=0, int dest=0);
 	virtual ~eveBaseDataMessage();
 	virtual eveBaseDataMessage* clone();
-	virtual bool compare(eveBaseDataMessage *);
-
+	virtual bool compare(eveMessage *);
 	int getChainId(){return chainId;};
 	void setChainId(int id){chainId = id;};
 	int getSmId(){return smId;};
@@ -458,8 +446,9 @@ public:
 	int getArraySize(){return arraySize;};
 	int getPositionCount(){return posCount;};
 	void setPositionCount(int pc){posCount = pc;};
-	eveDataMessage* clone();
+	virtual eveDataMessage* clone();
 	eveVariant toVariant();
+	virtual bool compare(eveMessage *);
 
 private:
 	int posCount;
@@ -490,8 +479,8 @@ public:
 	QStringList* getText(){return infoList;};
 	bool isArray(){return isarray;};
 	eveType getDataType(){return dataType;};
-	eveDevInfoMessage* clone();
-	bool compare(eveDevInfoMessage*);
+	virtual eveDevInfoMessage* clone();
+	bool compare(eveMessage*);
 
 private:
 	QStringList *infoList;
@@ -506,15 +495,16 @@ class evePlayListMessage : public eveMessage
 {
 public:
 	evePlayListMessage(const QList<evePlayListEntry> , int prio=0);
-	~evePlayListMessage();
-	int getCount(){return plList->size();};
-	evePlayListEntry & getEntry(int);
+	evePlayListMessage(evePlayListMessage&);
+	virtual ~evePlayListMessage();
+	int getCount(){return plList.size();};
+	evePlayListEntry getEntry(int);
 	bool compare(eveMessage *);
-	evePlayListMessage* clone();
+	virtual evePlayListMessage* clone();
+	void dump();
 
 private:
-	QList<evePlayListEntry> *plList;
-	evePlayListEntry entry;
+	QList<evePlayListEntry> plList;
 };
 
 /**
@@ -523,20 +513,21 @@ private:
 class eveStorageMessage : public eveMessage
 {
 public:
-	eveStorageMessage(int, int, QHash<QString, QString>*, int prio=0, int dest=0);
-	~eveStorageMessage();
+	eveStorageMessage(int, int, QHash<QString, QString>&, int prio=0, int dest=0);
+	virtual ~eveStorageMessage();
 	bool compare(eveMessage *);
-	eveStorageMessage* clone();
+	virtual eveStorageMessage* clone();
 	int getChainId(){return chainId;};
 	int getChannelId(){return channelId;};
 	QString getFileName(){return filename;};
-	QHash<QString, QString>* takeHash();
+	QHash<QString, QString>& getHash();
+	void dump();
 
 private:
 	int chainId;
 	int channelId;
 	QString filename;
-	QHash<QString, QString>* paraHash;
+	QHash<QString, QString> paraHash;
 };
 
 

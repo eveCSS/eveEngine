@@ -29,7 +29,7 @@ void evePlayListManager::addEntry(QString name, QString author, QByteArray data)
 	eveDataEntry * dataentry;
 
 	if (playlist.count() > PLAYLISTMAXENTRIES) {
-		eveError::log(4, "evePlayListManager::addEntry: Too many playlist entries");
+		eveError::log(ERROR, "evePlayListManager::addEntry: Too many playlist entries");
 		return;
 	}
 	if (lastId > 2000000000)
@@ -38,7 +38,7 @@ void evePlayListManager::addEntry(QString name, QString author, QByteArray data)
 		++lastId;
 
 	if (data.length() < 10){
-		eveError::log(4, "evePlayListManager::addEntry: XML-Data is empty");
+		eveError::log(ERROR, "evePlayListManager::addEntry: XML-Data is empty");
 		return;
 	}
 
@@ -117,7 +117,7 @@ evePlayListData* evePlayListManager::takeFirst(){
 		dataentry = datahash.take(entry.pid);
 	}
 	else {
-		eveError::log(4, "evePlayListManager::takeFirst: List inconsistency no data found");
+		eveError::log(ERROR, "evePlayListManager::takeFirst: List inconsistency no data found");
 		return NULL;
 	}
 	if (!dataentry->isLoaded) {

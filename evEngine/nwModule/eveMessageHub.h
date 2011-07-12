@@ -19,7 +19,7 @@ class eveMessageHub: public QObject
     Q_OBJECT
 
 public:
-	eveMessageHub(bool);
+	eveMessageHub(bool, bool);
 	virtual ~eveMessageHub();
 	int registerChannel(eveMessageChannel *, int);
 	void unregisterChannel(int);
@@ -59,8 +59,8 @@ private:
 	eveRequestManager *reqMan;
 	QReadWriteLock channelLock;
 	bool useGui;
-
-
+	bool useNet;
+	int loglevel;
 };
 
 #endif /*EVEMESSAGEHUB_H_*/

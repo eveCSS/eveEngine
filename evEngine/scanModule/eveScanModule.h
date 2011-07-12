@@ -102,8 +102,8 @@ private:
 	bool catchedTrigger;
 	bool catchedDetecTrigger;
 	bool delayedStart;
-	double settleTime;
-	double triggerDelay;
+	int settleDelay;
+	int triggerDelay;
 	QHash<stageT, void(eveScanModule::*)()> stageHash;
 	eveScanManager* manager;
 	eveScanModule* nestedSM;
@@ -116,6 +116,8 @@ private:
 	QList<eveSMChannel *> *channelList;
 	QList<eveEventProperty*>* eventList;
 	QTime scanTimer;
+	QTime triggerTime;
+	QTime settleTime;
 };
 
 #endif /* EVESCANMODULE_H_ */

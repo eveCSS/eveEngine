@@ -57,7 +57,7 @@ void eveSocket::readMessage()
     if (!messageInProgress) {
     	if (socket->bytesAvailable() > 3) {
     		if (!instream.device()->peek(4).startsWith(startTag)){
-            	eveError::log(4,QString("ECP Error: out of sync!, new message with unknown starttag"));
+            	eveError::log(INFO, QString("ECP Error: out of sync!, new message with unknown starttag"));
             	outOfSync=true;
             	readMessage();
     			return;
@@ -79,7 +79,7 @@ void eveSocket::readMessage()
 		//allocate buffer
 		messageBuffer = new QByteArray();
 		messageInProgress=true;
-		eveError::log(1,QString("new message coming in: length %1").arg(header.length));
+		eveError::log(DEBUG,QString("new message coming in: length %1").arg(header.length));
    }
 
     if (messageInProgress) {
@@ -103,12 +103,12 @@ void eveSocket::sendMessage(QByteArray *messageStream)
 {
 	if (messageStream->length() > 0){
 		if (socket->write(*messageStream) != messageStream->length())
-			eveError::log(4,"eveSocket::sendMessage: unable to send buffer");
+			eveError::log(ERROR,"eveSocket::sendMessage: unable to send buffer");
 		//else
 		//	eveError::log(4,QString("eveSocket::sendMessage: sent buffer with %1 bytes").arg(messageStream->length()));
 	}
 	else {
-		eveError::log(4,"eveSocket::sendMessage: not sending messages with 0 bytes ");
+		eveError::log(ERROR,"eveSocket::sendMessage: not sending messages with 0 bytes ");
 	}
 }
 

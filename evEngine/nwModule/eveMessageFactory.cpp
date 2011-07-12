@@ -1,3 +1,4 @@
+
 #include <QByteArray>
 #include <QDataStream>
 #include <QString>
@@ -25,9 +26,9 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 	eveMessage * message=NULL;
 
 	if (length > 0){
-		if (byteArray == 0) eveError::log(4,"eveMessageFactory::getNewMessage byteArray is NullPointer but length > 0");
+		if (byteArray == 0) eveError::log(ERROR,"eveMessageFactory::getNewMessage byteArray is NullPointer but length > 0");
 		if ((quint32)byteArray->length() != length) {
-			eveError::log(4,"eveMessageFactory::getNewMessage length of byteArray != length");
+			eveError::log(ERROR,"eveMessageFactory::getNewMessage length of byteArray != length");
 			return new eveErrorMessage(ERROR, EVEMESSAGEFACILITY_CPARSER, 0x0008, "length mismatch");
 		}
 	}
@@ -44,7 +45,7 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 
 			inStream >> xmlName >> xmlAuthor >> xmlData;
 			if (2*xmlName.length() + 2*xmlAuthor.length() + xmlData.length()+ 12 != (qint32) length) {
-				eveError::log(4,"eveMessageFactory::getNewMessage malformed EVEMESSAGETYPE_CURRENTXML / EVEMESSAGETYPE_ADDTOPLAYLIST");
+				eveError::log(ERROR,"eveMessageFactory::getNewMessage malformed EVEMESSAGETYPE_CURRENTXML / EVEMESSAGETYPE_ADDTOPLAYLIST");
 				return new eveErrorMessage(ERROR, EVEMESSAGEFACILITY_CPARSER, 0x0008, "malformed EVEMESSAGETYPE_CURRENTXML / EVEMESSAGETYPE_ADDTOPLAYLIST");
 			}
 			if (type == EVEMESSAGETYPE_CURRENTXML)
@@ -130,7 +131,7 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 				QString answer;
 				inStream >> answer;
 				if (2*answer.length() + 12 != (qint32) length) {
-					eveError::log(4,"eveMessageFactory::getNewMessage: malformed EVEMESSAGETYPE_REQUESTANSWER");
+					eveError::log(ERROR,"eveMessageFactory::getNewMessage: malformed EVEMESSAGETYPE_REQUESTANSWER");
 					return new eveErrorMessage(ERROR, EVEMESSAGEFACILITY_CPARSER, 0x0008, "malformed EVEMESSAGETYPE_REQUESTANSWER");
 				}
 				message = new eveRequestAnswerMessage(rid, rtype, answer);
@@ -186,7 +187,7 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 			evePlayListEntry plEntry;
 
 			inStream >> plcount;
-			eveError::log(4,QString("eveMessageFactory::getNewMessage: EVEMESSAGETYPE_PLAYLIST plcount: %1").arg(plcount));
+			eveError::log(ERROR,QString("eveMessageFactory::getNewMessage: EVEMESSAGETYPE_PLAYLIST plcount: %1").arg(plcount));
 			sum += 4;
 			for (int i=0; i < plcount; ++i ){
 				if (length < sum +12) {
@@ -280,7 +281,7 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 		}
 		break;
 		default:
-			eveError::log(4,QString("eveMessageFactory::getNewMessage: unknown message type %1").arg(type));
+			eveError::log(ERROR,QString("eveMessageFactory::getNewMessage: unknown message type %1").arg(type));
 			return new eveErrorMessage(ERROR, EVEMESSAGEFACILITY_CPARSER, 0x0008, "unknown message type");
 			break;
 	}
@@ -307,13 +308,13 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 	switch(messageType) {
 		case EVEMESSAGETYPE_ERROR:
 		{
-			struct timespec errTime = ((eveErrorMessage*)message)->getTime();
+			eveTime errTime = ((eveErrorMessage*)message)->getTime();
 			quint8 severity = ((eveErrorMessage*)message)->getSeverity();
 			quint8 facility = ((eveErrorMessage*)message)->getFacility();
 			quint16 errType = ((eveErrorMessage*)message)->getErrorType();
 			QString errText = ((eveErrorMessage*)message)->getErrorText();
 			quint32 messageLength = 0;
-			outStream << messageLength << (quint32) errTime.tv_sec << (quint32) errTime.tv_nsec << severity << facility << errType << errText;
+			outStream << messageLength << errTime.seconds() << errTime.nanoSeconds() << severity << facility << errType << errText;
 			outStream.device()->seek(8);
 			messageLength = block->length() - 12;
 			outStream << messageLength;
@@ -321,11 +322,11 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 			break;
 		case EVEMESSAGETYPE_ENGINESTATUS:
 		{
-			struct timespec statTime = ((eveEngineStatusMessage*)message)->getTime();
+			eveTime statTime = ((eveEngineStatusMessage*)message)->getTime();
 			QString xmlId = ((eveEngineStatusMessage*)message)->getXmlId();
 			quint32 estatus = ((eveEngineStatusMessage*)message)->getStatus();
 			quint32 messageLength = 0;
-			outStream << messageLength << (quint32) statTime.tv_sec << (quint32) statTime.tv_nsec << estatus << xmlId;
+			outStream << messageLength << statTime.seconds() << statTime.nanoSeconds() << estatus << xmlId;
 			outStream.device()->seek(8);
 			messageLength = block->length() - 12;
 			outStream << messageLength;
@@ -333,14 +334,14 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 		break;
 		case EVEMESSAGETYPE_CHAINSTATUS:
 		{
-			struct timespec statTime = ((eveChainStatusMessage*)message)->getTime();
+			eveTime statTime = ((eveChainStatusMessage*)message)->getTime();
 			quint32 cstatus = ((eveChainStatusMessage*)message)->getStatus();
 			quint32 cid  = ((eveChainStatusMessage*)message)->getChainId();
 			quint32 smid = ((eveChainStatusMessage*)message)->getSmId();
 			quint32 poscnt = ((eveChainStatusMessage*)message)->getPosCnt();
 			quint32 remtime = ((eveChainStatusMessage*)message)->getRemainingTime();
 			quint32 messageLength = 0;
-			outStream << messageLength << (quint32) statTime.tv_sec << (quint32) statTime.tv_nsec << cstatus << cid << smid << poscnt << remtime;
+			outStream << messageLength << statTime.seconds() << statTime.nanoSeconds() << cstatus << cid << smid << poscnt << remtime;
 			outStream.device()->seek(8);
 			messageLength = block->length() - 12;
 			outStream << messageLength;
@@ -478,7 +479,7 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 		break;
 
 		default:
-			eveError::log(4,QString("eveMessageFactory::getNewStream: unknown message type (%1)").arg(messageType));
+			eveError::log(ERROR,QString("eveMessageFactory::getNewStream: unknown message type (%1)").arg(messageType));
 			block->clear();
 			break;
 	}

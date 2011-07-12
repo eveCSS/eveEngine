@@ -44,7 +44,7 @@ public:
 	void nextPos();
 	void registerEvent(int, eveEventProperty*, bool chain=false);
 	int sendRequest(int, QString);
-	void cancelRequest(int smid, int rid);
+	void cancelRequest(int rid);
 	int getPositionCount(){return posCounter;};
 
 public slots:
@@ -61,10 +61,10 @@ public slots:
 
 private:
 	void sendStatus(int, int);
-	void addToHash(QHash<QString, QString>*, QString, eveXMLReader*);
+	void addToHash(QHash<QString, QString>&, QString, eveXMLReader*);
 	QHash<int, int> requestHash;
 	QHash<QString, QString> chainHash;
-	QHash<QString, QString>* savePluginHash;
+	QHash<QString, QString> savePluginHash;
 	QList<eveEventProperty*> eventPropList;
 	chainStatusT currentStatus;
 	int nextEventId;

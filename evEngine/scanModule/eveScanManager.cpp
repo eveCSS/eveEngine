@@ -60,7 +60,7 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 
 	// collect various data
 	// TODO never used
-	addToHash(&chainHash, "confirmsave", parser);
+	addToHash(chainHash, "confirmsave", parser);
 
 	// collect all storage-related data
 	savePluginHash = parser->getChainPlugin(chainId, "saveplugin");
@@ -69,7 +69,7 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 	addToHash(savePluginHash, "confirmsave", parser);
 	addToHash(savePluginHash, "savescandescription", parser);
 
-	if (savePluginHash->contains("savefilename")) useStorage = true;
+	if (savePluginHash.contains("savefilename")) useStorage = true;
 
 	sendStatusTimer = new QTimer(this);
 	sendStatusTimer->setInterval(5000);
@@ -92,8 +92,6 @@ void eveScanManager::init() {
 
 	// init StorageModule if we have a Datafilename
 	if (useStorage) {
-		// TODO before sending this we must make sure that the corresponding
-		// storage channel has been registered with messageHub
 		sendMessage(new eveStorageMessage(chainId, channelId, savePluginHash, 0, storageChannel));
 	}
 	rootSM->initialize();
@@ -104,7 +102,7 @@ void eveScanManager::init() {
  */
 void eveScanManager::shutdown(){
 
-	eveError::log(4, QString("eveScanManager: shutdown"));
+	eveError::log(DEBUG, QString("eveScanManager: shutdown"));
 
 	if (!shutdownPending) {
 		shutdownPending = true;
@@ -131,7 +129,7 @@ void eveScanManager::shutdown(){
 	}
 
 	// make sure mHub reads all outstanding messages before closing the channel
-	if (shutdownThreadIfQueueIsEmpty()) eveError::log(4, QString("eveScanManager: shutdown done"));
+	if (shutdownThreadIfQueueIsEmpty()) eveError::log(DEBUG, QString("eveScanManager: shutdown done"));
 }
 
 
@@ -240,7 +238,7 @@ void eveScanManager::sendRemainingTime(){
  */
 void eveScanManager::handleMessage(eveMessage *message){
 
-	eveError::log(4, "eveScanManager: message arrived");
+	eveError::log(DEBUG, "eveScanManager: message arrived");
 	switch (message->getType()) {
 		case EVEMESSAGETYPE_REQUESTANSWER:
 		{
@@ -315,11 +313,11 @@ void eveScanManager::sendStatus(int smid, int remainTime){
 	addMessage(new eveChainStatusMessage(currentStatus, chainId, smid, posCounter, eveTime::getCurrent(), remainTime, 0, storageChannel));
 }
 
-void eveScanManager::addToHash(QHash<QString, QString>* hash, QString key, eveXMLReader* parser){
+void eveScanManager::addToHash(QHash<QString, QString>& hash, QString key, eveXMLReader* parser){
 
 	QString value;
 	value = parser->getChainString(chainId, key);
-	if (!value.isEmpty()) hash->insert(key, value);
+	if (!value.isEmpty()) hash.insert(key, value);
 
 }
 
@@ -383,7 +381,6 @@ void eveScanManager::newEvent(eveEventProperty* evprop) {
 
 	switch (evprop->getActionType()){
 	case eveEventProperty::START:
-		// TODO ignore all startevents before storage is ready
 			if (evprop->isChainAction()){
 				if (rootSM) rootSM->startChain();
 			}
@@ -464,7 +461,7 @@ int eveScanManager::sendRequest(int smid, QString text){
 	return newrid;
 }
 
-void eveScanManager::cancelRequest(int smid, int rid){
+void eveScanManager::cancelRequest(int rid){
 	if (requestHash.contains(rid)) {
 		requestHash.remove(rid);
 		addMessage(new eveRequestCancelMessage(rid));

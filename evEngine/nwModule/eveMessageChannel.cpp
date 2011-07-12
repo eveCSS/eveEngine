@@ -63,7 +63,7 @@ bool eveMessageChannel::shutdownThreadIfQueueIsEmpty()
 		return true;
 	}
 	else {
-		eveError::log(5, QString("eveMessageChannel: %1 more Messages before shutdown").arg(sendMessageList.size()));
+		eveError::log(DEBUG, QString("eveMessageChannel: %1 more Messages before shutdown").arg(sendMessageList.size()));
 		emit messageWaiting(channelId);
 		return false;
 	}
@@ -126,7 +126,7 @@ void eveMessageChannel::newQueuedMessage()
 void eveMessageChannel::handleMessage(eveMessage * message)
 {
 	// child classes should implement method
-	eveError::log(4,"eveMessageChannel::handleMessage: missing message handler for child class! \n");
+	eveError::log(ERROR,"eveMessageChannel::handleMessage: missing message handler for child class! \n");
 }
 
 /**
@@ -136,7 +136,7 @@ void eveMessageChannel::handleMessage(eveMessage * message)
 void eveMessageChannel::shutdown()
 {
 	// child classes should implement method
-	eveError::log(4,"eveMessageChannel::shutdown: no child implementation, shutdown this thread \n");
+	eveError::log(ERROR,"eveMessageChannel::shutdown: no child implementation, shutdown this thread \n");
 	QThread::currentThread()->quit();
 }
 
