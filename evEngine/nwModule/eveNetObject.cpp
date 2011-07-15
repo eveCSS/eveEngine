@@ -50,8 +50,10 @@ void eveNetObject::init(){
 		netListener = new QTcpServer(this);
 		connect(netListener, SIGNAL(newConnection()), this, SLOT(acceptSocket()));
 
-		if (!netListener->listen(QHostAddress::Any, port ))
+		if (!netListener->listen(QHostAddress::Any, port )){
 			eveError::log(ERROR, QString("Error listening on port %1; Error: %2").arg(port).arg(netListener->errorString()));
+			addMessage(new eveMessage(EVEMESSAGETYPE_ENDPROGRAM));
+		}
 		else
 			eveError::log(DEBUG, QString("listening on port %1").arg(port));
 	}
@@ -161,5 +163,6 @@ void eveNetObject::log(QString string){
 
 void eveNetObject::sendError(int severity, int facility, int errorType,  QString errorString){
 	// bypass filter and send error Message
+	eveError::log(severity, errorString, EVEMESSAGEFACILITY_NETWORK);
 	sendMessage(new eveErrorMessage(severity, facility, errorType, errorString));
 }
