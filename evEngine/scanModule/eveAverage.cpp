@@ -18,7 +18,7 @@ eveAverage::eveAverage(int average, int maxAttempt, double lowLimit, double maxD
 }
 
 eveAverage::~eveAverage() {
-	// TODO Auto-generated destructor stub
+	// Auto-generated destructor stub
 }
 
 void eveAverage::reset(){
@@ -60,18 +60,17 @@ void eveAverage::addValue(eveVariant dataVar){
  * @return true if value is larger than lowLimit and deviation lower than maxDeviation
  */
 bool eveAverage::checkValue(double value){
-	lastTimeLevelReached = true;
+	last_value = value;
 	if ((lowLimit > 0.0) && (value <= lowLimit)) {
 		lastTimeLevelReached = false;
-		last_value = value;
 		return false;
 	}
 	// deviation check is skipped if the first two consecutive values have been found
 	if ((deviation > 0.0) && (dataArray.size() == 1 ) && (!lastTimeLevelReached ||
 					(fabs(dataArray.last() - value) > deviation))){
 		dataArray.clear();
-		return true;
 	}
+	lastTimeLevelReached = true;
 	return true;
 }
 
@@ -101,6 +100,6 @@ eveDataMessage* eveAverage::getResultMessage(){
 	eveDataStatus dstatus = {0,0,0};
 	if (attempt >= maxAttempt) dstatus.acqStatus = (eveAcqStatus)ACQSTATmaxattempt;
 	data.append(getResult().toDouble());
-	return new eveDataMessage(QString(), QString(), eveDataStatus(), DMTunmodified, eveTime(), data);
+	return new eveDataMessage(QString(), QString(), dstatus, DMTunmodified, eveTime(), data);
 }
 
