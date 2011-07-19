@@ -17,17 +17,21 @@ public:
 	eveAverage(int, int, double, double);
 	virtual ~eveAverage();
 	void reset();
-	eveVariant getResult();
-	bool isDone();
-	int getCount(){return dataArray.count();};
+	bool isDone(){return allDone;};
 	void addValue(eveVariant);
 	eveDataMessage* getResultMessage();
 
 private:
-	bool checkValue(double value);
+	eveVariant getResult();
+	void checkDeviation(double value);
+	bool checkLimit(double value);
 	double last_value;
 	bool lastTimeLevelReached;
 	bool calcDone;
+	bool allDone;
+	bool useLimit;
+	bool useDeviation;
+	int deviationCount;
 	int averageCount;
 	int maxAttempt;
 	int attempt;
