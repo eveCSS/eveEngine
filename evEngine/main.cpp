@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 	QString interfaces("all");
 	QString eveRoot;
 	int loglevel=-1;
-	int debuglevel=0;
+	int debuglevel=DEFAULT_LOGLEVEL;
 	int portNumber = 12345;
 	bool skipOne = false;
 	QTextEdit *textDisplay = 0;
