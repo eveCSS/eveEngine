@@ -67,6 +67,12 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 		}
 	}
 
+	//create directory hierarchy if it doesn't exist
+	QDir absDir = QFileInfo(fileName).absoluteDir();
+	if (!absDir.exists()) {
+		if (!absDir.mkpath(absDir.absolutePath())) sman->sendError(MINOR, 0, QString("(DataCollector) unable to create path %1").arg(absDir.absolutePath()));
+	}
+
 	if (!doAutoNumber && (eveFileTest::createTestfile(fileName) == 1)){
 		doAutoNumber = true;
 		sman->sendError(MINOR, 0, QString("(DataCollector) file %1 already exists, enabling autonumber").arg(fileName));
