@@ -45,7 +45,6 @@ public:
 	int getRemainingTime();
 	void gotoStart();
 	void readPos();
-	void start();
 
 	bool startSM(int);
 	bool stopSM(int);
@@ -72,6 +71,7 @@ signals:
 	void SMready();
 
 private:
+	void start();
 	void stgInit();
 	void stgGotoStart();
 	void stgReadPos();

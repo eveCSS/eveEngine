@@ -330,7 +330,6 @@ void eveScanModule::stgGotoStart() {
 
 	if (currentStageCounter == 0){
 		eveError::log(DEBUG,"stgGotoStart");
-		sendNextPos();
 		currentStageCounter = 1;
 		signalCounter = 0;
 		foreach (eveCalc *positioner, positionerList) {
@@ -841,6 +840,7 @@ void eveScanModule::start() {
         currentStageReady = false;
         currentStageCounter = 0;
         manager->setStatus(smId, smStatus);
+		sendNextPos();
         emit sigExecStage();
     }
 }
