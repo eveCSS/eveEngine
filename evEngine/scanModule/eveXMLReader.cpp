@@ -473,6 +473,12 @@ eveMotorAxis * eveXMLReader::createAxisDefinition(QDomNode axis, eveDeviceComman
         sendError(INFO,0,QString("eveXMLReader::createAxis: unable to check deadband, no <deadband> tag for %1").arg(name));
     }
 
+    domElement = axis.firstChildElement("option");
+	while (!domElement.isNull()) {
+		createDeviceDefinition(domElement);
+ 		domElement = domElement.nextSiblingElement("option");
+	}
+
 	return new eveMotorAxis(trigger, unit, gotoCommand, stopCommand, positionCommand, statusCommand, deadbandCommand, name, id);
 
 }
