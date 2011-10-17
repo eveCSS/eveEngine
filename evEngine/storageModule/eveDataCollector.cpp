@@ -31,6 +31,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 	QString suffix = paraHash.value("suffix", emptyString);
 	pluginName = paraHash.value("pluginname", emptyString);
 	pluginPath = paraHash.value("location", emptyString);
+	comment = paraHash.value("comment", emptyString);
 	bool saveXML = paraHash.value("savescandescription", emptyString).startsWith("true");
 	manager = sman;
 	fileWriter = NULL;
@@ -211,9 +212,13 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 			}
 		}
 	}
+
+	if (fwInitDone && !comment.isEmpty()) addComment(comment);
+
 	if (xmldata){
-		if (saveXML && fwInitDone)
+		if (saveXML && fwInitDone){
 			fileWriter->setXMLData(xmldata);
+		}
 		else
 			delete xmldata;
 	}
@@ -261,15 +266,15 @@ void eveDataCollector::addData(eveDataMessage* message) {
  * @brief add comment to filewriter
  * @param message comment text
  */
-void eveDataCollector::addComment(eveMessageText *message) {
+void eveDataCollector::addComment(QString& messageText) {
 
 	if (fwInitDone){
-		if (fileWriter->addComment(chainId, message->getText()) != SUCCESS){
+		if (fileWriter->addComment(chainId, messageText) != SUCCESS){
 			manager->sendError(ERROR, 0, QString("FileWriter: addComment error: %1").arg(fileWriter->errorText()));
 		}
 	}
 	else {
-		manager->sendError(ERROR, 0, QString("DataCollector: cannot add comment before init: %1").arg(message->getText()));
+		manager->sendError(ERROR, 0, QString("DataCollector: cannot add comment before init: %1").arg(messageText));
 	}
 }
 

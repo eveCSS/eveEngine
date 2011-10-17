@@ -22,7 +22,7 @@ public:
 	virtual ~eveDataCollector();
 	void addData(eveDataMessage*);
 	void addDevice(eveDevInfoMessage *);
-	void addComment(eveMessageText *);
+	void addComment(QString&);
 
 private:
 	QString macroExpand(QString);
@@ -30,6 +30,7 @@ private:
 	bool fwOpenDone;
 	int chainId;
 	QString fileName;
+	QString comment;
 	QString fileType;
 	QString pluginName;
 	QString pluginPath;

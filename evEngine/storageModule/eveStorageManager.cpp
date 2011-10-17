@@ -90,7 +90,7 @@ void eveStorageManager::handleMessage(eveMessage *message){
 			foreach (eveDataCollector* dc, chainIdDCHash){
 				sendError(DEBUG, 0, QString("got Livedescription: %1").arg(((eveMessageText*)message)->getText()));
 				//TODO save the livedescription as comment
-				dc->addComment((eveMessageText*)message);
+				dc->addComment(((eveMessageText*)message)->getText());
 			}
 			break;
 		default:
