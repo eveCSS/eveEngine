@@ -5,24 +5,27 @@
 #include "eveNetObject.h"
 #include "eveSocket.h"
 #include "eveError.h"
+#include "eveMessageHub.h"
 #include "eveMessageFactory.h"
 #include "eveParameter.h"
 
 eveNetObject::eveNetObject()
 {
-	mHub = eveMessageHub::getmHub();
     connect(this, SIGNAL(initDelayed()), this, SLOT(init()), Qt::QueuedConnection);
     emit initDelayed();
     channelId=EVECHANNEL_NET;
     use_net = false;
-
+    mFilter = NULL;
+    netListener = NULL;
+    shutdownPending = false;
     if (eveParameter::getParameter("use_network") == "yes") use_net = true;
 }
 
 eveNetObject::~eveNetObject()
 {
 	// most work has been done in shutdown()
-	delete netListener;
+	if (netListener) delete netListener;
+	if (mFilter) delete mFilter;
 }
 
 /* \brief init, called with delay by constructor
@@ -43,7 +46,7 @@ void eveNetObject::init(){
 	if (use_net){
 
 		// register with mHub if not already done
-		mHub->registerChannel(this, channelId);
+		eveMessageHub::getmHub()->registerChannel(this, channelId);
 		mFilter = new eveMessageFilter(this);
 
 		// create a TCP-Listener Object
@@ -145,21 +148,28 @@ void eveNetObject::sendMessage(eveMessage * message)
  */
 void eveNetObject::shutdown(){
 
-	netListener->close();
-	foreach (eveSocket *sock, socketList) {
-		sock->deleteSocket();
-	};
-	mHub->unregisterChannel(channelId);
-	delete mFilter;
-	mFilter = 0;
-	// TODO
-	// use QTimer to stop thread, when the current event queue has been processed
-	QThread::currentThread()->quit();
+	if (!shutdownPending){
+		shutdownPending = true;
+		eveError::log(DEBUG, "NetObject shutdown", EVEMESSAGEFACILITY_NETWORK);
+		netListener->close();
+		disableInput();
+		eveMessageHub::getmHub()->unregisterChannel(channelId);
+		foreach (eveSocket *sock, socketList) {
+			sock->disconnectSocket();
+		}
+	}
+	if (receiveQueueIsEmpty()){
+		QThread::currentThread()->quit();
+	}
+	else {
+		// call this again
+		QTimer::singleShot(500, this, SLOT(shutdown()));
+	}
 }
 
-void eveNetObject::log(QString string){
-	eveError::log(INFO, string);
-}
+//void eveNetObject::log(QString string){
+//	eveError::log(INFO, string);
+//}
 
 void eveNetObject::sendError(int severity, int facility, int errorType,  QString errorString){
 	// bypass filter and send error Message

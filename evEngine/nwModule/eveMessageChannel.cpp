@@ -91,7 +91,7 @@ bool eveMessageChannel::queueMessage(eveMessage * message)
 	return true;
 }
 /**
- * \brief signals the arrival of a new message
+ * \brief arrival of a new message to be handled
  *
  */
 void eveMessageChannel::newQueuedMessage()
@@ -117,6 +117,17 @@ void eveMessageChannel::newQueuedMessage()
 		if ((fastEmpty=receiveFastMessageList.isEmpty())) normalEmpty=receiveMessageList.isEmpty();
 		recLock.unlock();
 	}
+}
+
+/**
+ *
+ * @return true if receiveQueue is empty
+ */
+bool eveMessageChannel::receiveQueueIsEmpty()
+{
+	QReadLocker locker(&recLock);
+
+	return (receiveFastMessageList.isEmpty() && receiveMessageList.isEmpty());
 }
 
 /**

@@ -22,6 +22,7 @@ public:
 public slots:
 	void readMessage();
 	void deleteSocket();
+	void disconnectSocket();
 	void timeout();
 	void sendMessage(QByteArray *);
 

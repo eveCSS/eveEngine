@@ -21,7 +21,7 @@ public:
 
 	static eveError *errorOut;
 
-private slots:
+public slots:
 	void printLogMessage();
 
 signals:

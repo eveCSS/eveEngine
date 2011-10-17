@@ -1,4 +1,5 @@
 
+#include <iostream>
 #include <QTimer>
 #include <QApplication>
 #include <QFile>
@@ -119,8 +120,12 @@ int eveMessageHub::registerChannel(eveMessageChannel * channel, int channelId)
 
 	mChanHash.insert(newId, channel);
 	connect (channel, SIGNAL(messageWaiting(int)), this, SLOT(newMessage(int)), Qt::QueuedConnection);
-	connect (this, SIGNAL(closeAll()), channel, SLOT(shutdown()), Qt::QueuedConnection);
-
+	if(channelId == EVECHANNEL_NET){
+		connect (this, SIGNAL(closeNet()), channel, SLOT(shutdown()), Qt::QueuedConnection);
+	}
+	else {
+		connect (this, SIGNAL(closeAll()), channel, SLOT(shutdown()), Qt::QueuedConnection);
+	}
 	return newId;
 }
 
@@ -140,6 +145,7 @@ void eveMessageHub::unregisterChannel(int channelId)
 	}
 	storageChannelList.removeAll(channelId);
 	mathChannelList.removeAll(channelId);
+	eveError::log(DEBUG, QString("eveMessageHub: unregistered channel %1").arg(channelId));
 	return;
 }
 
@@ -187,8 +193,7 @@ void eveMessageHub::newMessage(int messageSource)
 			}
 			case EVEMESSAGETYPE_CURRENTXML:
 			case EVEMESSAGETYPE_ENGINESTATUS:
-				/* send errors and enginestatus to viewers if available */
-				if (useNet || mChanHash.contains(EVECHANNEL_NET)){
+				if (useNet && mChanHash.contains(EVECHANNEL_NET)){
 					if (mChanHash.value(EVECHANNEL_NET)->queueMessage(message))message = NULL;
 				}
 				else {
@@ -374,7 +379,7 @@ void eveMessageHub::newMessage(int messageSource)
 }
 
 /**
- * \brief queue an error message to be sent to connected Viewers (use only for messageHub)
+ * \brief queue an error message to be sent to connected Viewers (use only for messageHub with locked channelLock)
  * \param severity	Severity as defined in VE-Protocol-Spec
  * \param errorType errorType as defined in VE-Protocol-Spec
  * \param errorString	additional error description
@@ -383,12 +388,9 @@ void eveMessageHub::newMessage(int messageSource)
 void eveMessageHub::addError(int severity, int errorType,  QString errorString)
 {
 	eveError::log(severity, errorString, EVEMESSAGEFACILITY_MHUB);
-	if (useNet && (loglevel >= severity)) {
-		QReadLocker locker(&channelLock);
-		if (mChanHash.contains(EVECHANNEL_NET)){
-			eveErrorMessage *errorMessage = new eveErrorMessage(severity, EVEMESSAGEFACILITY_MHUB, errorType, errorString);
-			if (!mChanHash.value(EVECHANNEL_NET)->queueMessage(errorMessage)) delete errorMessage;
-		}
+	if (useNet && (loglevel >= severity) && (mChanHash.contains(EVECHANNEL_NET))) {
+		eveErrorMessage *errorMessage = new eveErrorMessage(severity, EVEMESSAGEFACILITY_MHUB, errorType, errorString);
+		if (!mChanHash.value(EVECHANNEL_NET)->queueMessage(errorMessage)) delete errorMessage;
 	}
 }
 
@@ -402,7 +404,7 @@ void eveMessageHub::close()
 
 	eveError::log(DEBUG, "MessageHub shut down");
 	emit closeAll();
-	QTimer::singleShot(500, this, SLOT(waitUntilDone()));
+	QTimer::singleShot(100, this, SLOT(waitUntilDone()));
 }
 /**
  * \brief wait until all channels have unregistered, then shutdown
@@ -412,7 +414,9 @@ void eveMessageHub::waitUntilDone()
 {
 	QReadLocker locker(&channelLock);
 	if (!mChanHash.isEmpty()){
-		QTimer::singleShot(500, this, SLOT(waitUntilDone()));
+		// close nwThread last
+		if (mChanHash.size()==1) emit closeNet();
+		QTimer::singleShot(100, this, SLOT(waitUntilDone()));
 		eveError::log(DEBUG, "eveMessageHub: still waiting for threads to shutdown");
 		return;
 	}

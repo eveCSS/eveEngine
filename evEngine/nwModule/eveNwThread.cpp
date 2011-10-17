@@ -1,5 +1,4 @@
 #include "eveNwThread.h"
-#include "eveNetObject.h"
 
 eveNwThread::eveNwThread(QWaitCondition* waitRegistration, QMutex *mutex)
 {
@@ -9,6 +8,7 @@ eveNwThread::eveNwThread(QWaitCondition* waitRegistration, QMutex *mutex)
 
 eveNwThread::~eveNwThread()
 {
+	delete netObject;
 }
 
 /**
@@ -17,7 +17,7 @@ eveNwThread::~eveNwThread()
 void eveNwThread::run()
 {
 	// create an NW-Module
-	eveNetObject * netObject = new eveNetObject();
+	netObject = new eveNetObject();
 	waitMutex->lock();
 	channelRegistered->wakeAll();
 	waitMutex->unlock();

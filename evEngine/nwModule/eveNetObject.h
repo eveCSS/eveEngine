@@ -5,7 +5,6 @@
 #include <QString>
 #include <QTcpServer>
 #include "eveMessageChannel.h"
-#include "eveMessageHub.h"
 #include "eveMessageFilter.h"
 class eveSocket;
 
@@ -24,7 +23,7 @@ public:
 	eveNetObject();
 	virtual ~eveNetObject();
 	void removeSocket(eveSocket*);
-	void log(QString);
+//	void log(QString);
 	void handleMessage(eveMessage *);
 	void sendMessage(eveMessage *);
 	void sendError(int, int, int, QString);
@@ -41,8 +40,8 @@ private slots:
 
 private:
 	bool use_net;
+	bool shutdownPending;
 	eveMessageFilter *mFilter;
-	eveMessageHub * mHub;
 	QTcpServer * netListener;
 	QSet<eveSocket*> socketList;
 };

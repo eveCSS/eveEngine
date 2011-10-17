@@ -35,6 +35,7 @@ public slots:
 signals:
 	void finished();
 	void closeAll();
+	void closeNet();
 	void closeParent();
 	void messageWaiting(int);
 

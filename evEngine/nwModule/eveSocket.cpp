@@ -27,13 +27,19 @@ eveSocket::eveSocket(QTcpSocket * tcpsocket, eveNetObject *netOb)
 eveSocket::~eveSocket()
 {
 	disconnect(socket, SIGNAL(disconnected()), this, SLOT(deleteSocket()));
+	delete timeoutClock;
+	delete socket;
 }
 
 void eveSocket::deleteSocket()
 {
-	socket->disconnectFromHost();
 	netObject->removeSocket(this);
 	this->deleteLater();
+}
+
+void eveSocket::disconnectSocket()
+{
+	socket->disconnectFromHost();
 }
 
 void eveSocket::readMessage()

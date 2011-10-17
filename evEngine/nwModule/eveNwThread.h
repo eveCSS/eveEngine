@@ -4,6 +4,7 @@
 #include <QThread>
 #include <QMutex>
 #include <QWaitCondition>
+#include "eveNetObject.h"
 
 class eveNwThread : public QThread
 {
@@ -13,6 +14,7 @@ public:
     void run();
 
 private:
+    eveNetObject *netObject;
 	QMutex *waitMutex;
 	QWaitCondition* channelRegistered;
 };
