@@ -27,6 +27,9 @@ evePosCalc::evePosCalc(eveScanModule* sm, QString stepfunction, bool abs, eveTyp
 	readyToGo = false;
 	absolute = abs;
 	totalSteps = -1;
+	doNotMove = false;
+	isAtEnd = false;
+
 	if (stepfunction.toLower() == "add"){
 		stepmode = STARTSTOP;
 		stepFunction = &evePosCalc::stepfuncAdd;
@@ -256,10 +259,9 @@ void evePosCalc::setStepFile(QString stepfilename) {
  *
  * @param pluginname name of step plugin
  */
-void evePosCalc::setStepPlugin(QString pluginname, QHash<QString, QString> parameter) {
+void evePosCalc::setStepPlugin(QString pluginname, QHash<QString, QString>& paraHash) {
 	stepPlugin = pluginname;
-	paraHash = parameter;
-	// The plugin ReferenceMultiply is not a plugin, it is hardcoded
+	// The plugins ReferenceMultiply, MotionDisabled are not regular plugins, they are hardcoded
 	if (pluginname == "ReferenceMultiply"){
 		if (paraHash.contains("factor")){
 			bool ok;
@@ -270,6 +272,13 @@ void evePosCalc::setStepPlugin(QString pluginname, QHash<QString, QString> param
 			RefMultiplyAxis = scanModule->findAxis(paraHash.value("referenceaxis"));
 		}
 		stepFunction = &evePosCalc::ReferenceMultiply;
+	}
+	if (pluginname == "MotionDisabled"){
+		doNotMove = true;
+		startPos=0;
+		endPos=0;
+		stepFunction = &evePosCalc::MotionDisabled;
+		isAtEnd = true;
 	}
 }
 
@@ -356,13 +365,8 @@ void evePosCalc::reset(){
 
 	posCounter = 0;
 	isAtEnd = false;
+	if (doNotMove) isAtEnd = true;
 	currentPos = startPosAbs;
-}
-
-eveVariant& evePosCalc::getStartPos(){
-
-		return startPosAbs;
-
 }
 
 /**
@@ -428,11 +432,23 @@ void evePosCalc::stepfuncList(){
 	}
 }
 
+/**
+ * @brief stepfunction moves the axis to a multiple of the reference axis
+ *
+ */
 void evePosCalc::ReferenceMultiply(){
 	if (RefMultiplyAxis != NULL)
 		currentPos = RefMultiplyAxis->getTargetPos() * RefMultiplyFactor;
 	else
 		sendError(ERROR, "ReferenceMultiply: invalid reference axis");
+}
+
+/**
+ * @brief stepfunction does not move anything
+ *
+ */
+void evePosCalc::MotionDisabled(){
+	isAtEnd=true;
 }
 
 /**

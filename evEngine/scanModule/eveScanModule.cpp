@@ -14,12 +14,13 @@
 #include "eveEventProperty.h"
 
 
-eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int chainid, int smid) :
+eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int chainid, int smid, smTypeT stype) :
 	QObject(parent){
 
 	manager = parent;
 	nestedSM = NULL;
 	appendedSM = NULL;
+	smType = stype;
 	currentStage = eveStgINIT;
 	currentStageReady = false;
 	currentStageCounter = 0;
@@ -56,14 +57,14 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	// do inner scans
 	int nestedNo = parser->getNested(chainId, smId);
     if (nestedNo > 0){
-    	nestedSM = new eveScanModule(manager, parser, chainId, nestedNo);
+    	nestedSM = new eveScanModule(manager, parser, chainId, nestedNo, eveSmTypeNESTED);
     	connect (nestedSM, SIGNAL(SMready()), this, SLOT(execStage()), Qt::QueuedConnection);
     }
 
 	// do appended scans
 	int appendedNo = parser->getAppended(chainId, smId);
     if (appendedNo > 0){
-    	appendedSM = new eveScanModule(manager, parser, chainId, appendedNo);
+    	appendedSM = new eveScanModule(manager, parser, chainId, appendedNo, eveSmTypeAPPENDED);
     	connect (appendedSM, SIGNAL(SMready()), this, SLOT(execStage()), Qt::QueuedConnection);
     }
 
@@ -161,7 +162,7 @@ eveScanModule::~eveScanModule() {
  * initialization:
  */
 void eveScanModule::initialize() {
-	eveError::log(DEBUG, "initialize");
+	sendError(DEBUG, 0, "initialize");
 	(this->*stageHash.value(eveStgINIT))();
 }
 
@@ -173,8 +174,8 @@ void eveScanModule::initialize() {
  */
 void eveScanModule::stgInit() {
 
-	eveError::log(DEBUG, "stgInit");
 	if (currentStageCounter == 0){
+		sendError(DEBUG, 0, "stgInit starting");
 		manager->setStatus(smId, eveSmINITIALIZING);
 
 		signalCounter = 0;
@@ -205,7 +206,7 @@ void eveScanModule::stgInit() {
 		}
 		// init events
 		foreach (eveEventProperty* evprop, *eventList){
-			eveError::log(DEBUG, QString("registering event for ..."));
+			sendError(DEBUG, 0, QString("registering event for ..."));
 			manager->registerEvent(smId, evprop, false);
 			if (evprop->getActionType() == eveEventProperty::TRIGGER) triggerConfirm=true;
 		}
@@ -235,34 +236,36 @@ void eveScanModule::stgInit() {
 			if (allInitDone) foreach (eveSMDevice *device, *postScanList) if (!device->isDone()) allInitDone = false;
 			if (allInitDone) foreach (eveSMAxis *axis, *axisList) if (!axis->isDone()) allInitDone = false;
 			if (allInitDone) foreach (eveSMChannel *channel, *channelList) if (!channel->isDone()) allInitDone = false;
+			if ((appendedSM != NULL) && (!appendedSM->initDone())) allInitDone = false;
 			if (allInitDone){
 				currentStageReady=true;
 				emit sigExecStage();
-				emit SMready();
-				eveError::log(DEBUG, "stgInit done");
+				sendError(DEBUG, 0, "stgInit done");
 			}
 		}
 	}
 }
 
 void eveScanModule::readPos() {
-	eveError::log(DEBUG, "calling stgReadPos");
+	sendError(DEBUG, 0, "calling stgReadPos");
+	// make sure only the root SM will increment positionCounter
 	(this->*stageHash.value(eveStgREADPOS))();
 }
 /**
- * \brief read all motor positions of this sm
+ * \brief read all motor positions and detector values of this and all
+ * nested and appended SMs, but only if this is the root-SM
  *
  */
 void eveScanModule::stgReadPos() {
 
 	if (currentStageCounter == 0){
-		eveError::log(DEBUG,"stgReadPos starting");
+		sendError(DEBUG, 0, "stgReadPos starting");
 		currentStageCounter = 1;
 		signalCounter = 0;
 		foreach (eveSMAxis *axis, *axisList){
 			sendMessage(axis->getDeviceInfo());
 			eveVariant dummy = axis->getPos();
-			eveError::log(DEBUG, QString("%1 position is %2").arg(axis->getName()).arg(dummy.toDouble()));
+			sendError(DEBUG, 0, QString("%1 position is %2").arg(axis->getName()).arg(dummy.toDouble()));
 		}
 		foreach (eveSMChannel *channel, *channelList){
 			//sendMessage(channel->getDeviceInfo());
@@ -303,9 +306,8 @@ void eveScanModule::stgReadPos() {
 					sendMessage(channel->getDeviceInfo());
 				}
 				currentStageReady=true;
-				emit SMready();
 				emit sigExecStage();
-				eveError::log(DEBUG, "stgReadPos Done");
+				sendError(DEBUG, 0, "stgReadPos Done");
 			}
 		}
 	}
@@ -313,9 +315,9 @@ void eveScanModule::stgReadPos() {
 
 
 void eveScanModule::gotoStart() {
-	eveError::log(DEBUG, "calling stgGotoStart");
 	// this is possible, if parent scan received a break previously
 	if (currentStage != eveStgGOTOSTART) currentStage = eveStgGOTOSTART;
+	currentStageCounter = 0;
 	(this->*stageHash.value(eveStgGOTOSTART))();
 }
 /**
@@ -329,7 +331,9 @@ void eveScanModule::gotoStart() {
 void eveScanModule::stgGotoStart() {
 
 	if (currentStageCounter == 0){
-		eveError::log(DEBUG,"stgGotoStart");
+		// increment posCounter unless we are nested
+		if (smType != eveSmTypeNESTED) sendNextPos();
+		sendError(DEBUG, 0, "stgGotoStart");
 		currentStageCounter = 1;
 		signalCounter = 0;
 		foreach (eveCalc *positioner, positionerList) {
@@ -340,7 +344,7 @@ void eveScanModule::stgGotoStart() {
 			channel->setTimer(startTime);
 		}
 		foreach (eveSMAxis *axis, *axisList){
-			eveError::log(DEBUG, QString("Moving axis %1").arg(axis->getName()));
+			sendError(DEBUG, 0, QString("Moving axis %1").arg(axis->getName()));
 			axis->setTimer(startTime);
 			axis->gotoStartPos(false);
 			++signalCounter;
@@ -368,11 +372,9 @@ void eveScanModule::stgGotoStart() {
 					sendMessage(posMesg);
 				}
 			}
-			eveError::log(DEBUG, "stgGotoStart done");
+			sendError(DEBUG, 0, "stgGotoStart done");
 			currentStageReady=true;
 			emit sigExecStage();
-			// if we are not executing, we were called from parent scan
-			if (smStatus != eveSmEXECUTING) emit SMready();
 		}
 	}
 }
@@ -510,12 +512,13 @@ void eveScanModule::stgTrigRead() {
 	else if (currentStageCounter == 3){
 		currentStageCounter=4;
 		signalCounter = 0;
-		eveError::log(DEBUG, "stgTrigRead");
+		sendError(DEBUG, 0, "stgTrigRead");
 		foreach (eveSMChannel *channel, *channelList){
 			sendError(INFO,0,QString("triggering detector channel %1").arg(channel->getName()));
 			channel->triggerRead(true);
 			++signalCounter;
 		}
+		triggerPosCount=manager->getPositionCount();
 		if (nestedSM) {
 			nestedSM->start();
 			++signalCounter;
@@ -542,6 +545,7 @@ void eveScanModule::stgTrigRead() {
 						double dval = dmesg->toVariant().toDouble(&ok);
 						if (ok) sendError(DEBUG, 0, QString("%1: value %2").arg(channel->getName()).arg(dval));
 						channel->loadPositioner(manager->getPositionCount());
+						dmesg->setPositionCount(triggerPosCount);
 						sendMessage(dmesg);
 					}
 				}
@@ -552,10 +556,10 @@ void eveScanModule::stgTrigRead() {
 			}
 			if (nestedSM && !nestedSM->isDone()) {
 				ready = false;
-	 			eveError::log(DEBUG, "stgTrigRead: called done but nested not ready");
+	 			sendError(DEBUG, 0, "stgTrigRead: called done but nested not ready");
 			}
 			if (ready) {
-				eveError::log(DEBUG, "stgTrigRead Done");
+				sendError(DEBUG, 0, "stgTrigRead Done");
 				currentStageReady=true;
 				emit sigExecStage();
 			}
@@ -579,7 +583,7 @@ void eveScanModule::stgTrigRead() {
 void eveScanModule::stgNextPos() {
 
 	if (currentStageCounter == 0){
-		sendError(INFO, 0, "stgNextPos");
+		sendError(DEBUG, 0, "stgNextPos");
 		signalCounter = 0;
 		currentStageCounter=1;
 
@@ -611,7 +615,7 @@ void eveScanModule::stgNextPos() {
 			--signalCounter;
 		}
 		else if (triggerConfirm && !catchedTrigger){
-			eveError::log(DEBUG, QString("Signal caught, but no trigger yet"));
+			sendError(DEBUG, 0, QString("Signal caught, but no trigger yet"));
 		}
 		else {
 			currentStageCounter=2;
@@ -740,7 +744,7 @@ void eveScanModule::stgEndPos() {
 						sendError(MINOR,0,QString("Positioning: %1: no position data available").arg(axis->getName()));
 				}
 			}
-			eveError::log(DEBUG, "stgEndPos done");
+			sendError(DEBUG, 0, "stgEndPos done");
 			currentStageReady=true;
 			emit sigExecStage();
 		}
@@ -807,8 +811,8 @@ void eveScanModule::execStage() {
 		// call stage method
 		(this->*stageHash.value(currentStage))();
 	}
-	// the stages which usually do not proceed if they are ready
 	else if ((currentStage == eveStgINIT) || (currentStage == eveStgREADPOS) || (currentStage == eveStgGOTOSTART)){
+		// the stages which usually do not proceed if they are ready and may have been called from parent
 		if (currentStageReady == false){
 			(this->*stageHash.value(currentStage))();
 		}
@@ -816,6 +820,7 @@ void eveScanModule::execStage() {
 			currentStage = (stageT)(((int) currentStage)+1);
 			currentStageReady = false;
 			currentStageCounter = 0;
+			emit SMready();
 		}
 		return;
 	}
@@ -840,7 +845,6 @@ void eveScanModule::start() {
         currentStageReady = false;
         currentStageCounter = 0;
         manager->setStatus(smId, smStatus);
-		sendNextPos();
         emit sigExecStage();
     }
 }

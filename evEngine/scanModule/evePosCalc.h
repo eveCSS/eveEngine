@@ -34,14 +34,15 @@ public:
 	void setEndPos(QString);
 	void setStepWidth(QString);
 	void setStepFile(QString);
-	void setStepPlugin(QString, QHash<QString, QString> );
+	void setStepPlugin(QString, QHash<QString, QString>& );
 	void setPositionList(QString);
 	void reset();
 	eveVariant& getNextPos();
-	eveVariant& getStartPos();
+	eveVariant& getStartPos(){return startPosAbs;};
 	eveVariant& getCurrentPos(){return currentPos;};
 	bool isAtEndPos(){return isAtEnd;};
 	bool setOffset(eveVariant);
+	bool motionDisabled(){return doNotMove;};
 	int getTotalSteps(){return totalSteps;};
 
 private:
@@ -49,6 +50,7 @@ private:
 	void stepfuncAdd();
 	void stepfuncList();
 	void ReferenceMultiply();
+	void MotionDisabled();
 	void stepfuncDummy();
 	void sendError(int, QString);
 	void checkValues();
@@ -59,7 +61,6 @@ private:
 	void (evePosCalc::*stepFunction)();
 	eveVariant startPosAbs, endPosAbs, startPos, endPos, currentPos, stepWidth, offSet, nullVal;
 	eveType axisType;
-	QHash<QString, QString> paraHash;
 	QString stepPlugin;
 	QStringList positionList;
 	QList<int> posIntList;
@@ -70,6 +71,7 @@ private:
 	bool absolute;
 	bool isAtEnd;
 	bool readyToGo;
+	bool doNotMove;
 };
 
 #endif /* EVEPOSCALC_H_ */

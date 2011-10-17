@@ -34,9 +34,10 @@ class eveScanModule: public QObject
 	Q_OBJECT
 
 public:
-	eveScanModule(eveScanManager *, eveXMLReader *, int, int);
+	eveScanModule(eveScanManager *, eveXMLReader *, int, int, smTypeT);
 	virtual ~eveScanModule();
 	bool isDone(){return (smStatus==eveSmDONE)?true:false;};
+	bool initDone(){return (currentStage==eveStgREADPOS)?true:false;};
 	// smStatusT getStatus(){return smStatus;};
 	void initialize();
 	void sendError(int, int, int, QString);
@@ -84,6 +85,7 @@ private:
 	void stgFinish();
 	void sendError(int, int, QString);
 	void sendNextPos(){manager->nextPos();};
+	smTypeT smType;
 	int chainId;
 	int smId;
 	int totalSteps;
@@ -96,6 +98,7 @@ private:
 	int signalCounter;
 	int triggerRid;
 	int triggerDetecRid;
+	int triggerPosCount;
 	bool triggerConfirm;
 	bool triggerDetecConf;
 	bool catchedRedo;

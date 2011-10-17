@@ -21,6 +21,8 @@ class eveScanModule;
 class eveEventProperty;
 
 enum smStatusT {eveSmNOTSTARTED, eveSmINITIALIZING, eveSmEXECUTING, eveSmPAUSED, eveSmTRIGGERWAIT, eveSmAPPEND, eveSmDONE} ;
+enum smTypeT {eveSmTypeROOT, eveSmTypeNESTED, eveSmTypeAPPENDED};
+
 
 /**
  * \brief Manager class for scanModules

@@ -84,7 +84,6 @@ private:
 	eveTransStatusT transStatus;
 	eveTransActionT currentAction;
 	int dataCount;
-	int timeOut;
 	QString pvname;
 	transMethodT method;
 	eveType dataType;

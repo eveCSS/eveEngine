@@ -40,7 +40,7 @@ eveCaTransport::eveCaTransport(eveSMBaseDevice *parent, QString xmlid, QString n
 	method = transdef->getMethod();
 	dataType = transdef->getDataType();
 	baseDevice = parent;
-	timeOut = (int)(transdef->getTimeout()*1000.0);
+	int timeOut = (int)(transdef->getTimeout()*1000.0);
 
 	getTimer = new QTimer(this);
 	getTimer->setSingleShot(true);

@@ -45,7 +45,7 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 		sendError(ERROR,0,"eveScanManager::eveScanManager: no root scanmodule found");
 	else {
 		// walk down the tree and create all ScanModules
-		rootSM = new eveScanModule(this, parser, chainId, rootId);
+		rootSM = new eveScanModule(this, parser, chainId, rootId, eveSmTypeROOT);
 		connect (rootSM, SIGNAL(SMready()), this, SLOT(smDone()), Qt::QueuedConnection);
 	}
 
@@ -68,6 +68,7 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 	addToHash(savePluginHash, "autonumber", parser);
 	addToHash(savePluginHash, "confirmsave", parser);
 	addToHash(savePluginHash, "savescandescription", parser);
+	addToHash(savePluginHash, "comment", parser);
 
 	if (savePluginHash.contains("savefilename")) useStorage = true;
 
@@ -218,7 +219,7 @@ void eveScanManager::sendMessage(eveMessage *message){
 		message->setDestination(storageChannel);
 	}
 	if (message->getType() == EVEMESSAGETYPE_DATA) {
-		((eveDataMessage*)message)->setPositionCount(posCounter);
+		if (((eveDataMessage*)message)->getPositionCount() == 0) ((eveDataMessage*)message)->setPositionCount(posCounter);
 		sentData = true;
 	}
 	addMessage(message);

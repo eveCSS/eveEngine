@@ -957,10 +957,10 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 		else if (!domElement.firstChildElement("plugin").isNull()) {
 			prependElement=false;
 			QHash<QString, QString> paraHash;
-			QDomElement domContr = domElement.firstChildElement("plugin");
-			getPluginData(domContr, paraHash);
-			if (domContr.attribute("name").trimmed().length() > 1)
-				poscalc->setStepPlugin(domContr.attribute("name"), paraHash);
+			QDomElement domPlugin = domElement.firstChildElement("plugin");
+			getPluginData(domPlugin, paraHash);
+			if (domPlugin.attribute("name").trimmed().length() > 1)
+				poscalc->setStepPlugin(domPlugin.attribute("name"), paraHash);
 			else
 				sendError(ERROR,0,"Step Plugin: invalid name");
 		}

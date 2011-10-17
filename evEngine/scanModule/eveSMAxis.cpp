@@ -337,6 +337,7 @@ void eveSMAxis::transportReady(int status) {
 
 			}
 			axisStatus = eveAXISIDLE;
+			signalCounter=0;
 			signalReady();
 		}
 	}
@@ -398,12 +399,27 @@ void eveSMAxis::gotoPos(eveVariant newpos, bool queue) {
 		signalReady();
 		return;
 	}
-	else {
-		targetPosition = newpos;
-		axisStatus = eveAXISWRITEPOS;
-		if (gotoTrans->writeData(targetPosition, queue)) {
-			sendError(ERROR,0,"error writing goto data");
-			signalReady();
+
+	if (eveAXISIDLE) {
+		if (posCalc->motionDisabled()){
+			// skip the move, read only current position
+			if (haveDeadband) {
+				delete deadbandTrans;
+				haveDeadband = false;
+			}
+			axisStatus = eveAXISREADPOS;
+			if (posTrans->readData(queue)){
+				sendError(ERROR, 0, "error reading position");
+				signalReady();
+			}
+		}
+		else {
+			targetPosition = newpos;
+			axisStatus = eveAXISWRITEPOS;
+			if (gotoTrans->writeData(targetPosition, queue)) {
+				sendError(ERROR,0,"error writing goto data");
+				signalReady();
+			}
 		}
 	}
 }

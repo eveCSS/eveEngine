@@ -35,7 +35,6 @@ public:
 	virtual ~eveSMAxis();
 	void gotoStartPos(bool);
 	void gotoNextPos(bool);
-	void gotoPos(eveVariant, bool);
 	eveVariant getPos(){return currentPosition;};
 	eveVariant getTargetPos(){return targetPosition;};
 	// bool isAtNextPos();
@@ -64,6 +63,7 @@ signals:
 	void axisDone();
 
 private:
+	void gotoPos(eveVariant, bool);
 	void sendError(int, int, QString);
 	void initAll();
 	void signalReady();
