@@ -41,6 +41,7 @@ void eveEventManager::handleMessage(eveMessage *message){
 		break;
 	}
 	delete message;
+	eveError::log(DEBUG, "eveEventManager: message done", EVEMESSAGEFACILITY_EVENT);
 }
 
 /**
