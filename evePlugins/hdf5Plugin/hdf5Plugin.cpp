@@ -164,6 +164,10 @@ int hdf5Plugin::setCols(int setID, QString colid, QString name, QStringList info
  */
 int hdf5Plugin::addData(int setID, eveDataMessage* data)
 {
+	if (!isFileOpen) {
+		errorString = QString("HDF5Plugin:addData: data file has not been opened");
+		return ERROR;
+	}
 	if (!setIdList.contains(setID)) {
 		errorString = QString("HDF5Plugin:addData: setID %1 has not been initialized").arg(setID);
 		return ERROR;
@@ -302,8 +306,7 @@ int hdf5Plugin::addComment(int setID, QString newComment){
 		return ERROR;
 	}
 	else {
-		comment.append(newComment);
-		comment.append(QString("; "));
+		comment.append(QString("%1; ").arg(newComment));
 	}
 	errorString.clear();
 	return SUCCESS;
@@ -326,9 +329,15 @@ int hdf5Plugin::close(int setID)
 		errorString = QString("HDF5Plugin:close: Columns for setID %1 not set").arg(setID);
 		return MINOR;
 	}
+	if (!isFileOpen) {
+		errorString = QString("HDF5Plugin:close: file already closed");
+		return MINOR;
+	}
 	int status = SUCCESS;
 	errorString = QString("HDF5Plugin");
-
+// TODO
+// put the comment into file, not into columns, but this does not work:
+//	dataFile->setComment("Comment", qPrintable(comment));
 	QHash<QString, columnInfo* >* columnHash = idHash.take(setID);
 	foreach (columnInfo* colInfo, *columnHash){
 		if (!colInfo->isNotInit){
@@ -337,7 +346,7 @@ int hdf5Plugin::close(int setID)
 				if (comment.length() > 0) {
 					hsize_t stringDim = 1;
 					StrType st = StrType(PredType::C_S1, comment.toLocal8Bit().length());
-					Attribute attrib = colInfo->dset.createAttribute("Live-Comment", st, DataSpace(1, &stringDim));
+					Attribute attrib = colInfo->dset.createAttribute("Comment", st, DataSpace(1, &stringDim));
 					attrib.write(st, qPrintable(comment));
 				}
 				colInfo->dset.extend( colInfo->currentOffset );
@@ -358,6 +367,8 @@ int hdf5Plugin::close(int setID)
 		try {
 			dataFile->close();
 			isFileOpen = false;
+			delete dataFile;
+			dataFile = NULL;
 			errorString += QString(": successfully closed file: %1").arg(fileName);
 		}
 		catch( Exception error )
