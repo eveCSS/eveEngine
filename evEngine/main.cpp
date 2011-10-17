@@ -176,12 +176,16 @@ int main(int argc, char *argv[])
 
 	eveError *error = new eveError(textDisplay, debuglevel);
 	eveMessageHub *mHub = new eveMessageHub(useGui, useNet);
-	mHub->init();
 
 	if (useGui) {
 		mainWin->connect(exitAct, SIGNAL(triggered()), mHub, SLOT(close()), Qt::QueuedConnection);
 		mainWin->connect(mHub, SIGNAL(closeParent()), mainWin, SLOT(close()), Qt::QueuedConnection);
 	}
+	mHub->init();
 
-    return app.exec();
+    int retval = app.exec();
+    // make sure all has been logged
+    if (!useGui) error->printLogMessage();
+
+    exit(retval);
 }
