@@ -6,7 +6,7 @@
 
 eveError::eveError(QTextEdit * textDispl, int loglvl)
 {
-	strcpy(severityChars, "0FEWID");
+	strcpy(severityChars, "SFEWID");
 	loglevel = loglvl;
 	if (loglevel+1 > strlen(severityChars)) loglevel = 5;
 	errorOut = this;
