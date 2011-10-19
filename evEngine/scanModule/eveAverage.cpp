@@ -89,6 +89,8 @@ void eveAverage::addValue(eveVariant dataVar){
 			}
 			else if (useDeviation && (deviationCount < 2)){
 				checkDeviation(data);
+				// increase maxAttempt so we can collect averageCount messages
+				if (deviationCount == 2) maxAttempt += averageCount-2;
 			}
 			else{
 				dataArray.append(data);
