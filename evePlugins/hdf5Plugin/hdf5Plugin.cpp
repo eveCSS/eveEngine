@@ -306,7 +306,12 @@ int hdf5Plugin::addComment(int setID, QString newComment){
 		return ERROR;
 	}
 	else {
-		comment.append(QString("%1; ").arg(newComment));
+		if ( comment.isEmpty()){
+			comment.append(newComment);
+		}
+		else {
+			comment.append(QString("; %1").arg(newComment));
+		}
 	}
 	errorString.clear();
 	return SUCCESS;
@@ -335,20 +340,27 @@ int hdf5Plugin::close(int setID)
 	}
 	int status = SUCCESS;
 	errorString = QString("HDF5Plugin");
-// TODO
-// put the comment into file, not into columns, but this does not work:
-//	dataFile->setComment("Comment", qPrintable(comment));
+
+	// write the comment into root group of file
+	try {
+		if (comment.length() > 0) {
+			hsize_t stringDim = 1;
+			StrType st = StrType(PredType::C_S1, comment.toLocal8Bit().length());
+			Group rootGroup = dataFile->openGroup("/");
+			Attribute attrib = rootGroup.createAttribute("Comment", st, DataSpace(1, &stringDim));
+			attrib.write(st, qPrintable(comment));
+		}
+	}
+	catch( Exception error )
+	{
+		errorString += QString(": %1").arg(error.getCDetailMsg());
+		status = ERROR;
+	}
+
 	QHash<QString, columnInfo* >* columnHash = idHash.take(setID);
 	foreach (columnInfo* colInfo, *columnHash){
 		if (!colInfo->isNotInit){
 			try {
-				// write the comment
-				if (comment.length() > 0) {
-					hsize_t stringDim = 1;
-					StrType st = StrType(PredType::C_S1, comment.toLocal8Bit().length());
-					Attribute attrib = colInfo->dset.createAttribute("Comment", st, DataSpace(1, &stringDim));
-					attrib.write(st, qPrintable(comment));
-				}
 				colInfo->dset.extend( colInfo->currentOffset );
 				colInfo->dset.close();
 			}
