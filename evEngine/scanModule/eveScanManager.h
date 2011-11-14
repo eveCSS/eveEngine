@@ -63,6 +63,7 @@ public slots:
 
 private:
 	void sendStatus(int, int);
+	void sendStartTime();
 	void addToHash(QHash<QString, QString>&, QString, eveXMLReader*);
 	QHash<int, int> requestHash;
 	QHash<QString, QString> chainHash;
@@ -78,6 +79,7 @@ private:
 	eveManager *manager;
 	int posCounter;
 	bool doBreak;
+	bool neverStarted;
 	bool shutdownPending;
 	QTimer *sendStatusTimer;
 };

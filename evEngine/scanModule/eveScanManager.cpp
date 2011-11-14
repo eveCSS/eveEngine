@@ -6,6 +6,8 @@
  */
 
 #include <QTimer>
+#include <QTime>
+#include <QDate>
 #include "eveScanThread.h"
 #include "eveScanManager.h"
 #include "eveScanModule.h"
@@ -33,6 +35,7 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 	sentData = false;
 	manager = parent;
 	shutdownPending = false;
+	neverStarted = true;;
 	nextEventId = chainId*100;
 	// TODO register global events
 
@@ -141,6 +144,10 @@ void eveScanManager::shutdown(){
  */
 void eveScanManager::smStart() {
 	sendError(INFO,0,"eveScanManager::smStart: starting root");
+	if (neverStarted){
+		sendStartTime();
+		neverStarted = false;
+	}
 	if (rootSM) rootSM->startChain();
 }
 
@@ -275,6 +282,15 @@ void eveScanManager::sendError(int severity, int errorType,  QString errorString
  */
 void eveScanManager::sendError(int severity, int facility, int errorType,  QString errorString){
 	addMessage(new eveErrorMessage(severity, facility, errorType, errorString));
+}
+
+void eveScanManager::sendStartTime() {
+	eveMessageTextList* mtl = new eveMessageTextList(EVEMESSAGETYPE_METADATA, (QStringList() << "StartTime" << QTime::currentTime().toString("hh:mm:ss")));
+	mtl->setChainId(chainId);
+	addMessage(mtl);
+	mtl = new eveMessageTextList(EVEMESSAGETYPE_METADATA, (QStringList() << "StartDate" << QDate::currentDate().toString("dd.MM.yyyy")));
+	mtl->setChainId(chainId);
+	addMessage(mtl);
 }
 
 /**

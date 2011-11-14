@@ -274,6 +274,7 @@ void eveMessageHub::newMessage(int messageSource)
 				QTimer::singleShot(0, this, SLOT(close()));
 				break;
 			case EVEMESSAGETYPE_LIVEDESCRIPTION:
+			case EVEMESSAGETYPE_METADATA:
 				if (haveStorage()){
 					((eveMessageText*)message)->setDestination(EVECHANNEL_STORAGE);
 					if (sendToStorage(message)) message = NULL;
