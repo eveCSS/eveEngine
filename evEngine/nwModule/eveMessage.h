@@ -38,6 +38,7 @@
 #define EVEMESSAGETYPE_BASEDATA 0x0105
 #define EVEMESSAGETYPE_REQUEST 0x0108
 #define EVEMESSAGETYPE_REQUESTCANCEL 0x0109
+#define EVEMESSAGETYPE_METADATA 0x010a
 #define EVEMESSAGETYPE_CURRENTXML 0x0110
 
 #define EVEMESSAGETYPE_PLAYLIST 0x0301
@@ -159,6 +160,25 @@ private:
 };
 
 /**
+ * \brief a message containing a list of text
+ */
+class eveMessageTextList : public eveMessage
+{
+public:
+	eveMessageTextList(int, QStringList&, int prio=0);
+	virtual ~eveMessageTextList(){};
+	QStringList& getText(){return messageTextList;};
+	bool compare(eveMessage *);
+	virtual eveMessageTextList* clone(){return new eveMessageTextList(type,messageTextList, priority);};
+	int getChainId(){return chainId;};
+	void setChainId(int id){chainId = id;};
+
+private:
+	QStringList messageTextList;
+	int chainId;
+};
+
+/**
  * \brief a message containing one integer
  */
 class eveMessageInt : public eveMessage
@@ -244,7 +264,7 @@ enum engineStatusT {eveEngIDLENOXML=1, eveEngIDLEXML, eveEngLOADINGXML, eveEngEX
 class eveEngineStatusMessage : public eveMessage
 {
 public:
-	eveEngineStatusMessage(int, QString, int prio=0, int dest=0);
+	eveEngineStatusMessage(unsigned int, QString, int prio=0, int dest=0);
 	virtual ~eveEngineStatusMessage();
 	unsigned int getStatus(){return estatus;};
 	QString getXmlId(){return XmlId;};
@@ -254,7 +274,7 @@ public:
 
 private:
 	eveTime timestamp;
-	int estatus;
+	unsigned int estatus;
 	QString XmlId;
 };
 

@@ -12,6 +12,7 @@
  *
  */
 #include <QHash>
+#include <QMultiHash>
 #include <QFile>
 #include "eveFileWriter.h"
 
@@ -24,7 +25,7 @@ public:
 	int setCols(int, QString, QString, QStringList);
 	int open(int);
 	int addData(int, eveDataMessage* );
-	int addComment(int, QString);
+	int addMetaData(int, QString, QString);
 	int close(int);
 	int setXMLData(QByteArray*);
 	QString errorText() {return errorString;};
@@ -46,7 +47,7 @@ private:
 	bool fileOpen;
 	QString fileName;
 	QString fileFormat;
-	QString comment;
+	QMultiHash<QString, QString> metaData;
 	QFile *filePtr;
 	QStringList colList;
 	QHash<QString, QString> lineHash;

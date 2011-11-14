@@ -90,9 +90,24 @@ void eveStorageManager::handleMessage(eveMessage *message){
 			foreach (eveDataCollector* dc, chainIdDCHash){
 				sendError(DEBUG, 0, QString("got Livedescription: %1").arg(((eveMessageText*)message)->getText()));
 				//TODO save the livedescription as comment
-				dc->addComment(((eveMessageText*)message)->getText());
+				dc->addMetaData(QString("Live-Comment"), ((eveMessageText*)message)->getText());
 			}
 			break;
+		case EVEMESSAGETYPE_METADATA:
+		{
+			int id = ((eveMessageTextList*)message)->getChainId();
+			if (chainIdChannelHash.contains(id)){
+				QStringList strlist = ((eveMessageTextList*)message)->getText();
+				if (strlist.size() > 1){
+					QString attribute = strlist.at(0);
+					QString strval = strlist.at(1);
+					if (!attribute.isEmpty() && !strval.isEmpty()) (chainIdDCHash.value(id))->addMetaData(attribute, strval);
+				}
+			}
+			else
+				sendError(ERROR, 0, QString("handleMessage: received metadata message with invalid chainId: %1").arg(id));
+		}
+		break;
 		default:
 			sendError(ERROR,0,QString("eveStorageManager::handleMessage: unknown message, type: %1").arg(message->getType()));
 			break;

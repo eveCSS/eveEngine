@@ -9,6 +9,7 @@
 #define HDF5PLUGIN_H_
 
 #include <QObject>
+#include <QMultiHash>
 #include "eveFileWriter.h"
 #include "H5Cpp.h"
 
@@ -42,7 +43,7 @@ public:
 	int open(int);
 	int close(int);
 	int addData(int, eveDataMessage*);
-	int addComment(int, QString);
+	int addMetaData(int, QString, QString);
 	int setXMLData(QByteArray*);
 
 	QString errorText();
@@ -76,7 +77,7 @@ private:
 	QString errorString;
 	H5File* dataFile;
 	int sizeIncrement;
-	QString comment;
+	QMultiHash<QString, QString> metaData;
 	QHash<int, QHash<QString, columnInfo* >* > idHash;
 
 };

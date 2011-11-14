@@ -7,6 +7,7 @@
 
 #include "eveAsciiFileWriter.h"
 #include <QTextStream>
+#include <QList>
 
 eveAsciiFileWriter::eveAsciiFileWriter() {
 	initDone = false;
@@ -39,7 +40,7 @@ int eveAsciiFileWriter::init(int setID, QString filename, QString format, QHash<
 	fileName = filename;
 	fileFormat = format;
 	errorString.clear();
-    comment.clear();
+	metaData.clear();
 	return SUCCESS;
 }
 
@@ -183,16 +184,16 @@ void eveAsciiFileWriter::nextPosition(){
 }
 
 /**
- * @brief add a comment to be written at end of file
+ * @brief add metadata (e.g. comment) to be written at end of file
  */
-int eveAsciiFileWriter::addComment(int setID, QString newComment){
+int eveAsciiFileWriter::addMetaData(int setID, QString attribute, QString stringVal){
 	if (setId != setID) {
-		errorString=QString("AsciiFileWriter does not support multiple Data Sets, give each chain a different Filename!");
+		errorString=QString("AsciiFileWriter does not support multiple Data Sets. Each chain needs a different Filename!");
 		return ERROR;
 	}
 	else {
-		comment.append(newComment);
-		comment.append(QString("; "));
+		if ((attribute.length() > 0) && (stringVal.length() > 0))
+			metaData.insert(attribute, stringVal);
 	}
 	errorString.clear();
 	return SUCCESS;
@@ -209,9 +210,11 @@ int eveAsciiFileWriter::close(int setID) {
 		return ERROR;
 	}
 	if (fileOpen) {
-		if (comment.length() > 0){
-		    QTextStream out(filePtr);
-		    out << "\nComment: " << comment << "\n";
+	    QTextStream out(filePtr);
+		QList<QString> keyList = metaData.uniqueKeys();
+		foreach(QString key, keyList){
+			while (metaData.count(key) > 0)
+				out << "\n" << key << ": " << metaData.take(key) << "\n";
 		}
 		filePtr->close();
 		fileOpen = false;

@@ -14,6 +14,7 @@
 #include "eveStorageManager.h"
 #include "eveAsciiFileWriter.h"
 #include "eveFileTest.h"
+#include "eveSimplePV.h"
 
 
 /**
@@ -213,7 +214,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 		}
 	}
 
-	if (fwInitDone && !comment.isEmpty()) addComment(comment);
+	if (fwInitDone && !comment.isEmpty()) addMetaData(QString("Comment"), comment);
 
 	if (xmldata){
 		if (saveXML && fwInitDone){
@@ -263,18 +264,19 @@ void eveDataCollector::addData(eveDataMessage* message) {
 }
 
 /**
- * @brief add comment to filewriter
+ * @brief add metadata like comment to filewriter
+ * @param message comment text
  * @param message comment text
  */
-void eveDataCollector::addComment(QString& messageText) {
+void eveDataCollector::addMetaData(QString attribute, QString& messageText) {
 
 	if (fwInitDone){
-		if (fileWriter->addComment(chainId, messageText) != SUCCESS){
-			manager->sendError(ERROR, 0, QString("FileWriter: addComment error: %1").arg(fileWriter->errorText()));
+		if (fileWriter->addMetaData(chainId, attribute, messageText) != SUCCESS){
+			manager->sendError(ERROR, 0, QString("FileWriter: addMetaData error: %1").arg(fileWriter->errorText()));
 		}
 	}
 	else {
-		manager->sendError(ERROR, 0, QString("DataCollector: cannot add comment before init: %1").arg(messageText));
+		manager->sendError(ERROR, 0, QString("DataCollector: cannot add metadata before init: %1").arg(messageText));
 	}
 }
 
@@ -323,8 +325,27 @@ QString eveDataCollector::macroExpand(QString eString){
 	if (eString.contains("${TIME-}")){
 		eString.replace(QString("${TIME-}"), QString("%1").arg(now.toString("hh-mm-ss")));
 	}
+	while (eString.contains(QRegExp("\\$\\{PV:[^}]*\\}"))) {
+
+		QRegExp pvPattern("\\$\\{PV:([^}]*)\\}");
+		QString replaceText("__PV-replacing-error__");
+		int pos = pvPattern.indexIn(eString);
+		if (pos > -1) {
+			manager->sendError(DEBUG, 0, QString("PV macro expansion: pv >%1<").arg(pvPattern.cap(1)));
+			eveSimplePV* macroPV = new eveSimplePV(pvPattern.cap(1));
+			if (macroPV->getStatus() == SCSSUCCESS){
+				replaceText = macroPV->getStringValue();
+				manager->sendError(DEBUG, 0, QString("PV macro expansion: new value >%1<").arg(replaceText));
+			}
+			else {
+				manager->sendError(MINOR, 0, QString("PV macro expansion: pv error %1").arg(macroPV->getErrorString()));
+			}
+			delete macroPV;
+		}
+		eString.replace(QString("${PV:%1}").arg(pvPattern.cap(1)), replaceText);
+	}
 	if (eString.contains("${")) {
-		eString.replace(QRegExp("\\$\\{.*\\}"), "unknownMacro");
+		eString.replace(QRegExp("\\$\\{[^}]*\\}"), "__unknownMacro__");
 		manager->sendError(MINOR, 0, "DataCollector: unknown filename macro");
 	}
 	return eString;

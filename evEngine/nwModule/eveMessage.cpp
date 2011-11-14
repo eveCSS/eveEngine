@@ -35,6 +35,8 @@ eveMessage::eveMessage(int mtype, int prio, int dest)
 			(type == EVEMESSAGETYPE_ENDPROGRAM) ||
 			(type == EVEMESSAGETYPE_DEVINFO) ||
 			(type == EVEMESSAGETYPE_EVENTREGISTER) ||
+			(type == EVEMESSAGETYPE_LIVEDESCRIPTION) ||
+			(type == EVEMESSAGETYPE_METADATA) ||
 			(type == EVEMESSAGETYPE_REMOVEFROMPLAYLIST));
 }
 
@@ -65,12 +67,11 @@ void eveMessage::dump()
  * \param mtype the type of message
  * \param text message text
  */
-eveMessageText::eveMessageText(int mType, QString text, int prio)
+eveMessageText::eveMessageText(int mType, QString text, int prio) : eveMessage(mType, prio), messageText(text)
 {
 	type = mType;
 	// check the allowed types; for now EVEMESSAGETYPE_LIVEDESCRIPTION is the only candidate
 	assert(type == EVEMESSAGETYPE_LIVEDESCRIPTION);
-	messageText = text;
 	priority = prio;
 }
 /**
@@ -93,6 +94,35 @@ void eveMessageText::dump()
 	((eveMessage*)this)->dump();
 	std::cout << "eveMessageText:  messageText: " << qPrintable(messageText) << "\n";
 }
+
+
+
+/**
+ * \param mtype type of message
+ * \param textlist list of messages
+ * \param prio message priority
+ */
+eveMessageTextList::eveMessageTextList(int mType, QStringList& textlist, int prio) : eveMessage(mType, prio), messageTextList(textlist)
+{
+	type = mType;
+	// check the allowed types; for now EVEMESSAGETYPE_METADATA is the only candidate
+	assert(type == EVEMESSAGETYPE_METADATA);
+	priority = prio;
+}
+/**
+ * \brief compare two messages
+ * \param message a pointer to the message to compare with
+ * \return true if messages are identical else false
+ */
+bool eveMessageTextList::compare(eveMessage *message)
+{
+	if (!message) return false;
+	if (type != message->getType()) return false;
+	return false;
+	// neither implemented nor used
+	// return true;
+}
+
 
 /**
  * \brief Constructor a message holding an int
@@ -226,7 +256,7 @@ eveCurrentXmlMessage::~eveCurrentXmlMessage()
  * \param xmlname Name of currently processing scanmodule
  * \param status status of currently processing scanmodule
  */
-eveEngineStatusMessage::eveEngineStatusMessage(int status, QString xmlname, int prio, int dest) :
+eveEngineStatusMessage::eveEngineStatusMessage(unsigned int status, QString xmlname, int prio, int dest) :
 	eveMessage(EVEMESSAGETYPE_ENGINESTATUS, prio, dest)
 {
 	XmlId = QString(xmlname);

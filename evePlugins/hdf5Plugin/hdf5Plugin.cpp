@@ -84,7 +84,7 @@ int hdf5Plugin::init(int setID, QString filename, QString format, QHash<QString,
 	fileName = filename;
 	fileFormat = format;
 	errorString.clear();
-	comment.clear();
+	metaData.clear();
 
 	if (!isFileOpen){
 		try
@@ -298,20 +298,16 @@ int hdf5Plugin::addData(int setID, eveDataMessage* data)
 }
 
 /**
- * @brief add a comment to be written at end of file
+ * @brief add a metadata (e.g. comment) to be written at end of file
  */
-int hdf5Plugin::addComment(int setID, QString newComment){
+int hdf5Plugin::addMetaData(int setID, QString attribute, QString stringVal){
 	if (!setIdList.contains(setID)) {
-		errorString = QString("HDF5Plugin:addComment: setID %1 has not been initialized").arg(setID);
+		errorString = QString("HDF5Plugin:addMetaData: setID %1 has not been initialized").arg(setID);
 		return ERROR;
 	}
 	else {
-		if ( comment.isEmpty()){
-			comment.append(newComment);
-		}
-		else {
-			comment.append(QString("; %1").arg(newComment));
-		}
+		if ((attribute.length() > 0) && (stringVal.length() > 0))
+			metaData.insert(attribute, stringVal);
 	}
 	errorString.clear();
 	return SUCCESS;
@@ -342,20 +338,30 @@ int hdf5Plugin::close(int setID)
 	errorString = QString("HDF5Plugin");
 
 	// write the comment into root group of file
-	try {
-		if (comment.length() > 0) {
-			hsize_t stringDim = 1;
-			StrType st = StrType(PredType::C_S1, comment.toLocal8Bit().length());
-			Group rootGroup = dataFile->openGroup("/");
-			Attribute attrib = rootGroup.createAttribute("Comment", st, DataSpace(1, &stringDim));
-			attrib.write(st, qPrintable(comment));
+	QList<QString> keyList = metaData.uniqueKeys();
+	foreach(QString key, keyList){
+		QString value;
+		while (metaData.count(key) > 0){
+			if (value.size() > 0) value.append("; ");
+			value.append(metaData.take(key));
+		}
+		try {
+			if (value.length() > 0) {
+				hsize_t stringDim = 1;
+				StrType st = StrType(PredType::C_S1, value.toLocal8Bit().length());
+				Group rootGroup = dataFile->openGroup("/");
+				Attribute attrib = rootGroup.createAttribute(qPrintable(key), st, DataSpace(1, &stringDim));
+				attrib.write(st, qPrintable(value));
+			}
+		}
+		catch( Exception error )
+		{
+			errorString += QString(": %1").arg(error.getCDetailMsg());
+			status = ERROR;
+			break;
 		}
 	}
-	catch( Exception error )
-	{
-		errorString += QString(": %1").arg(error.getCDetailMsg());
-		status = ERROR;
-	}
+
 
 	QHash<QString, columnInfo* >* columnHash = idHash.take(setID);
 	foreach (columnInfo* colInfo, *columnHash){
