@@ -244,13 +244,16 @@ void evePosCalc::setStepFile(QString stepfilename) {
 		}
 	}
     if ((axisType == eveINT) && (posIntList.count() > 0)){
-    	startPos = posIntList.at(0);
+    	startPos = posIntList.first();
+    	endPos = posIntList.last();
     	totalSteps = posIntList.count();
     } else if ((axisType == eveDOUBLE) && (posDoubleList.count() > 0)){
-    	startPos = posDoubleList.at(0);
+    	startPos = posDoubleList.first();
+    	endPos = posDoubleList.last();
     	totalSteps = posDoubleList.count();
     } else if ((axisType == eveSTRING) && (positionList.count() > 0)){
-    	startPos = positionList.at(0);
+    	startPos = positionList.first();
+    	endPos = positionList.last();
     	totalSteps = positionList.count();
     }
 }
@@ -300,13 +303,16 @@ void evePosCalc::setPositionList(QString poslist) {
 		}
 	}
     if ((axisType == eveINT) && (posIntList.count() > 0)){
-    	startPos = posIntList.at(0);
+    	startPos = posIntList.first();
+    	endPos = posIntList.last();
     	totalSteps = posIntList.count();
     } else if ((axisType == eveDOUBLE) && (posDoubleList.count() > 0)){
-    	startPos = posDoubleList.at(0);
+    	startPos = posDoubleList.first();
+    	endPos = posDoubleList.last();
     	totalSteps = posDoubleList.count();
     } else if ((axisType == eveSTRING) && (positionList.count() > 0)){
-    	startPos = positionList.at(0);
+    	startPos = positionList.first();
+    	endPos = positionList.last();
     	totalSteps = positionList.count();
     }
 }
@@ -422,13 +428,11 @@ void evePosCalc::stepfuncList(){
 		}
 	}
 	else if (axisType == eveDOUBLE){
-		if (posCounter >= (posDoubleList.count())) {
+		if (posCounter >= (posDoubleList.count()-1)) {
 			isAtEnd = true;
-			if (posCounter > posDoubleList.count()) return;
+			if (posCounter >= posDoubleList.count()) return;
 		}
-		else {
-			currentPos.setValue(posDoubleList.at(posCounter));
-		}
+		currentPos.setValue(posDoubleList.at(posCounter));
 	}
 }
 
