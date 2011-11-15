@@ -46,7 +46,7 @@ evePosCalc::evePosCalc(eveScanModule* sm, QString stepfunction, bool abs, eveTyp
 		stepmode = FILE;
 		stepFunction = &evePosCalc::stepfuncList;
 	}
-	else if (stepfunction.toLower() == "list"){
+	else if (stepfunction.toLower() == "positionlist"){
 		stepmode = LIST;
 		stepFunction = &evePosCalc::stepfuncList;
 	}
@@ -289,7 +289,7 @@ void evePosCalc::setPositionList(QString poslist) {
 
 	if (stepmode != LIST) return;
 
-	positionList = poslist.split(",",QString::SkipEmptyParts);
+	positionList = poslist.split(";",QString::SkipEmptyParts);
 	foreach (QString value, positionList){
 		if (axisType == eveINT){
 			bool ok;
@@ -410,29 +410,19 @@ void evePosCalc::stepfuncList(){
 	// posCounter == 0 => start Position,
 
 	if (axisType == eveSTRING){
-		if (posCounter >= (positionList.count()-1)) {
-			isAtEnd = true;
-			if (posCounter > positionList.count()) return;
-		}
-		else {
+		if (posCounter >= (positionList.count()-1)) isAtEnd = true;
+		if (posCounter > positionList.count())
 			currentPos.setValue(positionList.at(posCounter));
-		}
 	}
 	else if (axisType == eveINT){
-		if (posCounter >= (posIntList.count()-1)) {
-			isAtEnd = true;
-			if (posCounter > posIntList.count()) return;
-		}
-		else {
+		if (posCounter >= (posIntList.count()-1)) isAtEnd = true;
+		if (posCounter < posIntList.count())
 			currentPos.setValue(posIntList.at(posCounter));
-		}
 	}
 	else if (axisType == eveDOUBLE){
-		if (posCounter >= (posDoubleList.count()-1)) {
-			isAtEnd = true;
-			if (posCounter >= posDoubleList.count()) return;
-		}
-		currentPos.setValue(posDoubleList.at(posCounter));
+		if (posCounter >= (posDoubleList.count()-1)) isAtEnd = true;
+		if (posCounter < posDoubleList.count())
+			currentPos.setValue(posDoubleList.at(posCounter));
 	}
 }
 
