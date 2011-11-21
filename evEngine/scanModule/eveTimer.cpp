@@ -78,9 +78,6 @@ int eveTimer::readData(bool queue){
 		else {
 			iArray.append(0);
 		}
-		// TODO
-		// hdf plugin expects an int array of size 2; change it
-		iArray.append(0);
 		newData = new eveDataMessage(xmlId, name, status, DMTunmodified, currentTime, iArray);
 	}
 	else if (datatype == eveDOUBLE){
