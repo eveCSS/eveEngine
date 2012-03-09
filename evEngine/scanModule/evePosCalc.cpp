@@ -200,6 +200,9 @@ void evePosCalc::setStepWidth(QString stepwidth) {
 	else if (axisType == eveINT){
 		stepWidth.setValue(stepwidth.toInt(&ok));
 	}
+	else if (axisType == eveStringT){
+		stepWidth.setValue(stepwidth.toInt(&ok));
+	}
 
 	if (!ok) sendError(ERROR, QString("unable to set %1 as stepwidth").arg(stepwidth));
 	checkValues();
