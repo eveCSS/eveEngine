@@ -18,7 +18,7 @@ eveScanThread::~eveScanThread() {
 
 void eveScanThread::run()
 {
-	printf("ScanThread starting\n");
+	//printf("ScanThread starting\n");
 	scanManager->init();
     exec();
 }

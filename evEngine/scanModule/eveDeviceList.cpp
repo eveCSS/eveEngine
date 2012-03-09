@@ -7,6 +7,8 @@
 
 #include <exception>
 #include "eveDeviceList.h"
+#include "eveMessage.h"
+#include "eveError.h"
 
 eveDeviceList::eveDeviceList() {
 
@@ -29,7 +31,7 @@ void eveDeviceList::clearAll() {
 	}
 	catch (std::exception& e)
 	{
-		printf("C++ Exception in eveDeviceList::clearAll %s\n",e.what());
+		eveError::log(DEBUG, QString("C++ Exception in eveDeviceList::clearAll %1").arg(e.what()));
 	}
 
 }
