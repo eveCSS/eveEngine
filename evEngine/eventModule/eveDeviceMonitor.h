@@ -38,7 +38,6 @@ private:
 	eveEventProperty* event;
 	eveEventManager* manager;
 	eveVariant limit;
-	bool currentState;
 	bool(eveDeviceMonitor::* compare)(eveVariant);
 };
 

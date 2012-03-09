@@ -8,11 +8,11 @@
 #include "eveDeviceMonitor.h"
 #include "eveCaTransport.h"
 #include "eveEventManager.h"
+#include "eveError.h"
 
 eveDeviceMonitor::eveDeviceMonitor(eveEventManager* eventManager, eveEventProperty* eventProp) : eveSMBaseDevice(eventManager){
 
 	// Note: eventProp lives in a different thread with unknown lifetime
-	currentState = false;
 	event = eventProp;
 	name = "";
 	xmlId = "";
@@ -45,6 +45,7 @@ eveDeviceMonitor::eveDeviceMonitor(eveEventManager* eventManager, eveEventProper
 	else {
 		int status = monitorTrans->monitorTrans();
 	}
+	eveError::log(DEBUG, "eveDeviceMonitor: new Monitor", EVEMESSAGEFACILITY_EVENT);
 
 }
 
@@ -56,15 +57,30 @@ eveDeviceMonitor::~eveDeviceMonitor() {
 // slot, called by underlying transport for every value change
 void eveDeviceMonitor::valueChange(eveVariant* newValue) {
 
+
 	bool newState = (this->*compare)(*newValue);
 
-	if (newState != currentState) {
-		currentState = newState;
-		if (currentState || event->getSignalOff()) {
-			event->setValue(*newValue);
-			event->fireEvent();
-			manager->sendError(DEBUG, 0, QString("fired a valueChange event, newValue: %1").arg(newValue->toDouble()));
+	// TODO remove this debug stuff
+	if (newValue->canConvert(QVariant::String)){
+		QString result = "false";
+		if (newState) result = "true";
+		manager->sendError(DEBUG, 0, QString("valueChange event, newValue: %1, limit: %2, result: %3, cif: %4").arg(newValue->toString()).arg(limit.toString()).arg(result).arg(event->getSignalOff()));
+	}
+
+	try {
+		if (newState != event->getOn()) {
+			event->setOn(newState);
+			if (newState || event->getSignalOff()) {
+				event->setValue(*newValue);
+				event->fireEvent();
+				manager->sendError(DEBUG, 0, QString("fired a valueChange event, newValue: %1").arg(newValue->toDouble()));
+			}
 		}
+	}
+	catch (std::exception& e)
+	{
+		//printf("C++ Exception %s\n",e.what());
+		manager->sendError(ERROR,0,QString("C++ Exception %1 eveDeviceMonitor::valueChange").arg(e.what()));
 	}
 	if (newValue != NULL) delete newValue;
 }
