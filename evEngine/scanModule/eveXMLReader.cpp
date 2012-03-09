@@ -15,6 +15,7 @@
 #include "eveScanManager.h"
 #include "eveScanModule.h"
 #include "evePosCalc.h"
+#include "eveError.h"
 
 eveXMLReader::eveXMLReader(eveManager *parentObject){
 	parent = parentObject;
@@ -53,7 +54,7 @@ bool eveXMLReader::read(QByteArray xmldata, eveDeviceList *devList)
     }
 
     QDomElement root = domDocument->documentElement();
-  	printf("%s\n",QString("ScanModule-File root %1").arg(root.tagName()).toAscii().data());
+	eveError::log(DEBUG, QString("ScanModule-File root %1").arg(root.tagName()).toAscii().data());
     if (root.tagName() != "scml") {
 		sendError(ERROR,0,QString("eveXMLReader::read: file is not a scml file, it is %1").arg(root.tagName()));
         return false;
@@ -202,7 +203,7 @@ void eveXMLReader::createDetectorDefinition(QDomNode detector){
 /** \brief create a Transport from XML
  * \param node the <access> DomNode
  */
-eveBaseTransportDef * eveXMLReader::createTransportDefinition(QDomElement node)
+eveTransportDef * eveXMLReader::createTransportDefinition(QDomElement node)
 {
 	QString typeString, transportString, timeoutString;
 	QString methodString;
@@ -313,8 +314,8 @@ eveDetectorChannel * eveXMLReader::createChannelDefinition(QDomNode channel, eve
     	}
     }
     else { // every device needs its private copy of default unit
-    	// TODO define a copyConstructor which allocates a new eveBaseTransportDef
-    	// every device command needs its own eveBaseTransportDef
+    	// TODO define a copyConstructor which allocates a new eveTransportDef
+    	// every device command needs its own eveTransportDef
     	// do not use the default copy constructor or leave clone method
     	//    	if (unit != NULL) unit = new eveDeviceCommand(*unit);
     	if (unit != NULL) unit = unit->clone();
@@ -489,7 +490,7 @@ eveMotorAxis * eveXMLReader::createAxisDefinition(QDomNode axis, eveDeviceComman
  *
  */
 eveDeviceCommand * eveXMLReader::createDeviceCommand(QDomNode node){
-	eveBaseTransportDef *access=NULL;
+	eveTransportDef *access=NULL;
 	QString valueString="";
 	eveType valuetype=eveUnknownT;
 
@@ -979,7 +980,7 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 	}
 	catch (std::exception& e)
 	{
-		printf("C++ Exception %s\n",e.what());
+		// printf("C++ Exception %s\n",e.what());
 		sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getAxisList").arg(e.what()));
 	}
 	return axislist;
@@ -1028,7 +1029,7 @@ QList<eveSMChannel*>* eveXMLReader::getChannelList(eveScanModule* scanmodule, in
 	}
 	catch (std::exception& e)
 	{
-		printf("C++ Exception %s\n",e.what());
+		//printf("C++ Exception %s\n",e.what());
 		sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getChannelList").arg(e.what()));
 	}
 	return channellist;
@@ -1063,11 +1064,12 @@ QList<eveEventProperty*>* eveXMLReader::getSMEventList(int chain, int smid){
 		domEvent = domElement.firstChildElement("pauseevent");
 		while (!domEvent.isNull()) {
 			eveEventProperty* event = getEvent(eveEventProperty::PAUSE, domEvent);
-			QDomElement signalOffToo = domElement.firstChildElement("continue_if_false");
+			QDomElement signalOffToo = domEvent.firstChildElement("continue_if_false");
 			if (!signalOffToo.isNull()){
 				bool signalOff = false;
-				if (signalOffToo.text() == "true") signalOff = true;
+				if (signalOffToo.text().toLower() == "true") signalOff = true;
 				event->setSignalOff(signalOff);
+				eveError::log(DEBUG, QString("eveXMLReader::getSMEventList: pauseEvent signaloff: %1 ").arg(signalOff));
 			}
 			if (event != NULL ) eventList->append(event);
 			domEvent = domEvent.nextSiblingElement("pauseevent");
@@ -1075,11 +1077,13 @@ QList<eveEventProperty*>* eveXMLReader::getSMEventList(int chain, int smid){
 	}
 	catch (std::exception& e)
 	{
-		printf("C++ Exception %s\n",e.what());
+		//printf("C++ Exception %s\n",e.what());
 		sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getSMEventList").arg(e.what()));
 	}
 	return eventList;
 }
+// TODO
+// join code for getSMEventList + getChainEventList
 
 QList<eveEventProperty*>* eveXMLReader::getChainEventList(int chain){
 
@@ -1116,11 +1120,11 @@ QList<eveEventProperty*>* eveXMLReader::getChainEventList(int chain){
 		domEvent = domElement.firstChildElement("pauseevent");
 		while (!domEvent.isNull()) {
 			eveEventProperty* event = getEvent(eveEventProperty::PAUSE, domEvent);
-			QDomElement signalOffToo = domElement.firstChildElement("continue_if_false");
+			QDomElement signalOffToo = domEvent.firstChildElement("continue_if_false");
 			if (!signalOffToo.isNull()){
 				bool signalOff = false;
-				if (signalOffToo.text() == "true") signalOff = true;
-				event->setSignalOff(signalOff);
+				if (signalOffToo.text().toLower() == "true") signalOff = true;
+				if (event != NULL ) event->setSignalOff(signalOff);
 			}
 			if (event != NULL ) eventList->append(event);
 			domEvent = domEvent.nextSiblingElement("pauseevent");
@@ -1128,7 +1132,7 @@ QList<eveEventProperty*>* eveXMLReader::getChainEventList(int chain){
 	}
 	catch (std::exception& e)
 	{
-		printf("C++ Exception %s\n",e.what());
+		//printf("C++ Exception %s\n",e.what());
 		sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getChainEventList").arg(e.what()));
 	}
 	return eventList;

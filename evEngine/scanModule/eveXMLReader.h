@@ -72,7 +72,7 @@ private:
 	eveDetectorChannel * createChannelDefinition(QDomNode, eveDeviceCommand *, eveDeviceCommand *);
 	eveMotorAxis * createAxisDefinition(QDomNode, eveDeviceCommand *, eveDeviceCommand *);
 	void createOption(QDomNode);
-	eveBaseTransportDef* createTransportDefinition(QDomElement node);
+	eveTransportDef* createTransportDefinition(QDomElement node);
 	void getPluginData(QDomElement, QHash<QString, QString>&);
 	eveDeviceList *deviceList;
 	eveManager *parent;

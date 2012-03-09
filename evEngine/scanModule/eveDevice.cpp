@@ -7,12 +7,12 @@
 
 #include "eveDevice.h"
 
-eveBaseTransportDef::eveBaseTransportDef(eveType eptype) {
-	dataType=eptype;
-}
-eveBaseTransportDef::~eveBaseTransportDef() {
-	// TODO Auto-generated destructor stub
-}
+//eveBaseTransportDef::eveBaseTransportDef(eveType eptype) {
+//	dataType=eptype;
+//}
+//eveBaseTransportDef::~eveBaseTransportDef() {
+//	// TODO Auto-generated destructor stub
+//}
 
 //eveLocalTransportDef::eveLocalTransportDef(eveType etype, transMethodT accessMethod ,QString accessname) :
 //	eveBaseTransportDef::eveBaseTransportDef(etype) {
@@ -41,8 +41,8 @@ eveBaseTransportDef::~eveBaseTransportDef() {
 //	return new eveCaTransportDef(dataType, method, timeout, pV );
 //}
 
-eveTransportDef::eveTransportDef(eveTransportT ttype, eveType etype, transMethodT transMethod, double timeo, QString accname) :
-	eveBaseTransportDef::eveBaseTransportDef(etype) {
+eveTransportDef::eveTransportDef(eveTransportT ttype, eveType etype, transMethodT transMethod, double timeo, QString accname) {
+	dataType=etype;
 	timeout = timeo;
 	accessName = accname;
 	method = transMethod;
@@ -55,7 +55,7 @@ eveTransportDef* eveTransportDef::clone() {
 	return new eveTransportDef(transType, dataType, method, timeout, accessName );
 }
 
-eveDeviceCommand::eveDeviceCommand(eveBaseTransportDef * trans, QString value, eveType valtype) {
+eveDeviceCommand::eveDeviceCommand(eveTransportDef * trans, QString value, eveType valtype) {
 	transDef = trans;
 	valueString = value;
 	valueType = valtype;
@@ -64,7 +64,7 @@ eveDeviceCommand::~eveDeviceCommand() {
 	if (transDef != NULL) delete transDef;
 }
 eveDeviceCommand* eveDeviceCommand::clone() {
-	eveBaseTransportDef *trans;
+	eveTransportDef *trans;
 	if (transDef != NULL)
 		trans = transDef->clone();
 	else

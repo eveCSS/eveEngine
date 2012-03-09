@@ -19,7 +19,6 @@ enum eveTransportT {eveTRANS_CA, eveTRANS_LOCAL };
 
 /**
  * \brief base class for transports (CA, etc.)
- */
 class eveBaseTransportDef {
 public:
 	eveBaseTransportDef(eveType);
@@ -31,20 +30,25 @@ protected:
 	eveType dataType;
 	eveTransportT transType;
 };
+ */
 
 /**
  * \brief Common transport
  */
-class eveTransportDef : public eveBaseTransportDef{
+class eveTransportDef {
 public:
 	eveTransportDef(eveTransportT, eveType, transMethodT, double, QString );
 	virtual ~eveTransportDef();
 	eveTransportDef* clone();
 	QString getName(){return accessName;};
+	eveType getDataType(){return dataType;};
+	eveTransportT getTransType(){return transType;};
 	transMethodT getMethod(){return method;};
 	double getTimeout(){return timeout;};
 
 private:
+	eveType dataType;
+	eveTransportT transType;
 	QString accessName;
 	transMethodT method;
 	double timeout;
@@ -90,16 +94,16 @@ private:
  */
 class eveDeviceCommand {
 public:
-	eveDeviceCommand(eveBaseTransportDef *, QString, eveType);
+	eveDeviceCommand(eveTransportDef *, QString, eveType);
 	eveDeviceCommand(const eveDeviceCommand&);
 	virtual ~eveDeviceCommand();
 	eveDeviceCommand* clone();
 	eveType getValueType() {return valueType;};
 	QString getValueString() {return valueString;};
-	eveBaseTransportDef* getTrans() {return transDef;};
+	eveTransportDef* getTrans() {return transDef;};
 
 private:
-	eveBaseTransportDef *transDef;
+	eveTransportDef *transDef;
 	QString	valueString;
 	eveType valueType;
 };
