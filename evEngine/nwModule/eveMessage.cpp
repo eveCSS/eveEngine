@@ -656,7 +656,7 @@ eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, 
 	dataModifier = dmod;
 	dataType = eveDateTimeT;
 	dateTime = QDateTime(datetime);
-	arraySize = dataStrings.size();
+	arraySize = 1;
 	timestamp = eveTime(mtime);
 	posCount = 0;
 
