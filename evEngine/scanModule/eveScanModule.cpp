@@ -31,7 +31,8 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	catchedRedo = false;
 	catchedTrigger=false;
 	catchedDetecTrigger=false;
-	triggerDetecConf = false;
+	manDetTrigger = false;
+	eventTrigger = false;
 	delayedStart = false;
 	totalSteps = -1;
 	currentPosition = 0;
@@ -39,7 +40,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	// convert times to msecs
 	settleDelay = (int)(parser->getSMTagDouble(chainId, smId, "settletime", 0.0)*1000.0);
 	triggerDelay = (int)(parser->getSMTagDouble(chainId, smId, "triggerdelay", 0.0)*1000.0);
-    triggerConfirm  = parser->getSMTagBool(chainId, smId, "triggerconfirm", false);
+    manualTrigger  = parser->getSMTagBool(chainId, smId, "triggerconfirm", false);
     QString scanType = parser->getSMTag(chainId, smId, "type");
 	if (scanType != "classic") sendError(ERROR,0,QString("unknown smtype: %1").arg(scanType));
 
@@ -92,7 +93,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     channelList = parser->getChannelList(this, chainId, smId);
 	foreach (eveSMChannel *channel, *channelList){
 	    connect (channel, SIGNAL(channelDone()), this, SLOT(execStage()), Qt::QueuedConnection);
-	    if (channel->hasConfirmTrigger()) triggerDetecConf = true;
+	    if (channel->hasConfirmTrigger()) manDetTrigger = true;
 	}
 
 	eventList = parser->getSMEventList(chainId, smId);
@@ -208,7 +209,7 @@ void eveScanModule::stgInit() {
 		foreach (eveEventProperty* evprop, *eventList){
 			sendError(DEBUG, 0, QString("registering event for ..."));
 			manager->registerEvent(smId, evprop, false);
-			if (evprop->getActionType() == eveEventProperty::TRIGGER) triggerConfirm=true;
+			if (evprop->getActionType() == eveEventProperty::TRIGGER) eventTrigger=true;
 		}
 		delete eventList;
 		eventList = NULL;
@@ -268,10 +269,12 @@ void eveScanModule::stgReadPos() {
 			sendError(DEBUG, 0, QString("%1 position is %2").arg(axis->getName()).arg(dummy.toDouble()));
 		}
 		foreach (eveSMChannel *channel, *channelList){
-			//sendMessage(channel->getDeviceInfo());
-			sendError(INFO,0,QString("testing detector channel %1").arg(channel->getName()));
-			channel->triggerRead(false);
-			++signalCounter;
+			//read channel value to check if it is working, skip channels with long integration time;
+			if (channel->readAtInit()){
+				sendError(INFO,0,QString("testing detector channel %1").arg(channel->getName()));
+				channel->triggerRead(false);
+				++signalCounter;
+			}
 		}
 		if (nestedSM != NULL) {
 			nestedSM->readPos();
@@ -484,7 +487,7 @@ void eveScanModule::stgTrigRead() {
 		else {
 			currentStageCounter=2;
 			signalCounter = 0;
-			if (triggerDetecConf){
+			if (manDetTrigger){
 				catchedDetecTrigger = false;
 				smLastStatus = smStatus;
 				smStatus = eveSmTRIGGERWAIT;
@@ -497,7 +500,7 @@ void eveScanModule::stgTrigRead() {
 	}
 	else if (currentStageCounter == 2){
 		// check if trigger event received
-		if (triggerDetecConf){
+		if (manDetTrigger){
 			if (catchedDetecTrigger){
 				currentStageCounter=3;
 				manager->cancelRequest(triggerDetecRid);
@@ -598,13 +601,19 @@ void eveScanModule::stgNextPos() {
 			currentStageReady=true;
 		}
 		else {
-			if (triggerConfirm){
-				catchedTrigger = false;
+			if (manualTrigger || eventTrigger) {
 				smLastStatus = smStatus;
 				smStatus = eveSmTRIGGERWAIT;
 				manager->setStatus(smId, smStatus);
+			}
+			if (manualTrigger){
+				catchedTrigger = false;
 				++signalCounter;
 				triggerRid = manager->sendRequest(smId, "Trigger Positioning");
+			}
+			if (eventTrigger){
+				catchedEventTrigger = false;
+				++signalCounter;
 			}
 		}
 		emit sigExecStage();
@@ -614,14 +623,14 @@ void eveScanModule::stgNextPos() {
 		if (signalCounter > 0){
 			--signalCounter;
 		}
-		else if (triggerConfirm && !catchedTrigger){
+		else if ((manualTrigger && !catchedTrigger)||(eventTrigger && !catchedEventTrigger)){
 			sendError(DEBUG, 0, QString("Signal caught, but no trigger yet"));
 		}
 		else {
 			currentStageCounter=2;
 			signalCounter = 0;
 
-			if (triggerConfirm) manager->cancelRequest(triggerRid);
+			if (manualTrigger) manager->cancelRequest(triggerRid);
 
 			sendNextPos();
 			foreach (eveSMAxis *axis, *axisList){
@@ -1111,11 +1120,19 @@ bool eveScanModule::triggerSM(int smid, int rid) {
 	if (smId == smid){
 		found = true;
 		if (smStatus == eveSmTRIGGERWAIT) {
-			if (triggerRid == rid) catchedTrigger=true;
-			if (triggerDetecRid == rid) catchedDetecTrigger=true;
-			smStatus = smLastStatus;
-			manager->setStatus(smId, smStatus);
-			emit sigExecStage();
+			if (rid == 0)
+				catchedEventTrigger = true;
+			else if (triggerRid == rid)
+				catchedTrigger=true;
+			else if (triggerDetecRid == rid)
+				catchedDetecTrigger=true;
+
+			if (!(manualTrigger && !catchedTrigger) && !(eventTrigger && !catchedEventTrigger)
+					&& !(manDetTrigger && !catchedDetecTrigger)){
+				smStatus = smLastStatus;
+				manager->setStatus(smId, smStatus);
+				emit sigExecStage();
+			}
 		}
 	}
 	if (!found && nestedSM) found = nestedSM->triggerSM(smid, rid);

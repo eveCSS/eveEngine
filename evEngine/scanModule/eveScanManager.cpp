@@ -41,7 +41,6 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 
 	// TODO check startevent
 
-	printf("Constructor: ScanManager with chain %d\n", chainid);
 	//parser->addScanManager(chainId, this);
 	int rootId = parser->getRootId(chainId);
 	if (rootId == 0)
@@ -62,8 +61,10 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 	connect (manager, SIGNAL(pauseSMs()), this, SLOT(smPause()), Qt::QueuedConnection);
 
 	// collect various data
-	// TODO never used
 	addToHash(chainHash, "confirmsave", parser);
+
+
+	eventList = parser->getChainEventList(chainId);
 
 	// collect all storage-related data
 	savePluginHash = parser->getChainPlugin(chainId, "saveplugin");
@@ -94,11 +95,24 @@ eveScanManager::~eveScanManager() {
  */
 void eveScanManager::init() {
 
+	if (!rootSM) {
+		sendError(ERROR,0,"init: no root scanmodule found");
+		return;
+	}
 	// init StorageModule if we have a Datafilename
 	if (useStorage) {
 		sendMessage(new eveStorageMessage(chainId, channelId, savePluginHash, 0, storageChannel));
 	}
 	rootSM->initialize();
+	// init events
+	foreach (eveEventProperty* evprop, *eventList){
+		sendError(DEBUG, 0, QString("registering chain event"));
+		registerEvent(0, evprop, true);
+		if (evprop->getActionType() == eveEventProperty::TRIGGER) rootSM->setEventTrigger(true);
+	}
+	delete eventList;
+	eventList = NULL;
+
 }
 
 /**
@@ -410,19 +424,23 @@ void eveScanManager::newEvent(eveEventProperty* evprop) {
 			if (evprop->getOn()){
 				// pause on
 				if (evprop->isChainAction()){
-					if (rootSM) rootSM->pauseChain();
+					sendError(DEBUG, 0, QString("eveScanManager: new event: pause on chain"));
+					rootSM->pauseChain();
 				}
 				else {
-					if (rootSM) rootSM->pauseSM(evprop->getSmId());
+					sendError(DEBUG, 0, QString("eveScanManager: new event: pause on smid %1").arg(evprop->getSmId()));
+					rootSM->pauseSM(evprop->getSmId());
 				}
 			}
 			else {
 				// pause off
 				if (evprop->isChainAction()){
-					if (rootSM) rootSM->resumeChain();
+					sendError(DEBUG, 0, QString("eveScanManager: new event: pause off chain"));
+					rootSM->resumeChain();
 				}
 				else {
-					if (rootSM) rootSM->resumeSM(evprop->getSmId());
+					sendError(DEBUG, 0, QString("eveScanManager: new event: pause off smid %1").arg(evprop->getSmId()));
+					rootSM->resumeSM(evprop->getSmId());
 				}
 			}
 		}

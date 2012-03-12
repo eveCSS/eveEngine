@@ -38,7 +38,7 @@ public:
 	virtual ~eveScanModule();
 	bool isDone(){return (smStatus==eveSmDONE)?true:false;};
 	bool initDone(){return (currentStage==eveStgREADPOS)?true:false;};
-	// smStatusT getStatus(){return smStatus;};
+	void setEventTrigger(bool val){eventTrigger = val;};
 	void initialize();
 	void sendError(int, int, int, QString);
 	void sendMessage(eveMessage*);
@@ -99,10 +99,12 @@ private:
 	int triggerRid;
 	int triggerDetecRid;
 	int triggerPosCount;
-	bool triggerConfirm;
-	bool triggerDetecConf;
+	bool eventTrigger;
+	bool manualTrigger;
+	bool manDetTrigger;
 	bool catchedRedo;
 	bool catchedTrigger;
+	bool catchedEventTrigger;
 	bool catchedDetecTrigger;
 	bool delayedStart;
 	int settleDelay;

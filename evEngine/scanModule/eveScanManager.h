@@ -82,6 +82,7 @@ private:
 	bool neverStarted;
 	bool shutdownPending;
 	QTimer *sendStatusTimer;
+	QList<eveEventProperty*>* eventList;
 };
 
 #endif /* EVESCANMANAGER_H_ */
