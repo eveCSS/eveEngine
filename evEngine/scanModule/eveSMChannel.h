@@ -49,7 +49,7 @@ public:
 	void addPositioner(eveCalc* pos){positionerList.append(pos);};
 	void loadPositioner(int pc);
 	void setTimer(QDateTime start);
-
+	bool readAtInit(){return timeoutShort;};
 
 public slots:
 	void transportReady(int);
@@ -63,6 +63,7 @@ private:
 	void sendError(int, int, QString);
 	void read(bool);
 	void signalReady();
+	bool timeoutShort;
 	bool isTimer;
 	bool redo;
 	bool ready;

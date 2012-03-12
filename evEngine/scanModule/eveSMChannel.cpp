@@ -43,6 +43,8 @@ eveSMBaseDevice(scanmodule) {
 	eventList = eventlist;
 	unit = "";
 	isTimer = false;
+	// true if read timeout is <= 10s
+	timeoutShort = true;
 
 	if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
       eveTransportDef* transdef = (eveTransportDef*)definition->getValueCmd()->getTrans();
@@ -59,6 +61,7 @@ eveSMBaseDevice(scanmodule) {
              valueTrans = new eveCounter(this, xmlId, name, transdef);
           }
       }
+      if (transdef->getTimeout() > 10.0) timeoutShort = false;
 	}
 	if (valueTrans != NULL)
 		haveValue = true;
@@ -152,7 +155,7 @@ eveSMChannel::~eveSMChannel() {
 	}
 	catch (std::exception& e)
 	{
-		printf("C++ Exception %s\n",e.what());
+		//printf("C++ Exception %s\n",e.what());
 		sendError(FATAL, 0, QString("C++ Exception in ~eveSMChannel %1").arg(e.what()));
 	}
 }
