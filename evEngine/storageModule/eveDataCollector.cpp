@@ -331,9 +331,10 @@ QString eveDataCollector::macroExpand(QString eString){
 		QString replaceText("__PV-replacing-error__");
 		int pos = pvPattern.indexIn(eString);
 		if (pos > -1) {
+			manager->sendError(MINOR, 0, QString("PV macro expansion is an experimental feature and has an impact on system stability "));
 			manager->sendError(DEBUG, 0, QString("PV macro expansion: pv >%1<").arg(pvPattern.cap(1)));
 			eveSimplePV* macroPV = new eveSimplePV(pvPattern.cap(1));
-			if (macroPV->getStatus() == SCSSUCCESS){
+			if (macroPV->readPV() == SCSSUCCESS){
 				replaceText = macroPV->getStringValue();
 				manager->sendError(DEBUG, 0, QString("PV macro expansion: new value >%1<").arg(replaceText));
 			}
@@ -341,6 +342,7 @@ QString eveDataCollector::macroExpand(QString eString){
 				manager->sendError(MINOR, 0, QString("PV macro expansion: pv error %1").arg(macroPV->getErrorString()));
 			}
 			delete macroPV;
+			manager->sendError(DEBUG, 0, QString("resuming after macro expansion"));
 		}
 		eString.replace(QString("${PV:%1}").arg(pvPattern.cap(1)), replaceText);
 	}
