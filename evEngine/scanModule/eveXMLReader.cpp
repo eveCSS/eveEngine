@@ -1037,12 +1037,24 @@ QList<eveSMChannel*>* eveXMLReader::getChannelList(eveScanModule* scanmodule, in
 
 QList<eveEventProperty*>* eveXMLReader::getSMEventList(int chain, int smid){
 
+	if (!smIdHash.contains(chain)) return new QList<eveEventProperty* >;
+	QDomElement domElement = smIdHash.value(chain)->value(smid);
+	return getEventList(domElement);
+}
+
+QList<eveEventProperty*>* eveXMLReader::getChainEventList(int chain){
+
+	if (!chainDomIdHash.contains(chain)) return new QList<eveEventProperty* >;
+	QDomElement domElement = chainDomIdHash.value(chain);
+	return getEventList(domElement);
+}
+
+QList<eveEventProperty*>* eveXMLReader::getEventList(QDomElement domElement){
+
 	QList<eveEventProperty* > *eventList = new QList<eveEventProperty* >;
 
 	try
 	{
-		if (!smIdHash.contains(chain)) return eventList;
-		QDomElement domElement = smIdHash.value(chain)->value(smid);
 		QDomElement domEvent = domElement.firstChildElement("redoevent");
 		while (!domEvent.isNull()) {
 			eveEventProperty* event = getEvent(eveEventProperty::REDO, domEvent);
@@ -1078,62 +1090,7 @@ QList<eveEventProperty*>* eveXMLReader::getSMEventList(int chain, int smid){
 	catch (std::exception& e)
 	{
 		//printf("C++ Exception %s\n",e.what());
-		sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getSMEventList").arg(e.what()));
-	}
-	return eventList;
-}
-// TODO
-// join code for getSMEventList + getChainEventList
-
-QList<eveEventProperty*>* eveXMLReader::getChainEventList(int chain){
-
-	QList<eveEventProperty* > *eventList = new QList<eveEventProperty* >;
-
-	try
-	{
-		if (!chainDomIdHash.contains(chain)) return eventList;
-		QDomElement domElement = chainDomIdHash.value(chain);
-		QDomElement domEvent = domElement.firstChildElement("startevent");
-		while (!domEvent.isNull()) {
-			eveEventProperty* event = getEvent(eveEventProperty::START, domEvent);
-			if (event != NULL ) eventList->append(event);
-			domEvent = domEvent.nextSiblingElement("startevent");
-		}
-		domEvent = domElement.firstChildElement("redoevent");
-		while (!domEvent.isNull()) {
-			eveEventProperty* event = getEvent(eveEventProperty::REDO, domEvent);
-			if (event != NULL ) eventList->append(event);
-			domEvent = domEvent.nextSiblingElement("redoevent");
-		}
-		domEvent = domElement.firstChildElement("breakevent");
-		while (!domEvent.isNull()) {
-			eveEventProperty* event = getEvent(eveEventProperty::BREAK, domEvent);
-			if (event != NULL ) eventList->append(event);
-			domEvent = domEvent.nextSiblingElement("breakevent");
-		}
-		domEvent = domElement.firstChildElement("stopevent");
-		while (!domEvent.isNull()) {
-			eveEventProperty* event = getEvent(eveEventProperty::STOP, domEvent);
-			if (event != NULL ) eventList->append(event);
-			domEvent = domEvent.nextSiblingElement("stopevent");
-		}
-		domEvent = domElement.firstChildElement("pauseevent");
-		while (!domEvent.isNull()) {
-			eveEventProperty* event = getEvent(eveEventProperty::PAUSE, domEvent);
-			QDomElement signalOffToo = domEvent.firstChildElement("continue_if_false");
-			if (!signalOffToo.isNull()){
-				bool signalOff = false;
-				if (signalOffToo.text().toLower() == "true") signalOff = true;
-				if (event != NULL ) event->setSignalOff(signalOff);
-			}
-			if (event != NULL ) eventList->append(event);
-			domEvent = domEvent.nextSiblingElement("pauseevent");
-		}
-	}
-	catch (std::exception& e)
-	{
-		//printf("C++ Exception %s\n",e.what());
-		sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getChainEventList").arg(e.what()));
+		sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getEventList").arg(e.what()));
 	}
 	return eventList;
 }

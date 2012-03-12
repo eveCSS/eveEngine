@@ -79,6 +79,7 @@ private:
 	QHash<int, QDomElement> chainDomIdHash;
 	QHash<int, QHash<int, QDomElement>* > smIdHash;
 	QHash<int, int> rootSMHash; // has id of the root sm in chain
+	QList<eveEventProperty*>* getEventList(QDomElement);
 	//eveEventTypeT getEventType(QString);
 
 };
