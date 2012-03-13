@@ -43,10 +43,6 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 
 	if (paraHash.value("autonumber", emptyString).toLower() == "true") doAutoNumber = true;;
 
-	// TODO
-	//we send dummy data for testing purpose only
-	//addMessage(new eveRequestMessage(eveRequestManager::getRequestManager()->newId(channelId),EVEREQUESTTYPE_OKCANCEL, "Sie haben HALT gedrueckt"));
-
 	if (fileName.isEmpty()){
 		sman->sendError(ERROR,0,QString("eveDataCollector: empty filename not allowed, using dummy-filename"));
 		fileName = "dummy-filename";
