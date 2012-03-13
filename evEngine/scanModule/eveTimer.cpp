@@ -118,10 +118,10 @@ int eveTimer::writeData(eveVariant writedata, bool queue){
 		else {
 			// check for day wrap
 			int msecsOffset = 0 ;
-			if (currentDT.date() != writeDT.date())
-				msecsOffset = currentDT.secsTo(writeDT) * 1000;
-			sendError(DEBUG, 0, QString("eveTimer: load timer with %1 msecs").arg(msecsOffset + currentDT.time().msecsTo(writeDT.time())));
-			QTimer::singleShot (msecsOffset + currentDT.time().msecsTo(writeDT.time()), this, SLOT (waitDone()));
+			msecsOffset = currentDT.secsTo(writeDT) * 1000;
+			msecsOffset += writeDT.time().msec() - currentDT.time().msec();
+			sendError(DEBUG, 0, QString("eveTimer: load timer with %1 msecs").arg(msecsOffset));
+			QTimer::singleShot (msecsOffset, this, SLOT (waitDone()));
 		}
 	}
 	else if (writedata.getType() == eveInt32T){
