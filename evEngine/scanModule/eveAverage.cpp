@@ -8,6 +8,7 @@
 #include "eveAverage.h"
 #include <cmath>
 #include <exception>
+#include "eveError.h"
 
 /**
  * wait until average values have been taken before signaling ready
@@ -151,7 +152,7 @@ eveVariant eveAverage::getResult(){
 			try {
 				sum += value;
 			} catch (std::exception& e) {
-				printf("C++ Exception in eveAverage > sum += value <  %s\n",e.what());
+				eveError::log(ERROR, QString("C++ Exception eveAverage > sum += value <  %1").arg(e.what()), EVEMESSAGEFACILITY_MATH);
 			}
 		}
 	}
