@@ -111,12 +111,11 @@ int eveTimer::writeData(eveVariant writedata, bool queue){
 
 		QDateTime writeDT = writedata.toDateTime();
 
-		sendError(DEBUG, 0, QString("eveTimer: now: %1 goto: %2").arg(currentDT.time().toString("hh:mm:ss.zzz")).arg(writeDT.time().toString("hh:mm:ss.zzz")));
+		sendError(DEBUG, 0, QString("eveTimer: now: %1 goto: %2").arg(currentDT.toString("dd.MM.yyyy hh:mm:ss.zzz")).arg(writeDT.toString("dd.MM.yyyy hh:mm:ss.zzz")));
 		if (currentDT >= writeDT){
 			waitDone();
 		}
 		else {
-			// check for day wrap
 			int msecsOffset = 0 ;
 			msecsOffset = currentDT.secsTo(writeDT) * 1000;
 			msecsOffset += writeDT.time().msec() - currentDT.time().msec();
