@@ -22,22 +22,26 @@ public:
 	virtual ~eveSimplePV();
 	static void eveSimplePVConnectCB(struct connection_handler_args args);
 	static void eveSimplePVGetCB(struct event_handler_args arg);
-	simpleCaStatusT getStatus(){return lastStatus;};
-	QString& getStringValue(){return pvdata;};
-	QString& getErrorString(){return errorText;};
+	QString getStringValue(){return pvdata;};
+	QString getErrorString(){return errorText;};
 	void wakeUp(simpleCaStatusT);
 	void setValueString(char* value);
+	simpleCaStatusT readPV();
 
 private:
-	simpleCaStatusT connectReadPV(QString);
 	void disconnectPV();
 	void sendError(QString);
 	chid chanChid;
 	simpleCaStatusT lastStatus;
+	QString pvname;
 	QString pvdata;
 	QString errorText;
-	QWaitCondition waitForCA;
-	QMutex waitLock;
+	QWaitCondition waitForConnect;
+	QMutex connectLock;
+	QWaitCondition waitForRead;
+	QMutex readLock;
+	bool connecting;
+	bool reading;
 
 };
 

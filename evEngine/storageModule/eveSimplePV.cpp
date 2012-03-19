@@ -9,17 +9,18 @@
 #include <iostream>
 #include <QTime>
 
-eveSimplePV::eveSimplePV(QString pvname) {
+eveSimplePV::eveSimplePV(QString name) : pvname(name) {
 
 	chanChid = 0;
-	lastStatus = connectReadPV(pvname);
+	connecting = false;
+	reading = false;
 }
 
 eveSimplePV::~eveSimplePV() {
 	// TODO Auto-generated destructor stub
 }
 
-simpleCaStatusT eveSimplePV::connectReadPV(QString pvname){
+simpleCaStatusT eveSimplePV::readPV(){
 
 	int status;
 
@@ -30,6 +31,7 @@ simpleCaStatusT eveSimplePV::connectReadPV(QString pvname){
 	}
 
 	lastStatus=SCSERROR;
+	connecting = true;
 	status=ca_create_channel(pvname.toAscii().data(), &eveSimplePVConnectCB, (void*) this, 0, &chanChid);
 	if(status != ECA_NORMAL){
 		sendError("eveSimplePV: Error creating CA Channel");
@@ -38,15 +40,21 @@ simpleCaStatusT eveSimplePV::connectReadPV(QString pvname){
 	}
 	ca_pend_io(0.0);
 
-	waitLock.lock();
-	if(!waitForCA.wait(&waitLock, 2000)){
-		waitLock.unlock();
+	connectLock.lock();
+	if(!waitForConnect.wait(&connectLock, 2000)){
+		connectLock.unlock();
 		sendError("eveSimplePV: Timeout while connecting to CA Channel");
 		disconnectPV();
 		return SCSERROR;
 	}
-	waitLock.unlock();
+	connectLock.unlock();
+	connecting = false;
 
+	if (lastStatus==SCSERROR){
+		disconnectPV();
+		return SCSERROR;
+	}
+	reading = true;
 	lastStatus=SCSERROR;
 	status = ca_get_callback(DBR_STRING, chanChid, &eveSimplePVGetCB, (void*) this);
 	if(status != ECA_NORMAL){
@@ -56,14 +64,15 @@ simpleCaStatusT eveSimplePV::connectReadPV(QString pvname){
 	}
 	ca_flush_io();
 
-	waitLock.lock();
-	if(!waitForCA.wait(&waitLock, 2000)){
+	readLock.lock();
+	if(!waitForRead.wait(&readLock, 2000)){
 		sendError("eveSimplePV: Timeout while reading from CA Channel");
 		disconnectPV();
 		return SCSERROR;
 	}
+
 	disconnectPV();
-	return SCSSUCCESS;
+	return lastStatus;
 }
 
 /** \brief connection callback
@@ -84,16 +93,12 @@ void eveSimplePV::eveSimplePVConnectCB(struct connection_handler_args arg){
 
 void eveSimplePV::wakeUp(simpleCaStatusT state){
 
-	lastStatus = state;
-	if (state){
-		sendError("connected");
+	if (connecting){
+		lastStatus = state;
+		connectLock.lock();
+		waitForConnect.wakeAll();
+		connectLock.unlock();
 	}
-	else {
-		sendError("connection unsuccessful");
-	}
-	waitLock.lock();
-	waitForCA.wakeAll();
-    waitLock.unlock();
 }
 
 /** \brief read callback
@@ -116,21 +121,24 @@ void eveSimplePV::eveSimplePVGetCB(struct event_handler_args arg){
 
 void eveSimplePV::setValueString(char* value){
 
-	if (value != NULL){
-		pvdata = value;
-		sendError(QString("data is %1").arg(pvdata));
-		lastStatus = SCSSUCCESS;
+	if (reading) {
+		if (value != NULL){
+			pvdata = value;
+			lastStatus = SCSSUCCESS;
+		}
+		else {
+			lastStatus = SCSERROR;
+		}
+		readLock.lock();
+		waitForRead.wakeAll();
+		readLock.unlock();
 	}
-	else {
-		sendError("error reading value");
-		lastStatus = SCSERROR;
-	}
-	waitLock.lock();
-	waitForCA.wakeAll();
-    waitLock.unlock();
 }
 
 void eveSimplePV::disconnectPV(){
+
+	connecting = false;
+	reading = false;
 
 	sendError("destroy channel/context");
 	if (chanChid) {
