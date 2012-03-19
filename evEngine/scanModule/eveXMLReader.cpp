@@ -1073,11 +1073,17 @@ QList<eveEventProperty*>* eveXMLReader::getEventList(QDomElement domElement){
 			if (event != NULL ) eventList->append(event);
 			domEvent = domEvent.nextSiblingElement("triggerevent");
 		}
+		domEvent = domElement.firstChildElement("stopevent");
+		while (!domEvent.isNull()) {
+			eveEventProperty* event = getEvent(eveEventProperty::STOP, domEvent);
+			if (event != NULL ) eventList->append(event);
+			domEvent = domEvent.nextSiblingElement("stopevent");
+		}
 		domEvent = domElement.firstChildElement("pauseevent");
 		while (!domEvent.isNull()) {
 			eveEventProperty* event = getEvent(eveEventProperty::PAUSE, domEvent);
 			QDomElement signalOffToo = domEvent.firstChildElement("continue_if_false");
-			if (!signalOffToo.isNull()){
+			if ((event != NULL ) &&(!signalOffToo.isNull())){
 				bool signalOff = false;
 				if (signalOffToo.text().toLower() == "true") signalOff = true;
 				event->setSignalOff(signalOff);
