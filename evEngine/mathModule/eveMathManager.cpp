@@ -6,6 +6,7 @@
  */
 
 #include <QThread>
+#include <QList>
 #include "eveMessage.h"
 #include "eveMathManager.h"
 #include "eveMessageHub.h"
@@ -113,7 +114,14 @@ void eveMathManager::shutdown(){
 		// stop input Queue
 		disableInput();
 
-		foreach(eveMath* math, mathHash.values()) delete math;
+		QList<eveMath*> deletedHash;
+		// Caution: multiHash may contain the math object several times
+		foreach(eveMath* math, mathHash.values()) {
+			if (!deletedHash.contains(math)){
+				deletedHash.append(math);
+				delete math;
+			}
+		}
 		mathHash.clear();
 		connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
 	}
