@@ -269,6 +269,7 @@ void eveScanModule::stgReadPos() {
 			sendError(DEBUG, 0, QString("%1 position is %2").arg(axis->getName()).arg(dummy.toDouble()));
 		}
 		foreach (eveSMChannel *channel, *channelList){
+			sendMessage(channel->getDeviceInfo());
 			//read channel value to check if it is working, skip channels with long integration time;
 			if (channel->readAtInit()){
 				sendError(INFO,0,QString("testing detector channel %1").arg(channel->getName()));
@@ -299,19 +300,14 @@ void eveScanModule::stgReadPos() {
 				}
 			}
 			foreach (eveSMChannel *channel, *channelList){
-				if (!channel->isDone()) {
+				if (channel->readAtInit() && !channel->isDone()) {
 					ready = false;
 					sendError(INFO, 0, QString("stgReadPos: channel %1 not ready").arg(channel->getName()));
 				}
 			}
-			if (ready) {
-				foreach (eveSMChannel *channel, *channelList){
-					sendMessage(channel->getDeviceInfo());
-				}
-				currentStageReady=true;
-				emit sigExecStage();
-				sendError(DEBUG, 0, "stgReadPos Done");
-			}
+			currentStageReady=true;
+			emit sigExecStage();
+			sendError(DEBUG, 0, "stgReadPos Done");
 		}
 	}
 }
@@ -326,7 +322,7 @@ void eveScanModule::gotoStart() {
 /**
  * \brief Goto Start Position
  *
- * move motors and all motors of all nested scans to start position,
+ * move motors  to start position,
  * - read motor positions
  * - send motor positions
  *
@@ -350,10 +346,6 @@ void eveScanModule::stgGotoStart() {
 			sendError(DEBUG, 0, QString("Moving axis %1").arg(axis->getName()));
 			axis->setTimer(startTime);
 			axis->gotoStartPos(false);
-			++signalCounter;
-		}
-		if (nestedSM != NULL) {
-			nestedSM->gotoStart();
 			++signalCounter;
 		}
 		emit sigExecStage();
