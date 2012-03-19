@@ -9,6 +9,7 @@
 #include <cmath>
 #include <exception>
 #include <values.h>
+#include "eveError.h"
 
 #define MATH EVEMESSAGEFACILITY_MATH
 
@@ -268,7 +269,7 @@ bool eveCalc::calculate(MathAlgorithm algo){
 			try {
 				sum += value;
 			} catch (std::exception& e) {
-				printf("C++ Exception in eveCalc > sum += value <  %s\n",e.what());
+				eveError::log(ERROR, QString("C++ Exception in eveCalc > sum += value <  %1").arg(e.what()), MATH);
 			}
 			++index;
 		}
