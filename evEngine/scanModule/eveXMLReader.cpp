@@ -1278,11 +1278,17 @@ void eveXMLReader::getMathConfigFromPlot(int chid, int smid, QList<eveMathConfig
 		QDomElement domPlot = domElement.firstChildElement("plot");
 		while (!domPlot.isNull()) {
 			bool ok;
+			bool init = true;
 			QString xAxisId;
 			QString yAxisId;
 			QString normalizeId;
 			int plotId = domPlot.attribute("id").toInt(&ok);
-			bool init = getSMTagBool(chid, smid, "init", true);
+			domElement = domPlot.firstChildElement("init");
+			if (!domElement.isNull()) {
+				if ((domElement.text().compare("no", Qt::CaseInsensitive) == 0) || (domElement.text().compare("false", Qt::CaseInsensitive) == 0))
+					init = false;
+			}
+
 			domElement = domPlot.firstChildElement("xaxis");
 			if (!domElement.isNull()) domElement = domElement.firstChildElement("id");
 			if (!domElement.isNull()) xAxisId = domElement.text();
