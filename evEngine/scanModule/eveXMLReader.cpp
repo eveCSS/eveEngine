@@ -1182,7 +1182,7 @@ eveEventProperty* eveXMLReader::getEvent(eveEventProperty::actionTypeT action, Q
 			return NULL;
 		}
 
-	 	eveDevice* deviceDef = deviceList->getDeviceDef(domId.text());
+	 	eveDevice* deviceDef = deviceList->getAnyDef(domId.text());
 		if ((deviceDef == NULL) || (deviceDef->getValueCmd() == NULL)){
 			sendError(ERROR, 0, QString("getEvent: no or invalid device definition found for %1").arg(domId.text()));
 			return NULL;

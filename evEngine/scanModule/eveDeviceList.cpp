@@ -36,5 +36,11 @@ void eveDeviceList::clearAll() {
 
 }
 
+eveDevice* eveDeviceList::getAnyDef(QString name){
 
+	if (axisDefinitions.contains(name)) return getAxisDef(name);
+	if (channelDefinitions.contains(name)) return getChannelDef(name);
+	if (deviceDefinitions.contains(name)) return getDeviceDef(name);
+	return NULL;
+}
 
