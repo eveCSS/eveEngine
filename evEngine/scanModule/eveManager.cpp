@@ -84,13 +84,7 @@ void eveManager::handleMessage(eveMessage *message){
 			}
 			break;
 		case EVEMESSAGETYPE_START:
-		{
-			//
-			if (loadPlayListEntry() || (engineStatus->getEngineStatus() == eveEngPAUSED)){
-				if (!sendStart())
-					sendError(INFO,0,"cannot process START command with current engine status");
-			}
-		}
+			if (!sendStart()) sendError(INFO,0,"cannot process START command with current engine status");
 		break;
 		case EVEMESSAGETYPE_STOP:
 			if (engineStatus->setStop()){
