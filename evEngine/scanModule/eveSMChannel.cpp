@@ -457,7 +457,12 @@ eveDevInfoMessage* eveSMChannel::getDeviceInfo(){
 	if (curValue != NULL){
 		sl->append(QString("Value:%1").arg(curValue->toVariant().toString()));
 	}
-
+	if (averageCount > 1) {
+		sl->append(QString("AverageCount:%1").arg(averageCount));
+		sl->append(QString("maxAttempts:%1").arg(maxAttempts));
+		sl->append(QString("maxDeviation:%1").arg(maxDeviation));
+		sl->append(QString("minimum:%1").arg(minimum));
+	}
 	return new eveDevInfoMessage(xmlId, name, sl);
 }
 
