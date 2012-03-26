@@ -62,12 +62,10 @@ public:
 /**
  * \brief tracks chain status and commands for manager
  *
- * If START, PAUSE, HALT, STOP command is received, engine status changes to
- * STARTED, PAUSED, HALTED, STOPPED.
  * Engine status is set to EXECUTING or IDLE by the appropriate
  * chainStatus Message.
  * Commands are accepted only, if engineStatus is EXECUTING or IDLE.
- * Exception: HALT will is always accepted. (README_Controls)
+ * Exception: HALT is always accepted. (README_Controls)
  */
 class eveManagerStatusTracker : public eveBasicStatusTracker {
 
