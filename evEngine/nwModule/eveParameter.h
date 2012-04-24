@@ -20,7 +20,7 @@ public:
 	eveParameter();
 	virtual ~eveParameter();
 	static QString getParameter(QString key){return paraHash.value(key);};
-	void setParameter(QString key, QString value){paraHash.insert(key, value);};
+	static void setParameter(QString key, QString value){paraHash.insert(key, value);};
 
 private:
 	static QHash<QString, QString> paraHash;
