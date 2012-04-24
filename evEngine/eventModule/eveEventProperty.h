@@ -13,7 +13,7 @@
 #include "eveVariant.h"
 #include "eveDevice.h"
 
-enum eventTypeT {eveEventTypeMONITOR=1, eveEventTypeSCHEDULE, eveEventTypeDETECTOR} ;
+enum eventTypeT {eveEventTypeMONITOR=1, eveEventTypeSCHEDULE, eveEventTypeDETECTOR, eveEventTypeGUI} ;
 enum incidentTypeT {eveIncidentNONE, eveIncidentSTART, eveIncidentEND} ;
 
 /*
@@ -27,6 +27,7 @@ public:
 	enum actionTypeT {NONE, START, PAUSE, HALT, BREAK, STOP, REDO, TRIGGER} ;
 
 	eveEventProperty(QString, QString, eveVariant limit, eventTypeT, incidentTypeT, actionTypeT, eveDeviceCommand*);
+	eveEventProperty(actionTypeT, int);
 	virtual ~eveEventProperty();
 	void setOn(bool state){onstate = state;};
 	bool getOn(){return onstate;};

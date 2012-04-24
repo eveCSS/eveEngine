@@ -30,6 +30,26 @@ eveEventProperty::eveEventProperty(QString evname, QString operation, eveVariant
 	eventId = 0;
 	smId = 0;
 	chainAction=false;
+	if (eventType == eveEventTypeMONITOR)
+		onstate = false;
+	else
+		onstate = true;
+	// always signal both states if REDO
+	if (actionType == REDO) signalOff = true;
+}
+
+eveEventProperty::eveEventProperty(actionTypeT actiontype, int evid)
+{
+	devCommand = NULL;
+	eventType = eveEventTypeGUI;
+	actionType = actiontype;
+	incidentType = eveIncidentNONE;
+	name = "Dummy";
+	onstate = true;
+	signalOff = false;
+	eventId = evid;
+	smId = 0;
+	chainAction=true;
 }
 
 eveEventProperty::~eveEventProperty() {
