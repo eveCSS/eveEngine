@@ -86,6 +86,9 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 
 eveScanManager::~eveScanManager() {
 	//delete sendStatusTimer;
+
+	// TODO
+	// unregister events ? (or is it done elsewhere)
 }
 
 /**
@@ -105,10 +108,12 @@ void eveScanManager::init() {
 	}
 	rootSM->initialize();
 	// init events
+	bool haveRedoEvent = false;
 	foreach (eveEventProperty* evprop, *eventList){
 		sendError(DEBUG, 0, QString("registering chain event"));
+		if (haveRedoEvent) sendError(MINOR, 0, QString("more than one redo event in a chain is unsupported"));
 		registerEvent(0, evprop, true);
-		if (evprop->getActionType() == eveEventProperty::TRIGGER) rootSM->setEventTrigger(true);
+		if (evprop->getActionType() == eveEventProperty::REDO) haveRedoEvent = true;
 	}
 	delete eventList;
 	eventList = NULL;
@@ -162,7 +167,9 @@ void eveScanManager::smStart() {
 		sendStartTime();
 		neverStarted = false;
 	}
-	if (rootSM) rootSM->startChain();
+	eveEventProperty evprop(eveEventProperty::START, 0);
+	if (rootSM) rootSM->newEvent(&evprop);
+//	if (rootSM) rootSM->startChain();
 }
 
 /**
@@ -174,7 +181,9 @@ void eveScanManager::smStart() {
  *
  */
 void eveScanManager::smHalt() {
-	if (rootSM) rootSM->haltChain();
+	eveEventProperty evprop(eveEventProperty::HALT, 0);
+	if (rootSM) rootSM->newEvent(&evprop);
+//	if (rootSM) rootSM->haltChain();
 }
 
 /**
@@ -184,7 +193,9 @@ void eveScanManager::smHalt() {
  * do nothing, if we are halted or stopped
  */
 void eveScanManager::smBreak() {
-	if (rootSM) rootSM->breakChain();
+	eveEventProperty evprop(eveEventProperty::BREAK, 0);
+	if (rootSM) rootSM->newEvent(&evprop);
+//	if (rootSM) rootSM->breakChain();
 }
 
 /**
@@ -195,7 +206,9 @@ void eveScanManager::smBreak() {
  * do nothing, if we are already halted, clear a break
  */
 void eveScanManager::smStop() {
-	if (rootSM) rootSM->stopChain();
+	eveEventProperty evprop(eveEventProperty::STOP, 0);
+	if (rootSM) rootSM->newEvent(&evprop);
+//	if (rootSM) rootSM->stopChain();
 }
 
 /**
@@ -205,17 +218,11 @@ void eveScanManager::smStop() {
  * do only if we are currently executing
  */
 void eveScanManager::smPause() {
-	if (rootSM) rootSM->pauseChain();
+	eveEventProperty evprop(eveEventProperty::PAUSE, 0);
+	if (rootSM) rootSM->newEvent(&evprop);
+//	if (rootSM) rootSM->pauseChain();
 }
 
-
-/**
- * \brief signals an redo event.
- *
- */
-void eveScanManager::smRedo() {
-	if (rootSM) rootSM->redoChain();
-}
 
 /**
  * \brief
@@ -223,11 +230,13 @@ void eveScanManager::smRedo() {
  */
 void eveScanManager::smDone() {
 
-	if (rootSM && rootSM->isDone()){
-		currentStatus = eveChainDONE;
+	if (rootSM && rootSM->isInitializing()){
+		rootSM->initialize();
+	}
+	else if (rootSM && rootSM->isDone()){
+		// TODO
+		currentStatus.setChainStatus(eveChainDONE);
 		sendStatus(0, 0);
-		// call shutdown to end this thread
-		//QTimer::singleShot(0, this, SLOT(shutdown()));
 		shutdown();
 	}
 }
@@ -248,7 +257,7 @@ void eveScanManager::sendMessage(eveMessage *message){
 
 void eveScanManager::sendRemainingTime(){
 
-	if (currentStatus == eveChainSmEXECUTING){
+	if (currentStatus.getStatus() == eveChainSmEXECUTING){
 		int remainTime = rootSM->getRemainingTime();
 		if (remainTime > -1) sendStatus(0, remainTime);
 	}
@@ -266,7 +275,9 @@ void eveScanManager::handleMessage(eveMessage *message){
 		{
 			int rid = ((eveRequestAnswerMessage*)message)->getReqId();
 			if (requestHash.contains(rid)) {
-				if (rootSM) rootSM->triggerSM(requestHash.value(rid), rid);
+				eveEventProperty evprop(eveEventProperty::TRIGGER, rid);
+				if (rootSM) rootSM->newEvent(&evprop);
+//				if (rootSM) rootSM->triggerSM(requestHash.value(rid), rid);
 				requestHash.remove(rid);
 			}
 		}
@@ -313,23 +324,7 @@ void eveScanManager::sendStartTime() {
  * @param status current chain status
  */
 void eveScanManager::setStatus(int smid, smStatusT status){
-	// TODO
-	// makes not much  sense to have different types smStatusT and chainStatusT
-	if (status == eveSmINITIALIZING)
-		currentStatus = eveChainSmINITIALIZING;
-	else if (status == eveSmNOTSTARTED)
-		currentStatus = eveChainSmIDLE;
-	else if (status == eveSmEXECUTING)
-		currentStatus = eveChainSmEXECUTING;
-	else if (status == eveSmPAUSED)
-		currentStatus = eveChainSmPAUSED;
-	else if (status == eveSmTRIGGERWAIT)
-		currentStatus = eveChainSmTRIGGERWAIT;
-	else if (status == eveSmAPPEND)
-		currentStatus = eveChainSmDONE;
-	else if (status == eveSmDONE)
-		currentStatus = eveChainSmDONE;
-
+    currentStatus.setStatus(status);
 	sendStatus (smid, -1);
 }
 /**
@@ -341,7 +336,7 @@ void eveScanManager::setStatus(int smid, smStatusT status){
 void eveScanManager::sendStatus(int smid, int remainTime){
 
 	// fill in our storage channel
-	addMessage(new eveChainStatusMessage(currentStatus, chainId, smid, posCounter, eveTime::getCurrent(), remainTime, 0, storageChannel));
+	addMessage(new eveChainStatusMessage(currentStatus.getStatus(), chainId, smid, posCounter, eveTime::getCurrent(), remainTime, 0, storageChannel));
 }
 
 void eveScanManager::addToHash(QHash<QString, QString>& hash, QString key, eveXMLReader* parser){
@@ -386,8 +381,10 @@ void eveScanManager::registerEvent(int smid, eveEventProperty* evproperty, bool 
 		return;
 	}
 	sendError(DEBUG, 0, "registering event");
-	++nextEventId;
-	evproperty->setEventId(nextEventId);
+	if (chain){
+		++nextEventId;
+		evproperty->setEventId(nextEventId);
+	}
 	evproperty->setSmId(smid);
 	evproperty->setChainAction(chain);
 	connect(evproperty, SIGNAL(signalEvent(eveEventProperty*)), this, SLOT(newEvent(eveEventProperty*)), Qt::QueuedConnection);
@@ -410,6 +407,14 @@ void eveScanManager::newEvent(eveEventProperty* evprop) {
 	else
 		sendError(DEBUG, 0, QString("eveScanManager: received new monitor event"));
 
+	if (evprop->isChainAction()){
+		if (currentStatus.setEvent(evprop) && rootSM) rootSM->newEvent(evprop);
+	}
+	else {
+		if (rootSM) rootSM->newEvent(evprop);
+	}
+
+/*
 	switch (evprop->getActionType()){
 	case eveEventProperty::START:
 			if (evprop->isChainAction()){
@@ -487,6 +492,7 @@ void eveScanManager::newEvent(eveEventProperty* evprop) {
 		break;
 
 	}
+*/
 }
 
 int eveScanManager::sendRequest(int smid, QString text){

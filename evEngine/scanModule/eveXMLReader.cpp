@@ -16,6 +16,10 @@
 #include "eveScanModule.h"
 #include "evePosCalc.h"
 #include "eveError.h"
+#include "eveParameter.h"
+
+#define EVE_XML_VERSION        1
+#define EVE_XML_REVISION       0
 
 eveXMLReader::eveXMLReader(eveManager *parentObject){
 	parent = parentObject;
@@ -26,16 +30,11 @@ eveXMLReader::eveXMLReader(eveManager *parentObject){
 //	motorHash = new QHash<QString, QDomElement>;
 //	detectorHash = new QHash<QString, QDomElement>;
 //	deviceHash = new QHash<QString, QDomElement>;
-
 }
 
 eveXMLReader::~eveXMLReader() {
 	if (domDocument != NULL) delete domDocument;
 }
-
-#define EVE_VERSION        0
-#define EVE_REVISION       4
-#define EVE_MODIFICATION   0
 
 /** \brief read XML-Data and create all device definitions and various hashes etc.
  * \param xmldata XML text data
@@ -64,80 +63,87 @@ bool eveXMLReader::read(QByteArray xmldata, eveDeviceList *devList)
 		sendError(ERROR,0,QString("eveXMLReader::read: no version tag found"));
         return false;
     }
-    QString thisVersion = QString("%1.%2.%3").arg((int)EVE_VERSION).arg((int)EVE_REVISION).arg((int)EVE_MODIFICATION);
+    QString thisVersion = QString("%1.%2").arg((int)EVE_XML_VERSION).arg((int)EVE_XML_REVISION);
     QStringList versions = version.text().split(".");
-    if (versions[0].toInt() != EVE_VERSION) {
+    if ((versions.count() > 1) && (versions[0].toInt() != EVE_XML_VERSION)) {
 		sendError(ERROR,0,QString("eveXMLReader::read: incompatible xml versions, file: %1, application: %2").arg(version.text()).arg(thisVersion));
         return false;
     }
-    if (versions[1].toInt() != EVE_REVISION) {
-		sendError(ERROR,0,QString("eveXMLReader::read: incompatible xml revisions file: %1, application: %2").arg(version.text()).arg(thisVersion));
-        return false;
+    if ((versions.count() > 1) && (versions[1].toInt() != EVE_XML_REVISION)) {
+		sendError(MINOR,0,QString("eveXMLReader::read: different xml revisions, file: %1, application: %2").arg(version.text()).arg(thisVersion));
     }
-    QDomElement repeatcount = root.firstChildElement("repeatcount");
-    if (repeatcount.isNull()){
-		sendError(ERROR,0,QString("eveXMLReader::read: no repeatcount tag found"));
-        return false;
+    QDomElement locationElem = root.firstChildElement("location");
+    if (!locationElem.isNull()){
+    	eveParameter::setParameter("location",locationElem.text());
     }
-    bool ok = true;
-    repeatCount = repeatcount.text().toInt(&ok);
-    if (!ok) repeatCount=0;
 
-    // build indices
-    // one Hash with DomElement / chain-id
-    // one Hash with DomElement / sm-id for every chain
-    // one Hash with previousHash /chain-id
-    QDomElement domElem = root.firstChildElement("chain");
-	while (!domElem.isNull()) {
-     	if (domElem.hasAttribute("id")) {
-     		QString typeString = domElem.attribute("id");
-     		int chainNo = typeString.toInt();
-     		if (chainIdList.contains(chainNo)){
-     			sendError(ERROR,0,QString("duplicate chainId %1").arg(chainNo));
-     		}
-     		else {
-     			chainIdList.append(chainNo);
-     		}
-     		chainDomIdHash.insert(chainNo, domElem);
-     		smIdHash.insert(chainNo, new QHash<int, QDomElement> );
-     		QDomElement domSM = domElem.firstChildElement("scanmodules");
-     		domSM = domSM.firstChildElement("scanmodule");
-     		while (!domSM.isNull()) {
-     		    if (domSM.hasAttribute("id")) {
-     		     	unsigned int smNo = QString(domSM.attribute("id")).toUInt();
-		     		(smIdHash.value(chainNo))->insert(smNo, domSM);
-     		     	QDomElement domParent = domSM.firstChildElement("parent");
-     		     	if (!domParent.isNull()) {
-     		     		if (domParent.text().toInt(&ok) == 0)
-							if (ok) rootSMHash.insert(chainNo,smNo);
-     		     	}
-     		    }
-     			domSM = domSM.nextSiblingElement("scanmodule");
-     		}
-     		if (!rootSMHash.contains(chainNo))
-     			sendError(ERROR,0,QString("no root scanmodule found for chain %1").arg(chainNo));
-     	}
-		domElem = domElem.nextSiblingElement("chain");
-	}
+    QDomElement scanElem = root.firstChildElement("scan");
+    if (!scanElem.isNull()){
+        QDomElement repeatcount = scanElem.firstChildElement("repeatcount");
+        if (repeatcount.isNull()){
+    		sendError(ERROR,0,QString("eveXMLReader::read: no repeatcount tag found"));
+            return false;
+        }
+        bool ok = true;
+        repeatCount = repeatcount.text().toInt(&ok);
+        if (!ok) repeatCount=0;
 
-    domElem = root.firstChildElement("detectors");
-    QDomNodeList detectorNodeList = domElem.childNodes();
-    for (unsigned int i=0; i < detectorNodeList.length(); ++i) createDetectorDefinition(detectorNodeList.item(i));
-    //    sendError(INFO,0,QString("eveXMLReader::read: found %1 detectorChannels").arg(channelDefinitions.size()));
+		// build indices
+		// one Hash with DomElement / chain-id
+		// one Hash with DomElement / sm-id for every chain
+		// one Hash with previousHash /chain-id
+		QDomElement domElem = scanElem.firstChildElement("chain");
+		while (!domElem.isNull()) {
+			if (domElem.hasAttribute("id")) {
+				QString typeString = domElem.attribute("id");
+				int chainNo = typeString.toInt();
+				if (chainIdList.contains(chainNo)){
+					sendError(ERROR,0,QString("duplicate chainId %1").arg(chainNo));
+				}
+				else {
+					chainIdList.append(chainNo);
+				}
+				chainDomIdHash.insert(chainNo, domElem);
+				smIdHash.insert(chainNo, new QHash<int, QDomElement> );
+				QDomElement domSM = domElem.firstChildElement("scanmodules");
+				domSM = domSM.firstChildElement("scanmodule");
+				while (!domSM.isNull()) {
+					if (domSM.hasAttribute("id")) {
+						unsigned int smNo = QString(domSM.attribute("id")).toUInt();
+						(smIdHash.value(chainNo))->insert(smNo, domSM);
+						QDomElement domParent = domSM.firstChildElement("parent");
+						if (!domParent.isNull()) {
+							if (domParent.text().toInt(&ok) == 0)
+								if (ok) rootSMHash.insert(chainNo,smNo);
+						}
+					}
+					domSM = domSM.nextSiblingElement("scanmodule");
+				}
+				if (!rootSMHash.contains(chainNo))
+					sendError(ERROR,0,QString("no root scanmodule found for chain %1").arg(chainNo));
+			}
+			domElem = domElem.nextSiblingElement("chain");
+		}
+    }
 
-    domElem = root.firstChildElement("motors");
-    QDomNodeList motorNodeList = domElem.childNodes();
-    for (unsigned int i=0; i < motorNodeList.length(); ++i) createMotorDefinition(motorNodeList.item(i));
+    QDomElement domElem = root.firstChildElement("detectors");
+	QDomNodeList detectorNodeList = domElem.childNodes();
+	for (unsigned int i=0; i < detectorNodeList.length(); ++i) createDetectorDefinition(detectorNodeList.item(i));
+	//    sendError(INFO,0,QString("eveXMLReader::read: found %1 detectorChannels").arg(channelDefinitions.size()));
 
-    domElem = root.firstChildElement("devices");
-    QDomNodeList deviceNodeList = domElem.childNodes();
-    for (unsigned int i=0; i < deviceNodeList.length(); ++i) createDeviceDefinition(deviceNodeList.item(i));
+	domElem = root.firstChildElement("motors");
+	QDomNodeList motorNodeList = domElem.childNodes();
+	for (unsigned int i=0; i < motorNodeList.length(); ++i) createMotorDefinition(motorNodeList.item(i));
+
+	domElem = root.firstChildElement("devices");
+	QDomNodeList deviceNodeList = domElem.childNodes();
+	for (unsigned int i=0; i < deviceNodeList.length(); ++i) createDeviceDefinition(deviceNodeList.item(i));
 
 //    domElem = root.firstChildElement("events");
 //    QDomNodeList eventNodeList = domElem.childNodes();
 //    for (unsigned int i=0; i < eventNodeList.length(); ++i) createEventDefinition(eventNodeList.item(i));
 
-    return true;
+	return true;
 }
 
 /** \brief create an eveDetector from XML
@@ -159,11 +165,7 @@ void eveXMLReader::createDetectorDefinition(QDomNode detector){
     if (!domElement.isNull()) id = domElement.text();
 
     domElement = detector.firstChildElement("name");
-    if (!domElement.isNull())
-    	name = domElement.text();
-    else
-    	name = id;
-    //printf("name: %s\n", id.toAscii().data());
+    if (!domElement.isNull()) name = domElement.text();
 
     // TODO do we need motors / detectors, or is axis / detector-channel sufficient
     // eveDetector* detect = new eveDetector(name, id);
@@ -279,10 +281,8 @@ eveDetectorChannel * eveXMLReader::createChannelDefinition(QDomNode channel, eve
     if (!domElement.isNull()) id = domElement.text();
 
     domElement = channel.firstChildElement("name");
-    if (!domElement.isNull())
-    	name = domElement.text();
-    else
-    	name = id;
+    if (!domElement.isNull()) name = domElement.text();
+
 
 	domElement = channel.firstChildElement("read");
 	if (!domElement.isNull())
@@ -351,14 +351,7 @@ void eveXMLReader::createMotorDefinition(QDomNode motor){
     if (!domElement.isNull()) id = domElement.text();
 
     domElement = motor.firstChildElement("name");
-    if (!domElement.isNull())
-    	name = domElement.text();
-    else
-    	name = id;
-    //printf("name: %s\n", id.toAscii().data());
-
-    // TODO do we need motors / detectors, or is axis / detector-channel sufficient
-    // eveMotor* detect = new eveMotor(name, id);
+    if (!domElement.isNull()) name = domElement.text();
 
     domElement = motor.firstChildElement("trigger");
     if (!domElement.isNull()) trigger = createDeviceCommand(domElement);
@@ -412,10 +405,7 @@ eveMotorAxis * eveXMLReader::createAxisDefinition(QDomNode axis, eveDeviceComman
     if (!domElement.isNull()) id = domElement.text();
 
     domElement = axis.firstChildElement("name");
-    if (!domElement.isNull())
-    	name = domElement.text();
-    else
-    	name = id;
+    if (!domElement.isNull()) name = domElement.text();
 
 	domElement = axis.firstChildElement("position");
 	if (!domElement.isNull()) positionCommand = createDeviceCommand(domElement);
@@ -462,8 +452,8 @@ eveMotorAxis * eveXMLReader::createAxisDefinition(QDomNode axis, eveDeviceComman
     		unit = new eveDeviceCommand(NULL, unitstring.text(), eveStringT);
     	}
     }
-    else { // every device needs its private copy of default unit
-// TODO use the copy constructor
+    else {
+// every device needs its private copy of default unit
 //    	if (unit != NULL) unit = new eveDeviceCommand(*unit);
     	if (unit != NULL) unit = unit->clone();
     }
@@ -547,10 +537,7 @@ void eveXMLReader::createDeviceDefinition(QDomNode device){
     	return;
     }
     domElement = device.firstChildElement("name");
-    if (!domElement.isNull())
-    	name = domElement.text();
-    else
-    	name = id;
+    if (!domElement.isNull()) name = domElement.text();
 
     domElement = device.firstChildElement("unit");
     if (!domElement.isNull()) unit = createDeviceCommand(domElement);
@@ -574,8 +561,6 @@ void eveXMLReader::createDeviceDefinition(QDomNode device){
 		return;
 	}
 	deviceList->insert(id, new eveDevice(unit, valueTrans, name, id));
-	// TODO remove this
-    sendError(INFO,0,QString("eveXMLReader::createDevice: Found id: %1, name: %2").arg(id).arg(name));
 }
 
 /** \brief parse XML for event definitions
@@ -1019,8 +1004,8 @@ QList<eveSMChannel*>* eveXMLReader::getChannelList(eveScanModule* scanmodule, in
 			}
 			else {
 				paraHash.insert(domId.nodeName(), domId.text().trimmed());
-				domId = domId.nextSiblingElement();
 			}
+			domId = domId.nextSiblingElement();
 		}
 
 		channellist->append(new eveSMChannel(scanmodule, channelDefinition, paraHash, eventList));
@@ -1139,7 +1124,7 @@ eveEventProperty* eveXMLReader::getEvent(eveEventProperty::actionTypeT action, Q
 		sendError(DEBUG, 0, QString("found schedule event definition, chid %1, smid %2").arg(chid).arg(smid));
 		return new eveEventProperty("", "", eveVariant(QVariant(eveVariant::getMangled(chid,smid))), eventType, incident, action, NULL);
 	}
- 	if (domElement.attribute("type") == "detector"){
+ 	else if (domElement.attribute("type") == "detector"){
 		eventTypeT eventType = eveEventTypeDETECTOR;
 
 		QDomElement domId = domElement.firstChildElement("id");

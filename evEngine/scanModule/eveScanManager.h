@@ -16,11 +16,11 @@
 #include "eveManager.h"
 #include "eveXMLReader.h"
 #include "eveDeviceList.h"
+#include "eveChainStatus.h"
 
 class eveScanModule;
 class eveEventProperty;
 
-enum smStatusT {eveSmNOTSTARTED, eveSmINITIALIZING, eveSmEXECUTING, eveSmPAUSED, eveSmTRIGGERWAIT, eveSmAPPEND, eveSmDONE} ;
 enum smTypeT {eveSmTypeROOT, eveSmTypeNESTED, eveSmTypeAPPENDED};
 
 
@@ -55,7 +55,7 @@ public slots:
 	void smBreak();
 	void smStop();
 	void smPause();
-	void smRedo();
+//	void smRedo();
 	void init();
 	void smDone();
 	void newEvent(eveEventProperty*);
@@ -69,7 +69,7 @@ private:
 	QHash<QString, QString> chainHash;
 	QHash<QString, QString> savePluginHash;
 	QList<eveEventProperty*> eventPropList;
-	chainStatusT currentStatus;
+	eveChainStatus currentStatus;
 	int nextEventId;
 	int chainId;
 	int storageChannel;

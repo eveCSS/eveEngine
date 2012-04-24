@@ -17,6 +17,7 @@
 #include "eveXMLReader.h"
 #include "eveScanManager.h"
 #include "eveCalc.h"
+#include "eveSMStatus.h"
 
 class eveScanManager;
 
@@ -36,17 +37,22 @@ class eveScanModule: public QObject
 public:
 	eveScanModule(eveScanManager *, eveXMLReader *, int, int, smTypeT);
 	virtual ~eveScanModule();
-	bool isDone(){return (smStatus==eveSmDONE)?true:false;};
+	bool isDone(){return myStatus.isDone();};
 	bool initDone(){return (currentStage==eveStgREADPOS)?true:false;};
-	void setEventTrigger(bool val){eventTrigger = val;};
+	bool isInitializing(){return ((currentStage == eveStgINIT) || (currentStage == eveStgREADPOS) || (currentStage == eveStgGOTOSTART));};
+	//void setEventTrigger(bool val){eventTrigger = val;};
+	bool isExecuting(){return myStatus.isExecuting();};
 	void initialize();
 	void sendError(int, int, int, QString);
 	void sendMessage(eveMessage*);
 	eveSMAxis* findAxis(QString);
 	int getRemainingTime();
-	void gotoStart();
+	//void gotoStart();
 	void readPos();
+	bool newEvent(eveEventProperty*);
 
+/*
+ *
 	bool startSM(int);
 	bool stopSM(int);
 	bool breakSM(int);
@@ -63,6 +69,7 @@ public:
 	bool resumeChain();
 	void haltChain();
 	void redoChain();
+ */
 
 public slots:
 	void execStage();
@@ -72,7 +79,7 @@ signals:
 	void SMready();
 
 private:
-	void start();
+	void startExec();
 	void stgInit();
 	void stgGotoStart();
 	void stgReadPos();
@@ -90,7 +97,7 @@ private:
 	int smId;
 	int totalSteps;
 	int currentPosition;
-	smStatusT smStatus, smLastStatus;
+	eveSMStatus myStatus;
 	stageT currentStage;
 	engineStatusT engineStatus;
 	bool currentStageReady;
@@ -102,11 +109,11 @@ private:
 	bool eventTrigger;
 	bool manualTrigger;
 	bool manDetTrigger;
-	bool catchedRedo;
-	bool catchedTrigger;
-	bool catchedEventTrigger;
-	bool catchedDetecTrigger;
-	bool delayedStart;
+	bool doRedo;
+//	bool catchedTrigger;
+//	bool catchedEventTrigger;
+//	bool catchedDetecTrigger;
+//	bool delayedStart;
 	int settleDelay;
 	int triggerDelay;
 	QHash<stageT, void(eveScanModule::*)()> stageHash;
