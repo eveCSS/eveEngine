@@ -4,7 +4,10 @@ QT += core \
     network \
     gui \
     xml
-HEADERS += mathModule/eveCalc.h \
+HEADERS += scanModule/eveSMStatus.h \
+    scanModule/eveChainStatus.h \
+    storageModule/eveSimplePV.h \
+    mathModule/eveCalc.h \
     mathModule/eveMathManager.h \
     mathModule/eveMathThread.h \
     scanModule/eveAverage.h \
@@ -55,7 +58,10 @@ HEADERS += mathModule/eveCalc.h \
     nwModule/evePlayListManager.h \
     mathModule/eveMath.h \
     mathModule/eveMathConfig.h
-SOURCES += mathModule/eveCalc.cpp \
+SOURCES += scanModule/eveSMStatus.cpp \
+    scanModule/eveChainStatus.cpp \
+    storageModule/eveSimplePV.cpp \
+    mathModule/eveCalc.cpp \
     mathModule/eveMathManager.cpp \
     mathModule/eveMathThread.cpp \
     scanModule/eveAverage.cpp \
@@ -109,18 +115,18 @@ SOURCES += mathModule/eveCalc.cpp \
 INCLUDEPATH += nwModule \
     scanModule \
     storageModule \
-    /soft/epics/base-3.14.10/include \
-    /soft/epics/base-3.14.10/include/os/Linux \
+    /soft/epics/base-3.14.12.1/include \
+    /soft/epics/base-3.14.12.1/include/os/Linux \
     eventModule \
     mathModule
-unix:LIBS += -L/opt/epics/base-3.14.10/lib/linux-x86 \
+unix:LIBS += -L/soft/epics/base-3.14.12.1/lib/linux-x86 \
     -lca \
     -lCom
 win32 { 
-    INCLUDEPATH += J:\epics\3.14\windows\base-3.14.10\include \
-        J:\epics\3.14\windows\base-3.14.10\include\os\WIN32
-    LIBS += J:\epics\3.14\windows\base-3.14.10\lib\win32-x86-mingw\ca.lib \
-        J:\epics\3.14\windows\base-3.14.10\lib\win32-x86-mingw\Com.lib \
+    INCLUDEPATH += J:\epics\3.14\windows\base-3.14.12.1\include \
+        J:\epics\3.14\windows\base-3.14.12.1\include\os\WIN32
+    LIBS += J:\epics\3.14\windows\base-3.14.12.1\lib\win32-x86-mingw\ca.lib \
+        J:\epics\3.14\windows\base-3.14.12.1\lib\win32-x86-mingw\Com.lib \
         -lws2_32
 }
 FORMS += 
