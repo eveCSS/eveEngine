@@ -61,11 +61,11 @@ bool eveChainStatus::setEvent(eveEventProperty* evprop ) {
 		statusChanged = true;
 		break;
 	case eveEventProperty::PAUSE:
-		if (!pause && evprop->getOn()) {
+		if (!pause && evprop->isSwitchOn()) {
 			pause = true;
 			statusChanged = true;
 		}
-		else if (pause && evprop->getSignalOff() && !evprop->getOn()) {
+		else if (pause && evprop->isSwitchOff()) {
 			pause = false;
 			statusChanged = true;
 		}
@@ -75,7 +75,7 @@ bool eveChainStatus::setEvent(eveEventProperty* evprop ) {
 			redo = true;
 			statusChanged = true;
 		}
-		else if (redo && evprop->getSignalOff() && !evprop->getOn()) {
+		else if (redo && !evprop->getOn()) {
 			redo = false;
 			statusChanged = true;
 		}

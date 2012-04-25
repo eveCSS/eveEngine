@@ -1067,12 +1067,17 @@ QList<eveEventProperty*>* eveXMLReader::getEventList(QDomElement domElement){
 		domEvent = domElement.firstChildElement("pauseevent");
 		while (!domEvent.isNull()) {
 			eveEventProperty* event = getEvent(eveEventProperty::PAUSE, domEvent);
-			QDomElement signalOffToo = domEvent.firstChildElement("continue_if_false");
-			if ((event != NULL ) &&(!signalOffToo.isNull())){
-				bool signalOff = false;
-				if (signalOffToo.text().toLower() == "true") signalOff = true;
-				event->setSignalOff(signalOff);
-				eveError::log(DEBUG, QString("eveXMLReader::getSMEventList: pauseEvent signaloff: %1 ").arg(signalOff));
+			QDomElement direction = domEvent.firstChildElement("action");
+			if ((event != NULL ) &&(!direction.isNull())){
+				if (direction.text().toLower() == "onoff")
+					event->setDirection(eveDirectionONOFF);
+				else if (direction.text().toLower() == "on")
+					event->setDirection(eveDirectionON);
+				else if (direction.text().toLower() == "off")
+					event->setDirection(eveDirectionOFF);
+				else
+					eveError::log(ERROR, QString("eveXMLReader::getSMEventList: pauseEvent invalid action: %1 ").arg(direction.text()));
+				eveError::log(DEBUG, QString("eveXMLReader::getSMEventList: pauseEvent action: %1 ").arg(direction.text()));
 			}
 			if (event != NULL ) eventList->append(event);
 			domEvent = domEvent.nextSiblingElement("pauseevent");

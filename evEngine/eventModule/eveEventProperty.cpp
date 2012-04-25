@@ -26,7 +26,7 @@ eveEventProperty::eveEventProperty(QString evname, QString operation, eveVariant
 	incidentType = incident;
 	name = evname;
 	comparison = operation;
-	signalOff = false;
+	direction = eveDirectionON;
 	eventId = 0;
 	smId = 0;
 	chainAction=false;
@@ -35,7 +35,7 @@ eveEventProperty::eveEventProperty(QString evname, QString operation, eveVariant
 	else
 		onstate = true;
 	// always signal both states if REDO
-	if (actionType == REDO) signalOff = true;
+	if (actionType == REDO) direction = eveDirectionONOFF;
 }
 
 eveEventProperty::eveEventProperty(actionTypeT actiontype, int evid)
@@ -46,7 +46,7 @@ eveEventProperty::eveEventProperty(actionTypeT actiontype, int evid)
 	incidentType = eveIncidentNONE;
 	name = "Dummy";
 	onstate = true;
-	signalOff = false;
+	direction = eveDirectionON;
 	eventId = evid;
 	smId = 0;
 	chainAction=true;

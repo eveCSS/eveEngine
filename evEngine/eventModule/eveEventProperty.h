@@ -15,6 +15,7 @@
 
 enum eventTypeT {eveEventTypeMONITOR=1, eveEventTypeSCHEDULE, eveEventTypeDETECTOR, eveEventTypeGUI} ;
 enum incidentTypeT {eveIncidentNONE, eveIncidentSTART, eveIncidentEND} ;
+enum directionTypeT {eveDirectionON, eveDirectionOFF, eveDirectionONOFF} ;
 
 /*
  *
@@ -44,8 +45,11 @@ public:
 	int getEventId(){return eventId;};
 	void setEventId(int id){eventId = id;};
 	void fireEvent(){emit signalEvent(this);};
-	void setSignalOff(bool doOffToo){signalOff=doOffToo;};
-	bool getSignalOff(){return signalOff;};
+	void setDirection(directionTypeT dir){direction=dir;};
+	directionTypeT getDirection(){return direction;};
+	bool isBothDirections(){return (direction==eveDirectionONOFF);};
+	bool isSwitchOn(){return (onstate && ((direction==eveDirectionONOFF) || (direction==eveDirectionON)));};
+	bool isSwitchOff(){return ((!onstate && (direction==eveDirectionONOFF)) || (onstate && (direction==eveDirectionOFF)));};
 	eveDeviceCommand* getDevCommand(){return devCommand;};
 	QString getCompareOperator(){return comparison;};
 	QString getName(){return name;};
@@ -68,8 +72,7 @@ private:
 	incidentTypeT incidentType;
 	QString comparison;
 	eveDeviceCommand* devCommand;;
-	// call eventAction too, if eventSource changes from true to false
-	bool signalOff;
+	directionTypeT direction;
 };
 
 #endif /* EVEEVENTPROPERTY_H_ */

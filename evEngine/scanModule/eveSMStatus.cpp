@@ -140,19 +140,19 @@ bool eveSMStatus::setEvent(eveEventProperty* evprop ) {
 			trackRedo = true;
 			*setRedo = true;
 		}
-		else if (evprop->getSignalOff()) {
+		else {
 			*setRedo = false;
 		}
 		break;
 	case eveEventProperty::PAUSE:
-		if (evprop->getOn()){
+		if (evprop->isSwitchOn()){
 			if (isExecuting() && !isPaused()) {
 				changed = true;
 				status = eveSmPAUSED;
 			}
 			*setPause = true;
 		}
-		else if (evprop->getSignalOff()) {
+		else if (evprop->isSwitchOff()) {
 			if (isExecuting() && *setPause && !*leavePause) {
 				changed = true;
 				if (isTriggerWait())

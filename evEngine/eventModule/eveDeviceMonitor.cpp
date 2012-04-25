@@ -64,13 +64,13 @@ void eveDeviceMonitor::valueChange(eveVariant* newValue) {
 	if (newValue->canConvert(QVariant::String)){
 		QString result = "false";
 		if (newState) result = "true";
-		manager->sendError(DEBUG, 0, QString("valueChange event, newValue: %1, limit: %2, result: %3, cif: %4").arg(newValue->toString()).arg(limit.toString()).arg(result).arg(event->getSignalOff()));
+		manager->sendError(DEBUG, 0, QString("valueChange event, newValue: %1, limit: %2, result: %3, action: %4").arg(newValue->toString()).arg(limit.toString()).arg(result).arg((int)event->getDevCommand()));
 	}
 
 	try {
 		if (newState != event->getOn()) {
 			event->setOn(newState);
-			if (newState || event->getSignalOff()) {
+			if (newState || event->isBothDirections()) {
 				event->setValue(*newValue);
 				event->fireEvent();
 				manager->sendError(DEBUG, 0, QString("fired a valueChange event, newValue: %1").arg(newValue->toDouble()));
