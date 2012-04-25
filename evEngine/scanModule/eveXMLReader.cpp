@@ -63,6 +63,7 @@ bool eveXMLReader::read(QByteArray xmldata, eveDeviceList *devList)
 		sendError(ERROR,0,QString("eveXMLReader::read: no version tag found"));
         return false;
     }
+    eveParameter::setParameter("xmlversion",version.text());
     QString thisVersion = QString("%1.%2").arg((int)EVE_XML_VERSION).arg((int)EVE_XML_REVISION);
     QStringList versions = version.text().split(".");
     if ((versions.count() > 1) && (versions[0].toInt() != EVE_XML_VERSION)) {

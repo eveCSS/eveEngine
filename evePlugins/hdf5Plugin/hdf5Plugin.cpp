@@ -58,7 +58,7 @@ int hdf5Plugin::open(int setID)
  *
  * @param setID 	dataset-identification (chain-id)
  * @param filename 	Filename including absolute path
- * @param format	dataformat
+ * @param format	datafile format
  * @param parameter	Plugin-parameter from xml
  * @return			error severity
  */
@@ -84,9 +84,9 @@ int hdf5Plugin::init(int setID, QString filename, QString format, QHash<QString,
 	fileName = filename;
 	fileFormat = format;
 	errorString.clear();
-	metaData.clear();
 
 	if (!isFileOpen){
+		metaData.clear();
 		try
 		{
 			Exception::dontPrint();
@@ -223,10 +223,11 @@ int hdf5Plugin::addData(int setID, eveDataMessage* data)
 			colInfo->dset.extend( colInfo->currentDim );
 
 			// add attribute XML-ID
+			// xmlid is part of info below
 			hsize_t stringDim = 1;
-			StrType st = StrType(PredType::C_S1, colId.toLocal8Bit().length());
-			Attribute attrib = colInfo->dset.createAttribute("XML-ID", st, DataSpace(1, &stringDim));
-			attrib.write(st, qPrintable(colId));
+//			StrType st = StrType(PredType::C_S1, colId.toLocal8Bit().length());
+//			Attribute attrib = colInfo->dset.createAttribute("XML-ID", st, DataSpace(1, &stringDim));
+//			attrib.write(st, qPrintable(colId));
 
 			// add more attributes
 			foreach(QString infoLine, colInfo->info){
@@ -245,7 +246,7 @@ int hdf5Plugin::addData(int setID, eveDataMessage* data)
 		}
 		catch( Exception error )
 		{
-			errorString = QString("HDF5Plugin:addData: %1").arg(error.getCDetailMsg());
+			errorString = QString("HDF5Plugin:addData: Exception: %1").arg(error.getCDetailMsg());
 			setIdList.removeAll(setID);
 			return ERROR;
 		}
@@ -301,16 +302,20 @@ int hdf5Plugin::addData(int setID, eveDataMessage* data)
  * @brief add a metadata (e.g. comment) to be written at end of file
  */
 int hdf5Plugin::addMetaData(int setID, QString attribute, QString stringVal){
-	if (!setIdList.contains(setID)) {
-		errorString = QString("HDF5Plugin:addMetaData: setID %1 has not been initialized").arg(setID);
-		return ERROR;
+	errorString.clear();
+	if (setID == 0){
+		if ((attribute.length() > 0)) metaData.insert(attribute, stringVal);
+		return SUCCESS;
+	}
+	else if (setIdList.contains(setID)) {
+		// TODO this metadata belongs to the chain not metaData
+		if ((attribute.length() > 0)) metaData.insert(attribute, stringVal);
+		return SUCCESS;
 	}
 	else {
-		if ((attribute.length() > 0) && (stringVal.length() > 0))
-			metaData.insert(attribute, stringVal);
+		errorString = QString("HDF5Plugin:addMetaData: setID %1 has not been initialized").arg(setID);
 	}
-	errorString.clear();
-	return SUCCESS;
+	return ERROR;
 }
 
 

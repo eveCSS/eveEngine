@@ -12,6 +12,7 @@
 #include "eveStorageManager.h"
 #include "eveDataCollector.h"
 #include "eveError.h"
+#include "eveParameter.h"
 
 eveStorageManager::eveStorageManager(QString filename, QByteArray* xmldata) {
 	// register with messageHub
@@ -90,22 +91,30 @@ void eveStorageManager::handleMessage(eveMessage *message){
 			foreach (eveDataCollector* dc, chainIdDCHash){
 				sendError(DEBUG, 0, QString("got Livedescription: %1").arg(((eveMessageText*)message)->getText()));
 				//TODO save the livedescription as comment
-				dc->addMetaData(QString("Live-Comment"), ((eveMessageText*)message)->getText());
+				dc->addMetaData(0, QString("Live-Comment"), ((eveMessageText*)message)->getText());
 			}
 			break;
 		case EVEMESSAGETYPE_METADATA:
 		{
 			int id = ((eveMessageTextList*)message)->getChainId();
-			if (chainIdChannelHash.contains(id)){
-				QStringList strlist = ((eveMessageTextList*)message)->getText();
-				if (strlist.size() > 1){
-					QString attribute = strlist.at(0);
-					QString strval = strlist.at(1);
-					if (!attribute.isEmpty() && !strval.isEmpty()) (chainIdDCHash.value(id))->addMetaData(attribute, strval);
+			QStringList strlist = ((eveMessageTextList*)message)->getText();
+			while (strlist.size() > 1){
+				QString attribute = strlist.takeFirst();
+				QString strval = strlist.takeFirst();
+				if (attribute.isEmpty()) continue;
+				if (id == 0){
+					foreach (eveDataCollector* dc, chainIdDCHash){
+						sendError(DEBUG, 0, QString("got Livedescription: %1").arg(((eveMessageText*)message)->getText()));
+						//TODO save the livedescription as comment
+						dc->addMetaData(id, attribute, strval);
+					}
 				}
+				else if (chainIdChannelHash.contains(id)){
+					(chainIdDCHash.value(id))->addMetaData(id, attribute, strval);
+				}
+				else
+					sendError(ERROR, 0, QString("handleMessage: received metadata message with invalid chainId: %1").arg(id));
 			}
-			else
-				sendError(ERROR, 0, QString("handleMessage: received metadata message with invalid chainId: %1").arg(id));
 		}
 		break;
 		default:
@@ -167,6 +176,10 @@ bool eveStorageManager::configStorage(eveStorageMessage* message){
 		eveDataCollector* dc = new eveDataCollector(this, message, xmlData);
 		xmlData = NULL;
 		chainIdDCHash.insert(chainId, dc);
+		QString param = eveParameter::getParameter("xmlversion");
+		dc->addMetaData(0, "Version", param);
+		param = eveParameter::getParameter("location");
+		dc->addMetaData(0, "Location", param);
 		return true;
 	}
 	return false;

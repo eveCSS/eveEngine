@@ -210,7 +210,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 		}
 	}
 
-	if (fwInitDone && !comment.isEmpty()) addMetaData(QString("Comment"), comment);
+	if (fwInitDone && !comment.isEmpty()) addMetaData(0, "Comment", comment);
 
 	if (xmldata){
 		if (saveXML && fwInitDone){
@@ -261,13 +261,14 @@ void eveDataCollector::addData(eveDataMessage* message) {
 
 /**
  * @brief add metadata like comment to filewriter
+ * @param Id       chainId if Id > 0, for all files if Id == 0
  * @param message comment text
  * @param message comment text
  */
-void eveDataCollector::addMetaData(QString attribute, QString& messageText) {
+void eveDataCollector::addMetaData(int Id, QString attribute, QString& messageText) {
 
 	if (fwInitDone){
-		if (fileWriter->addMetaData(chainId, attribute, messageText) != SUCCESS){
+		if (fileWriter->addMetaData(Id, attribute, messageText) != SUCCESS){
 			manager->sendError(ERROR, 0, QString("FileWriter: addMetaData error: %1").arg(fileWriter->errorText()));
 		}
 	}
@@ -284,7 +285,7 @@ void eveDataCollector::addDevice(eveDevInfoMessage* message) {
 
 	if (fwInitDone && !fwOpenDone){
 		if (deviceList.contains(message->getXmlId()))
-			manager->sendError(INFO, 0, QString("DataCollector: already received device info for %1").arg(message->getXmlId()));
+			manager->sendError(DEBUG, 0, QString("DataCollector: already received device info for %1").arg(message->getXmlId()));
 		else {
 			deviceList.append(message->getXmlId());
 			manager->sendError(DEBUG, 0, QString("DataCollector: setting device info for %1").arg(message->getXmlId()));

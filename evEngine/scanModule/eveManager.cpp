@@ -8,6 +8,7 @@
 #include <QTimer>
 #include <QMutex>
 #include <QWaitCondition>
+#include <QHash>
 #include "eveManager.h"
 #include "eveRequestManager.h"
 #include "eveMessageHub.h"

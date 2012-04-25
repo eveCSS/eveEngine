@@ -11,6 +11,7 @@
 #include <QObject>
 #include <QMultiHash>
 #include "eveFileWriter.h"
+#include "eveTypes.h"
 #include "H5Cpp.h"
 
 #ifndef H5_NO_NAMESPACE

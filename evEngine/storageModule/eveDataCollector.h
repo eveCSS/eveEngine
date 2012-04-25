@@ -22,7 +22,7 @@ public:
 	virtual ~eveDataCollector();
 	void addData(eveDataMessage*);
 	void addDevice(eveDevInfoMessage *);
-	void addMetaData(QString, QString&);
+	void addMetaData(int, QString, QString&);
 
 private:
 	QString macroExpand(QString);
