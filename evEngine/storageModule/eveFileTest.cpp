@@ -24,10 +24,10 @@ eveFileTest::~eveFileTest() {
 /**
  * Replace a name.txt with name0001.txt, unless the filename already has a number.
  * If the new file already exists, then increment the highest existing number.
- * If no more free numbers are left, append another 4 digit block
+ * If no more free numbers are left, append another 5 digit block
  *
  * @param filename
- * @return new filename with the next 4 char number appended or replaced
+ * @return new filename with the next 5 char number appended or replaced
  * 			which does not exist in the current directory
  */
 QString eveFileTest::addNumber(QString filename) {
@@ -36,7 +36,7 @@ QString eveFileTest::addNumber(QString filename) {
 	QDir directory(info.absolutePath());
 	QString base(info.completeBaseName());
 	QString suffix(info.suffix());
-	QRegExp rx("[0-9]{4,4}$");
+	QRegExp rx("[0-9]{5,5}$");
 	QRegExp testrx("[0-9]*$");
 	QString newName;
 	QString testbase(base);
@@ -46,7 +46,7 @@ QString eveFileTest::addNumber(QString filename) {
 	base.remove(rx);
 	testbase.remove(testrx);
 
-	// if filename has more than 4 trailing digits append "_xxxx"
+	// if filename has more than 5 trailing digits append "_xxxxx"
 	if (base.length() != testbase.length()){
 		base = info.completeBaseName().append("_");
 		originalBase = base;
@@ -54,33 +54,33 @@ QString eveFileTest::addNumber(QString filename) {
 	// prepend a "." to suffix if we have a suffix or if we have a trailing "."
 	if ((suffix.length() > 0) || filename.endsWith(".")) suffix.prepend(".");
 
-	QStringList namelist = directory.entryList(QStringList(QString("%1[0-9][0-9][0-9][0-9]%2").arg(base).arg(suffix)), QDir::Files, QDir::Name);
+	QStringList namelist = directory.entryList(QStringList(QString("%1[0-9][0-9][0-9][0-9][0-9]%2").arg(base).arg(suffix)), QDir::Files, QDir::Name);
 	int index = 1;
 	while (namelist.count() > 0){
 		QFileInfo newInfo(namelist.last());
-		index = newInfo.completeBaseName().right(4).toInt(&ok);
-		if (index != 9999) break;
-		base = base.append("9999_");
+		index = newInfo.completeBaseName().right(5).toInt(&ok);
+		if (index != 99999) break;
+		base = base.append("99999_");
 		originalBase = base;
-		namelist = directory.entryList(QStringList(QString("%1[0-9][0-9][0-9][0-9]%2").arg(base).arg(suffix)), QDir::Files, QDir::Name);
+		namelist = directory.entryList(QStringList(QString("%1[0-9][0-9][0-9][0-9][0-9]%2").arg(base).arg(suffix)), QDir::Files, QDir::Name);
 	}
 
 	if (namelist.count() > 0){
 		QFileInfo newInfo(namelist.last());
-		index = newInfo.completeBaseName().right(4).toInt(&ok);
-		if (index == 9999) {
+		index = newInfo.completeBaseName().right(5).toInt(&ok);
+		if (index == 99999) {
 			index = 0;
-			base.append("9999_");
+			base.append("99999_");
 		}
 		++index;
-		newName = QString("/%1%2%3").arg(base).arg(index,4,10,QChar('0')).arg(suffix);
+		newName = QString("/%1%2%3").arg(base).arg(index,5,10,QChar('0')).arg(suffix);
 	}
 	else {
-		QRegExp nmbr(".*[0-9]{4,4}$");
+		QRegExp nmbr(".*[0-9]{5,5}$");
 		if (nmbr.exactMatch(originalBase))
 			newName = QString("/%1%2").arg(originalBase).arg(suffix);
 		else
-			newName = QString("/%010001%2").arg(base).arg(suffix);
+			newName = QString("/%0100001%2").arg(base).arg(suffix);
 	}
 	return newName.prepend(info.absolutePath());
 }
