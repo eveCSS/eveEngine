@@ -452,6 +452,8 @@ eveDevInfoMessage* eveSMChannel::getDeviceInfo(){
 	else
 		sl = new QStringList();
 
+	sl->prepend(name);
+	sl->prepend(xmlId);
 	sl->append(QString("unit:%1").arg(unit));
 	sl->append(QString("DeviceType:Channel"));
 	if (curValue != NULL){

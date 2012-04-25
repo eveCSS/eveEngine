@@ -483,6 +483,8 @@ eveDevInfoMessage* eveSMAxis::getDeviceInfo(){
 		sl = gotoTrans->getInfo();
 	else
 		sl = new QStringList();
+	sl->prepend(name);
+	sl->prepend(xmlId);
 	sl->append(QString("unit:%1").arg(unit));
 	sl->append(QString("DeviceType:Axis"));
 	if (curPosition != NULL){
