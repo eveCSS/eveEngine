@@ -21,12 +21,12 @@ public:
 	eveAsciiFileWriter();
 	virtual ~eveAsciiFileWriter();
 
-	int init(int, QString, QString, QHash<QString, QString>&);
+	int init(QString, QString, QHash<QString, QString>&);
 	int setCols(int, QString, QString, QStringList);
-	int open(int);
+	int open();
 	int addData(int, eveDataMessage* );
 	int addMetaData(int, QString, QString);
-	int close(int);
+	int close();
 	int setXMLData(QByteArray*);
 	QString errorText() {return errorString;};
 

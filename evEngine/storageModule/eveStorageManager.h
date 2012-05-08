@@ -12,6 +12,7 @@
 #include <QHash>
 #include <QString>
 #include "eveMessageChannel.h"
+#include "eveXMLReader.h"
 
 class eveDataCollector;
 
@@ -20,7 +21,7 @@ class eveStorageManager : public eveMessageChannel
 	Q_OBJECT
 
 public:
-	eveStorageManager(QString, QByteArray* );
+	eveStorageManager(QString, int, eveXMLReader*, QByteArray* );
 	virtual ~eveStorageManager();
 	void shutdown();
 	void handleMessage(eveMessage *);
@@ -30,10 +31,11 @@ public:
 
 private:
 	bool configStorage(eveStorageMessage*);
+	void addToHash(QHash<QString, QString>&, int, QString, eveXMLReader*);
 	QHash<int, int> chainIdChannelHash;
-	QHash<int, eveDataCollector* > chainIdDCHash;
+	eveDataCollector* dc;
 	QString fileName;
-	QByteArray* xmlData;
+	//QByteArray* xmlData;
 	bool shutdownPending;
 
 

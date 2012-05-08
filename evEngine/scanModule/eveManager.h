@@ -31,7 +31,6 @@ public:
 	void sendError(int, int, int, QString);
 	void shutdown();
 	bool sendStart();
-	//eveDeviceList * getDeviceDefs(){return deviceList;};
 
 signals:
 	void finished();
@@ -47,7 +46,6 @@ private:
 	void startChains();
 	// eveMessageHub * mHub;
 	evePlayListData* currentPlEntry;
-	eveDeviceList *deviceList;
 	eveManager *manager;
 	evePlayListManager *playlist;
 	eveManagerStatusTracker *engineStatus;

@@ -35,7 +35,7 @@ class eveXMLReader {
 public:
 	eveXMLReader(eveManager*);
 	virtual ~eveXMLReader();
-	bool read(QByteArray, eveDeviceList *);
+	bool read(QByteArray);
 	int getRootId(int);
 	QList<int> getChainIdList(){return chainIdList;};
 	int getNested(int, int);
@@ -74,7 +74,7 @@ private:
 	void createOption(QDomNode);
 	eveTransportDef* createTransportDefinition(QDomElement node);
 	void getPluginData(QDomElement, QHash<QString, QString>&);
-	eveDeviceList *deviceList;
+	eveDeviceList deviceList;
 	eveManager *parent;
 	QHash<int, QDomElement> chainDomIdHash;
 	QHash<int, QHash<int, QDomElement>* > smIdHash;

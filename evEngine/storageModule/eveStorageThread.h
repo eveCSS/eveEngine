@@ -11,7 +11,7 @@
 class eveStorageThread : public QThread
 {
 public:
-	eveStorageThread(QString, QByteArray*, QWaitCondition*, QMutex *);
+	eveStorageThread(QString, int, eveXMLReader*, QByteArray*, QWaitCondition*, QMutex *);
 	virtual ~eveStorageThread();
 	int getChannelId(){return manager->getChannelId();};
     void run();
@@ -21,6 +21,8 @@ private:
 	QString fileName;
 	QByteArray* xmlData;
 	QMutex *waitMutex;
+	eveXMLReader* xmlReader;
+	int chainId;
 	QWaitCondition* storageRegistered;
 };
 

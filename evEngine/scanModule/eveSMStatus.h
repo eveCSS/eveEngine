@@ -34,6 +34,7 @@ public:
 	bool isTriggerEventWait(){return evTrigWait;};
 	bool triggerDetecStart(int);
 	bool isTriggerDetecWait(){return detTrigWait;};
+	bool forceExecuting();
 
 private:
 	smStatusT status;

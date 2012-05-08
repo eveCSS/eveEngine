@@ -25,7 +25,6 @@
  */
 eveManager::eveManager() {
 	currentPlEntry = NULL;
-	deviceList = new eveDeviceList();
 	playlist = new evePlayListManager();
 	eveMessageHub * mHub = eveMessageHub::getmHub();
 	channelId = mHub->registerChannel(this, EVECHANNEL_MANAGER);
@@ -214,8 +213,7 @@ bool eveManager::loadPlayListEntry(){
 bool eveManager::createSMs(QByteArray xmldata, bool isRepeat) {
 
 	eveXMLReader* scmlParser = new eveXMLReader(this);
-	deviceList->clearAll();
-    if (scmlParser->read(xmldata, deviceList)) {
+    if (scmlParser->read(xmldata)) {
     	sendError(INFO,0,"eveManager::createSMs: successfully parsed XML");
     }
     else {
@@ -232,6 +230,7 @@ bool eveManager::createSMs(QByteArray xmldata, bool isRepeat) {
 	foreach (int chainId, scmlParser->getChainIdList()){
 		int storageChannelId = 0;
 		// we start a storage thread, if we have a savefilename and the name is not already on the list
+		// for now: each filename has its storage thread
 		QString value = scmlParser->getChainString(chainId, "savefilename");
 		if (!value.isEmpty()){
 			if (!fileNameList.contains(value)){
@@ -239,7 +238,7 @@ bool eveManager::createSMs(QByteArray xmldata, bool isRepeat) {
 				QMutex mutex;
 		        mutex.lock();
 		        QWaitCondition waitRegistration;
-				eveStorageThread *storageThread = new eveStorageThread(value, &xmldata, &waitRegistration, &mutex);
+				eveStorageThread *storageThread = new eveStorageThread(value, chainId, scmlParser, &xmldata, &waitRegistration, &mutex);
 				storageThread->start();
 				waitRegistration.wait(&mutex);
 				storageChannelId = storageThread->getChannelId();

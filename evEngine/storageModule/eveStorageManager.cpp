@@ -13,17 +13,30 @@
 #include "eveDataCollector.h"
 #include "eveError.h"
 #include "eveParameter.h"
+#include "eveXMLReader.h"
 
-eveStorageManager::eveStorageManager(QString filename, QByteArray* xmldata) {
+eveStorageManager::eveStorageManager(QString filename, int chainId, eveXMLReader* parser, QByteArray* xmldata) {
 	// register with messageHub
-	xmlData = new QByteArray(*xmldata);
+	//xmlData = new QByteArray(*xmldata);
 	fileName = filename;
 	shutdownPending = false;
 	channelId = eveMessageHub::getmHub()->registerChannel(this, EVECHANNEL_STORAGE);
+
+	// collect all storage-related data
+	QHash<QString, QString> pluginHash = parser->getChainPlugin(chainId, "saveplugin");
+	addToHash(pluginHash, chainId, "autonumber", parser);
+	addToHash(pluginHash, chainId, "savescandescription", parser);
+	addToHash(pluginHash, chainId, "comment", parser);
+	pluginHash.insert("filename", filename);
+
+	dc = new eveDataCollector(this, pluginHash, xmldata);
+	QString param = eveParameter::getParameter("xmlversion");
+	dc->addMetaData(0, "Version", param);
+	param = eveParameter::getParameter("location");
+	dc->addMetaData(0, "Location", param);
 }
 
 eveStorageManager::~eveStorageManager() {
-	foreach (eveDataCollector* dc, chainIdDCHash) delete dc;
 }
 
 /**
@@ -50,11 +63,10 @@ void eveStorageManager::handleMessage(eveMessage *message){
 					sendError(ERROR,0,QString("handleMessage: unable to remove not existing chainId %1 from chainList").arg(id));
 				}
 				else {
-					// if id is in chainIdChannelHash, then it is in chainIdDCHash
-					delete chainIdDCHash.take(id);
 					// close input queue, if we are done
 					if (chainIdChannelHash.isEmpty()) disableInput();
 					eveChainStatusMessage* answer = new eveChainStatusMessage(eveChainSTORAGEDONE, id, 0, 0);
+					// TODO is this redundant?
 					answer->setStatus(eveChainSTORAGEDONE);
 					addMessage(answer);
 					if (chainIdChannelHash.isEmpty()) shutdown();
@@ -65,7 +77,7 @@ void eveStorageManager::handleMessage(eveMessage *message){
 		{
 			int id = ((eveDataMessage*)message)->getChainId();
 			if (chainIdChannelHash.contains(id)){
-				(chainIdDCHash.value(id))->addData((eveDataMessage*)message);
+				dc->addData((eveDataMessage*)message);
 			}
 			else
 				sendError(ERROR, 0, QString("handleMessage: received data message with invalid chainId: %1").arg(id));
@@ -81,18 +93,15 @@ void eveStorageManager::handleMessage(eveMessage *message){
 			int id = ((eveDevInfoMessage*)message)->getChainId();
 			if (chainIdChannelHash.contains(id)){
 				sendError(DEBUG, 0, "found DataCollector, calling with new device info");
-				(chainIdDCHash.value(id))->addDevice((eveDevInfoMessage*)message);
+				dc->addDevice((eveDevInfoMessage*)message);
 			}
 			else
 				sendError(ERROR, 0, QString("handleMessage: received data message with invalid chainId: %1").arg(id));
 		}
 		break;
 		case EVEMESSAGETYPE_LIVEDESCRIPTION:
-			foreach (eveDataCollector* dc, chainIdDCHash){
-				sendError(DEBUG, 0, QString("got Livedescription: %1").arg(((eveMessageText*)message)->getText()));
-				//TODO save the livedescription as comment
-				dc->addMetaData(0, QString("Live-Comment"), ((eveMessageText*)message)->getText());
-			}
+			sendError(DEBUG, 0, QString("got Livedescription: %1").arg(((eveMessageText*)message)->getText()));
+			dc->addMetaData(0, QString("Live-Comment"), ((eveMessageText*)message)->getText());
 			break;
 		case EVEMESSAGETYPE_METADATA:
 		{
@@ -102,15 +111,9 @@ void eveStorageManager::handleMessage(eveMessage *message){
 				QString attribute = strlist.takeFirst();
 				QString strval = strlist.takeFirst();
 				if (attribute.isEmpty()) continue;
-				if (id == 0){
-					foreach (eveDataCollector* dc, chainIdDCHash){
-						sendError(DEBUG, 0, QString("got Livedescription: %1").arg(((eveMessageText*)message)->getText()));
-						//TODO save the livedescription as comment
-						dc->addMetaData(id, attribute, strval);
-					}
-				}
-				else if (chainIdChannelHash.contains(id)){
-					(chainIdDCHash.value(id))->addMetaData(id, attribute, strval);
+				if ((id == 0) || chainIdChannelHash.contains(id)){
+					sendError(DEBUG, 0, QString("sending attribute %1: %2").arg(attribute).arg(strval));
+					dc->addMetaData(id, attribute, strval);
 				}
 				else
 					sendError(ERROR, 0, QString("handleMessage: received metadata message with invalid chainId: %1").arg(id));
@@ -149,9 +152,12 @@ void eveStorageManager::sendError(int severity, int facility, int errorType,  QS
  */
 void eveStorageManager::shutdown(){
 
+	eveError::log(DEBUG, QString("eveStorageManager: shutdown"));
+
 	// stop input Queue
 	if (!shutdownPending) {
 		shutdownPending = true;
+		delete dc;
 		disableInput();
 		connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
 	}
@@ -171,17 +177,19 @@ void eveStorageManager::shutdown(){
 bool eveStorageManager::configStorage(eveStorageMessage* message){
 
 	int chainId = message->getChainId();
-	if (!chainIdChannelHash.contains(chainId)){
+	if ((chainId > 0) && !chainIdChannelHash.contains(chainId)){
 		chainIdChannelHash.insert(chainId, message->getChannelId());
-		eveDataCollector* dc = new eveDataCollector(this, message, xmlData);
-		xmlData = NULL;
-		chainIdDCHash.insert(chainId, dc);
-		QString param = eveParameter::getParameter("xmlversion");
-		dc->addMetaData(0, "Version", param);
-		param = eveParameter::getParameter("location");
-		dc->addMetaData(0, "Location", param);
+		dc->addChain(message);
 		return true;
 	}
 	return false;
 }
+
+void eveStorageManager::addToHash(QHash<QString, QString>& hash, int chainId, QString key, eveXMLReader* parser){
+
+	QString value = parser->getChainString(chainId, key);
+	if (!value.isEmpty()) hash.insert(key, value);
+
+}
+
 

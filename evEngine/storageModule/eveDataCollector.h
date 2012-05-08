@@ -8,6 +8,7 @@
 #ifndef EVEDATACOLLECTOR_H_
 #define EVEDATACOLLECTOR_H_
 
+#include <QList>
 #include "eveMessage.h"
 #include "eveFileWriter.h"
 
@@ -18,9 +19,10 @@ class eveStorageManager;
  */
 class eveDataCollector {
 public:
-	eveDataCollector(eveStorageManager*, eveStorageMessage*, QByteArray*);
+	eveDataCollector(eveStorageManager*, QHash<QString, QString>&, QByteArray*);
 	virtual ~eveDataCollector();
 	void addData(eveDataMessage*);
+	void addChain(eveStorageMessage*);
 	void addDevice(eveDevInfoMessage *);
 	void addMetaData(int, QString, QString&);
 
@@ -28,7 +30,9 @@ private:
 	QString macroExpand(QString);
 	bool fwInitDone;
 	bool fwOpenDone;
-	int chainId;
+	bool StartTimeDone;
+	bool StartDateDone;
+	QList<int> chainIdList;
 	QString fileName;
 	QString comment;
 	QString fileType;

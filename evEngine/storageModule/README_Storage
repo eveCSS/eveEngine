@@ -1,5 +1,10 @@
 
 
+muss überarbeitet werden, stimmt so nicht mehr.
+Außerdem ist es nicht möglich, dass mehrere Chains in das gleiche
+File schreiben, da jede Chain einen eigenen DataCollector hat, der
+das jeweilige File verwaltet.
+
 Es gibt einen StorageThread pro Datenfile:
 	MessageHub muss routen, dazu muss der Datenquelle eine
    	Adresse mitgeteilt werden. Da geht so:

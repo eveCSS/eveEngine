@@ -19,14 +19,64 @@
 class eveFileWriter {
 public:
 	// eveFileWriter();
+
 	virtual ~eveFileWriter() {};
-	virtual int init(int, QString, QString, QHash<QString, QString>&) = 0;
-	virtual int setCols(int, QString, QString, QStringList) = 0;
-	virtual int open(int) = 0;
-	virtual int addData(int, eveDataMessage*) = 0;
-	virtual int addMetaData(int, QString, QString)=0;
-	virtual int close(int) = 0;
-	virtual int setXMLData(QByteArray*) = 0;
+    //! initialize FileWriter plugin. Must be called before all other routines
+    /*!
+      \param filename name of datafile.
+      \param format the datafile format description
+      \param parameters a key/value store for plugin parameters
+      \return status (DEBUG/INFO/MINOR/ERROR/FATAL)
+      \sa hdf5Plugin::init, eveAsciiFileWriter::init
+    */
+	virtual int init(QString filename, QString format, QHash<QString, QString>& parameters) = 0;
+    //! define a column/dataset, must be called before data may be sent for this column/dataset
+    /*!
+      \param chainId chainId or Groupname
+      \param xmlid xmlId of device (used as datasetname in hdf)
+      \param name name of device (used as link to datasetname in hdf)
+      \param info List of device properties to be written to file
+      \return status (DEBUG/INFO/MINOR/ERROR/FATAL)
+      \sa hdf5Plugin::setCols, eveAsciiFileWriter::setCols
+    */
+	virtual int setCols(int chainId, QString xmlid, QString name, QStringList info) = 0;
+    //! open the file
+    /*!
+      \return status (DEBUG/INFO/MINOR/ERROR/FATAL)
+      \sa hdf5Plugin::open, eveAsciiFileWriter::open
+    */
+	virtual int open() = 0;
+    //! add data to an existing column/dataset
+    /*!
+      \param chainId chainId or Groupname
+      \param message dataMessage containing data to write into file
+      \return status (DEBUG/INFO/MINOR/ERROR/FATAL)
+      \sa hdf5Plugin::addData, eveAsciiFileWriter::addData
+    */
+	virtual int addData(int chainId, eveDataMessage* message) = 0;
+    //! add metadata to an chain/group
+    /*!
+      \param chainId chainId or Groupname
+      \param attribute attribute name
+      \param value attribute value
+      \return status (DEBUG/INFO/MINOR/ERROR/FATAL)
+      \sa hdf5Plugin::addMetaData, eveAsciiFileWriter::addMetaData
+    */
+	virtual int addMetaData(int chainId, QString attribute, QString value)=0;
+    //! close chain/group
+    /*!
+      \param chainId chainId or Groupname
+      \return status (DEBUG/INFO/MINOR/ERROR/FATAL)
+      \sa hdf5Plugin::close, eveAsciiFileWriter::close
+    */
+	virtual int close() = 0;
+    //! store xmldata into file
+    /*!
+      \param xmldata xml content
+      \return status (DEBUG/INFO/MINOR/ERROR/FATAL)
+      \sa hdf5Plugin::close, eveAsciiFileWriter::close
+    */
+	virtual int setXMLData(QByteArray* xmldata) = 0;
 	virtual QString errorText() = 0;
 };
 

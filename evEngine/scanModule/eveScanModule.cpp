@@ -889,7 +889,8 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
 			}
 		case eveEventProperty::STOP:
 			if (nestedSM) nestedSM->newEvent(evprop);
-			if (myStatus.isExecuting()){
+			if ((myStatus.isExecuting()) || (myStatus.getStatus() == eveSmNOTSTARTED)){
+				if(myStatus.forceExecuting()) manager->setStatus(smId, myStatus.getStatus());
 				sendError(DEBUG, 0, QString("Stop Scan Module"));
 				currentStage = eveStgFINISH;
 				currentStageReady = false;

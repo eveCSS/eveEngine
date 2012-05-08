@@ -78,6 +78,24 @@ bool eveSMStatus::isExecuting() {
 
 /**
  *
+ * @return true if we are executing i.e. we are started and not paused
+ */
+bool eveSMStatus::forceExecuting() {
+	bool retval = false;
+	if (!(status == eveSmEXECUTING)) {
+		retval = true;
+		status = eveSmEXECUTING;
+	}
+	pause = false;
+	chainPause = false;
+	evTrigWait = false;
+	maTrigWait = false;
+	detTrigWait = false;
+	return retval;
+}
+
+/**
+ *
  * @return true if we are done (an appended scan may still be running)
  */
 bool eveSMStatus::isDone() {

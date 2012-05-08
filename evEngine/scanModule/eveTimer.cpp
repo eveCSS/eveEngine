@@ -176,6 +176,11 @@ void eveTimer::sendError(int severity, int errorType,  QString message){
 QStringList* eveTimer::getInfo(){
 	QStringList *sl = new QStringList();
 	sl->append(QString("Access:local:%1").arg(accessname));
+	if (datatype == eveINT)
+		sl->append(QString("Unit:mSecs"));
+	else if (datatype == eveDOUBLE)
+		sl->append(QString("Unit:secs"));
+
 	return sl;
 }
 

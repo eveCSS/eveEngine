@@ -20,14 +20,13 @@
 /**
  * @param sman corresponding Storage Manager
  * @param message configuration info
- * @param xmldata pointer to xml buffer with scandescription, will be deleted by this class
+ * @param xmldata pointer to xml buffer with scandescription
  */
-eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* message, QByteArray* xmldata) {
+eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QString>& paraHash, QByteArray* xmldata) {
 
-	QHash<QString, QString> paraHash = message->getHash();
 	QString emptyString("");
-	chainId = message->getChainId();
-	fileName = message->getFileName();
+	chainIdList.empty();
+	fileName = paraHash.value("filename", emptyString);
 	fileType = paraHash.value("format", emptyString);
 	QString suffix = paraHash.value("suffix", emptyString);
 	pluginName = paraHash.value("pluginname", emptyString);
@@ -38,6 +37,8 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 	fileWriter = NULL;
 	fwInitDone = false;
 	fwOpenDone = false;
+	StartTimeDone = false;
+	StartDateDone = false;
 	bool fileTest = false;
 	bool doAutoNumber = false;
 
@@ -79,7 +80,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 	QString numberedName = fileName;
 	if (doAutoNumber) numberedName = eveFileTest::addNumber(fileName);
 	if (numberedName.isEmpty()){
-		sman->sendError(ERROR,0,QString("eveDataCollector: unable to add number to filename %1 ").arg(message->getFileName()));
+		sman->sendError(ERROR,0,QString("eveDataCollector: unable to add number to filename %1 ").arg(fileName));
 	}
 	else {
 		fileName = numberedName;
@@ -198,12 +199,12 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 	}
 
 	if (fileWriter){
-		int status = fileWriter->init(chainId, fileName, fileType, paraHash);
+		int status = fileWriter->init(fileName, fileType, paraHash);
 		if ((status == ERROR)||(status == FATAL)){
-			manager->sendError(ERROR, 0, QString("FileWriter: init error: %1").arg(fileWriter->errorText()));
+			manager->sendError(status, 0, QString("FileWriter: init error: %1").arg(fileWriter->errorText()));
 		}
 		else {
-			if (status == MINOR)manager->sendError(MINOR, 0, QString("FileWriter: init warning: %1").arg(fileWriter->errorText()));
+			if (status == MINOR)manager->sendError(status, 0, QString("FileWriter: init warning: %1").arg(fileWriter->errorText()));
 			if (fileTest) {
 				fwInitDone = true;
 			}
@@ -212,20 +213,14 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, eveStorageMessage* m
 
 	if (fwInitDone && !comment.isEmpty()) addMetaData(0, "Comment", comment);
 
-	if (xmldata){
-		if (saveXML && fwInitDone){
-			fileWriter->setXMLData(xmldata);
-		}
-		else
-			delete xmldata;
-	}
+	if (fwInitDone && xmldata && saveXML) fileWriter->setXMLData(xmldata);
+
 }
 
 eveDataCollector::~eveDataCollector() {
-	if (fwInitDone) {
-		if (fileWriter->close(chainId) != SUCCESS){
-			manager->sendError(ERROR, 0, QString("FileWriter: close error: %1").arg(fileWriter->errorText()));
-		}
+	if (fileWriter){
+		int status = fileWriter->close();
+		manager->sendError(status, 0, QString("FileWriter: close error: %1").arg(fileWriter->errorText()));
 		delete fileWriter;
 	}
 	deviceList.clear();
@@ -239,16 +234,18 @@ void eveDataCollector::addData(eveDataMessage* message) {
 
 	if (fwInitDone && deviceList.contains(message->getXmlId())) {
 		if (!fwOpenDone){
-			if (fileWriter->open(chainId) != SUCCESS){
-				manager->sendError(ERROR, 0, QString("FileWriter: open error: %1").arg(fileWriter->errorText()));
+			int status = fileWriter->open();
+			if (status <= ERROR){
+				manager->sendError(status, 0, QString("addData: %1").arg(fileWriter->errorText()));
 			}
 			else {
-				manager->sendError(DEBUG, 0, QString("FileWriter: successfully opened file"));
+				manager->sendError(status, 0, QString("addData: %1").arg(fileWriter->errorText()));
 				fwOpenDone = true;
 			}
 		}
 		if (fwOpenDone){
-			fileWriter->addData(chainId, message);
+			int status = fileWriter->addData(message->getChainId(), message);
+			manager->sendError(status, 0, fileWriter->errorText());
 		}
 	}
 	else {
@@ -268,8 +265,15 @@ void eveDataCollector::addData(eveDataMessage* message) {
 void eveDataCollector::addMetaData(int Id, QString attribute, QString& messageText) {
 
 	if (fwInitDone){
-		if (fileWriter->addMetaData(Id, attribute, messageText) != SUCCESS){
-			manager->sendError(ERROR, 0, QString("FileWriter: addMetaData error: %1").arg(fileWriter->errorText()));
+		int status = fileWriter->addMetaData(Id, attribute, messageText);
+		manager->sendError(status, 0, QString("addMetaData: %1").arg(fileWriter->errorText()));
+		if ((Id > 0) && (attribute=="StartTime") && !StartTimeDone) {
+			fileWriter->addMetaData(0, attribute, messageText);
+			StartTimeDone = true;
+		}
+		else if ((Id > 0) && (attribute=="StartDate") && !StartDateDone) {
+			fileWriter->addMetaData(0, attribute, messageText);
+			StartDateDone = true;
 		}
 	}
 	else {
@@ -289,13 +293,17 @@ void eveDataCollector::addDevice(eveDevInfoMessage* message) {
 		else {
 			deviceList.append(message->getXmlId());
 			manager->sendError(DEBUG, 0, QString("DataCollector: setting device info for %1").arg(message->getXmlId()));
-			if (fileWriter->setCols(chainId,message->getXmlId(), message->getName(), *(message->getText())) != SUCCESS) {
-				manager->sendError(ERROR, 0, QString("FileWriter Error: %1").arg(fileWriter->errorText()));
-			}
+			int status = fileWriter->setCols(message->getChainId(),message->getXmlId(), message->getName(), *(message->getText()));
+			manager->sendError(status, 0, QString("addDevice: %1").arg(fileWriter->errorText()));
 		}
 	}
 	else
 		manager->sendError(ERROR, 0, "DataCollector: can't add devices, file initialization unsuccessful or file already opened");
+}
+
+void eveDataCollector::addChain(eveStorageMessage* message){
+	int chainId = message->getChainId();
+	if (!chainIdList.contains(chainId)) chainIdList.append(chainId);
 }
 
 /**

@@ -1,5 +1,25 @@
 
 
+
+*************************************************************************
+
+Vorsicht mit qPrintable()
+
+    QString greeting = "Hello";
+    const char *badData = greeting.toAscii().constData(); // data is invalid
+
+    QByteArray asciiData = greeting.toAscii();
+    const char *goodData = asciiData.constData();
+
+    In the above example, the goodData pointer is valid for the lifetime of
+    the asciiData byte array. If you need to keep a copy of the data in a
+    non-Qt data structure, use standard C memory allocation and string
+    copying functions to do so before destroying the byte array.
+    
+    http://lists.trolltech.com/qt-interest/2007-12/thread00508-0.html
+    http://qt-project.org/faq/answer/how_can_i_convert_a_qstring_to_char_and_vice_versa
+**************************************************************************
+
 EngineStatus:
 enum engineStatusT:
 	eveEngIDLENOXML=1: 	No XML is loaded, engine has just be started or

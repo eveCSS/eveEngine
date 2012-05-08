@@ -1,4 +1,13 @@
 
+h3. 3 große Erweiterungen:
+
+* Status von SM und Chain:
+** chain und status tracken unabhängig voneinander ihren Status. SM fragt den SMtracker, ob weitergemacht werden darf mayTrig(), mayMove(). Der Tracker fragt SM und ChainStatus ab und antwortet entsprechend true/false. (siehe auch #288)
+* DatenMonitor
+** PVs können während des Ablaufs der Chain gemonitort werden. Das soll für Axis/Channel-Options (Range, retry-deadband) verwendet werden und für average/maxDeviation/minimumm/axAttempts #299
+** In der ersten Stufe werden die Werte: average/maxDeviation/minimum/maxAttempts durch die Methode getDeviceInfo() ausgelesen und an Storage geschickt, der sie in der Monitor-Tabelle /chain_id/device/xml_id (siehe Wiki HDF) ablegt.
+* Normieren auf 2. Detector soll in die Messung eingebaut werden. #298
+
 
 h3. Was noch fehlt
 
@@ -30,5 +39,6 @@ bc. Engine hat implementiert:  Detector-Events haben eine Id mit D-<chainid>-<sm
 * -einen zusätzlichen ChainStatus AcquisitionRunning zumindest als Message an den Viewer als Unterstatus von Executing, der dem Plot anzeigt, dass die jetzt folgenden Daten geplottet werden sollen. Im Gegensatz zu den Daten, die während ReadPos gesendet werden.- Anmerkung: ist anders gelöst. Der Typ in der DataMessage kann gesetzt werden. Derzeit wird nur unmodified/raw geplottet, evtl. kann ein weiterer Typ definiert werden, der nicht raw ist, aber trotzdem geplottet werden soll.
 
 * requestMessages: haben eine Signal-Methode, die vom Empfänger ausgelöst werden kann. Verhindert das umständliche Senden und Warten auf die Antwort z.B. beim StorageConfig
+
 
  

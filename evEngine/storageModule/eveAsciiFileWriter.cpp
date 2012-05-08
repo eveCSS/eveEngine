@@ -23,20 +23,20 @@ eveAsciiFileWriter::~eveAsciiFileWriter() {
 
 /**
  *
- * @param setID 	dataset-identification (chain-id)
  * @param filename 	Filename including absolute path
  * @param format	dataformat
  * @param parameter	Plugin-parameter from xml
  * @return			error severity
  */
-int eveAsciiFileWriter::init(int setID, QString filename, QString format, QHash<QString, QString>& parameter){
+int eveAsciiFileWriter::init(QString filename, QString format, QHash<QString, QString>& parameter){
 	if (initDone) {
 		errorString = QString("AsciiFileWriter does not support multiple Data Sets, initialize only once");
 		return ERROR;
 	}
 	// asciiFileWriter ignores parameter
 	initDone = true;
-	setId = setID;
+	// TODO
+	//	setId = setID;
 	fileName = filename;
 	fileFormat = format;
 	errorString.clear();
@@ -101,11 +101,11 @@ int eveAsciiFileWriter::setCols(int setID, QString colid, QString rname, QString
  * @param setID		dataset-identification (chain-id)
  * @return			error severity
  */
-int eveAsciiFileWriter::open(int setID){
-	if (setId != setID) {
-		errorString=QString("AsciiFileWriter does not support multiple Data Sets, give each chain a different Filename!");
-		return ERROR;
-	}
+int eveAsciiFileWriter::open(){
+//	if (setId != setID) {
+//		errorString=QString("AsciiFileWriter does not support multiple Data Sets, give each chain a different Filename!");
+//		return ERROR;
+//	}
 	filePtr = new QFile(fileName);
 	if (!filePtr->open(QIODevice::ReadWrite)){
 		errorString = QString("AsciiFileWriter: error opening File %1").arg(fileName);
@@ -204,11 +204,7 @@ int eveAsciiFileWriter::addMetaData(int setID, QString attribute, QString string
  * @param setID		dataset-identification (chain-id)
  * @return			error severity
  */
-int eveAsciiFileWriter::close(int setID) {
-	if (setId != setID) {
-		errorString=QString("AsciiFileWriter does not support multiple Data Sets, give each chain a different Filename!");
-		return ERROR;
-	}
+int eveAsciiFileWriter::close() {
 	if (fileOpen) {
 	    QTextStream out(filePtr);
 		QList<QString> keyList = metaData.uniqueKeys();
