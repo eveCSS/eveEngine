@@ -11,14 +11,12 @@
 #include <QtGui>
 #include "hdf5Plugin.h"
 
-using namespace std;
-
-
 hdf5Plugin::hdf5Plugin() {
 	// TODO Auto-generated constructor stub
 	fileName = "";
-	sizeIncrement = 50; // default file size increment
+	defaultSizeIncrement = 50; // default file size increment
 	isFileOpen = false;
+	dataFile = NULL;
 }
 
 hdf5Plugin::~hdf5Plugin() {
@@ -35,18 +33,13 @@ hdf5Plugin::~hdf5Plugin() {
 }
 
 /**
- * @brief			open the File (all setCol commands are done), noop for hdf5
- * @param setID		dataset-identification (chain-id)
+ * @brief			open the File, noop for hdf5
  * @return			error severity
  */
-int hdf5Plugin::open(int setID)
+int hdf5Plugin::open()
 {
-	int status = SUCCESS;
+	int status = DEBUG;
 	errorString.clear();
-	if (!setIdList.contains(setID)) {
-		errorString = QString("HDF5Plugin: Data Set with id %1, is not initialized").arg(setID);
-		status = ERROR;
-	}
 	if (!isFileOpen) {
 		errorString = QString("HDF5Plugin: data file %1 has not been opened").arg(fileName);
 		status = ERROR;
@@ -56,17 +49,12 @@ int hdf5Plugin::open(int setID)
 
 /**
  *
- * @param setID 	dataset-identification (chain-id)
  * @param filename 	Filename including absolute path
  * @param format	datafile format
  * @param parameter	Plugin-parameter from xml
  * @return			error severity
  */
-int hdf5Plugin::init(int setID, QString filename, QString format, QHash<QString, QString>& parameter){
-	if (setIdList.contains(setID)) {
-		errorString = QString("HDF5Plugin: Data Set with id %1, is already initialized").arg(setID);
-		return MINOR;
-	}
+int hdf5Plugin::init(QString filename, QString format, QHash<QString, QString>& parameter){
 	if (!fileName.isEmpty() && (fileName != filename)){
 		errorString = QString("HDF5Plugin: unable to handle more than one filename: %1").arg(filename);
 		return MINOR;
@@ -75,10 +63,9 @@ int hdf5Plugin::init(int setID, QString filename, QString format, QHash<QString,
 		errorString = QString("HDF5Plugin: unable to handle any other format than HDF5; not: %1").arg(filename);
 		return ERROR;
 	}
-	setIdList.append(setID);
 	if (parameter.contains("extent")){
 		int tmp = parameter.value("extent").toInt();
-		if ((tmp > 0) && (tmp < 1000000)) sizeIncrement = tmp;
+		if ((tmp > 0) && (tmp < 1000000)) defaultSizeIncrement = tmp;
 	}
 
 	fileName = filename;
@@ -86,12 +73,12 @@ int hdf5Plugin::init(int setID, QString filename, QString format, QHash<QString,
 	errorString.clear();
 
 	if (!isFileOpen){
-		metaData.clear();
 		try
 		{
 			Exception::dontPrint();
 			dataFile = new H5File(qPrintable(fileName), H5F_ACC_TRUNC);
 			isFileOpen = true;
+			errorString = QString("HDF5Plugin: successfully opened file %1").arg(fileName);
 		}
 		catch( FileIException error )
 		{
@@ -99,17 +86,17 @@ int hdf5Plugin::init(int setID, QString filename, QString format, QHash<QString,
 			return ERROR;
 		}
 	}
-	return SUCCESS;
+	return DEBUG;
 }
 
 
 int hdf5Plugin::setXMLData(QByteArray* xmldata){
-	int retval = SUCCESS;
+	int retval = DEBUG;
 	if (isFileOpen) {
 		QString xmlfilename = fileName + ".scml";
 		QFile* filePtr = new QFile(xmlfilename);
 		if (!filePtr->open(QIODevice::ReadWrite)){
-			errorString = QString("HDF5Plugin: error opening File %1").arg(xmlfilename);
+			errorString = QString("HDF5Plugin: error opening xml file %1").arg(xmlfilename);
 			retval = ERROR;
 		}
 		else {
@@ -117,288 +104,409 @@ int hdf5Plugin::setXMLData(QByteArray* xmldata){
 				errorString = QString("HDF5Plugin: error writing xmldata to File %1").arg(xmlfilename);
 				retval = ERROR;
 			}
+			else {
+				errorString = QString("HDF5Plugin: successfully wrote xmldata to File %1").arg(xmlfilename);
+			}
 			filePtr->close();
 		}
 	}
-	if (xmldata != NULL) delete xmldata;
 	return retval;
 }
 
 /**
  * @brief			create and label a column
- * @param setID 	dataset-identification (chain-id)
+ * @param pathId 	chainId
  * @param colid		xml-id of detectorchannel / axis
  * @param name		name of column (name as in xml)
  * @param info		stringlist with additional info
  * @return			error severity
  */
-int hdf5Plugin::setCols(int setID, QString colid, QString name, QStringList info){
+int hdf5Plugin::setCols(int pathId, QString colid, QString name, QStringList info){
 
-	if (!setIdList.contains(setID)) {
-		errorString = QString("HDF5Plugin: setID %1 has not been initialized").arg(setID);
+	errorString.clear();
+	QString dsname = getDSName(pathId, colid);
+
+	if (!isFileOpen) {
+		errorString = QString("HDF5Plugin:setCols: data file has not been opened");
 		return ERROR;
 	}
-	errorString.clear();
-	if (!idHash.contains(setID)){
-		idHash.insert(setID, new QHash<QString, columnInfo*>());
-	}
 
-	QHash<QString, columnInfo* >* colHashPtr = idHash.value(setID);
-	if (colHashPtr->contains(colid)){
-		errorString = QString("HDF5Plugin: device already in column list");
-		return MINOR;
+	if (dsNameHash.contains(dsname)){
+		errorString = QString("HDF5Plugin: Data Set with name %1, is already initialized").arg(dsname);
+		return INFO;
 	}
-	else {
-		colHashPtr->insert(colid, new columnInfo(name, info));
-	}
-
-	return SUCCESS;
+	createGroup(pathId);
+//	dsNameHash.insert(dsname, new columnInfo(name, info));
+	hdf5DataSet *ds = new hdf5DataSet(dsname, colid, name, info, dataFile);
+	ds->setSizeIncrement(defaultSizeIncrement);
+	dsNameHash.insert(dsname, ds);
+	return DEBUG;
 }
 
 /**
  * \brief create the datasets, since we now know the datatype
  *
- * @param setID		dataset-identification (chain-id)
+ * @param pathId		dataset-identification (chain-id)
  * @param data		data to write to file
  * @return			error severity
  */
-int hdf5Plugin::addData(int setID, eveDataMessage* data)
+int hdf5Plugin::addData(int pathId, eveDataMessage* data)
 {
+	int status;
+	hdf5DataSet *ds;
+
 	if (!isFileOpen) {
 		errorString = QString("HDF5Plugin:addData: data file has not been opened");
 		return ERROR;
 	}
-	if (!setIdList.contains(setID)) {
-		errorString = QString("HDF5Plugin:addData: setID %1 has not been initialized").arg(setID);
-		return ERROR;
-	}
-	if (!idHash.contains(setID)) {
-		errorString = QString("HDF5Plugin:addData: Columns for setID %1 not set").arg(setID);
-		return ERROR;
-	}
-	QString colId = data->getXmlId();
-	if (colId.length() < 1){
-		errorString = QString("HDF5Plugin:addData: Columns invalid xml-id");
-		return ERROR;
-	}
-//	if (data->getArraySize() != 1){
-//		//TODO handle array data
-//		errorString = QString("HDF5Plugin:addData: array data not yet implemented");
-//		// return addArrayData(setID, data);
-//		return ERROR;
-//	}
+	errorString.clear();
 
-	columnInfo* colInfo = idHash.value(setID)->value(colId);
-	if (colInfo == NULL){
-		errorString = QString("HDF5Plugin:addData: Column for device %1 not in hash").arg(colId);
-		return ERROR;
-	}
-	if (colInfo->isNotInit){
+	QString dsname = getDSName(pathId, data->getXmlId());
 
-		try {
-			Exception::dontPrint();
-
-			//Create the data space.
-			hsize_t maxdim[] = {H5S_UNLIMITED};   /* Dataspace dimensions file*/
-			colInfo->currentDim[0] = sizeIncrement;
-			colInfo->dspace = DataSpace( 1, colInfo->currentDim, maxdim );
-
-			hsize_t memdim[] = {1};   			/* Dataspace dimensions memory*/
-			colInfo->memspace = DataSpace( 1, memdim );
-
-			//Modify dataset creation properties, i.e. enable chunking.
-			DSetCreatPropList createProps;
-			hsize_t chunk_dims[] = {1};
-			createProps.setChunk( 1, chunk_dims );
-
-			colInfo->arraySize = data->getArraySize();
-			colInfo->compoundType = createDataType(QString("PosCounter"), qPrintable(colId), data->getDataType(), colInfo->arraySize);
-
-			// Create the memory buffer.
-			colInfo->memSize = colInfo->compoundType.getSize();
-			colInfo->memBuffer = (memSpace_t *) calloc(1, colInfo->memSize);
-
-			// Create the dataset.
-			colInfo->dset = dataFile->createDataSet(qPrintable(colId), colInfo->compoundType, colInfo->dspace, createProps);
-			colInfo->dset.extend( colInfo->currentDim );
-
-			// add attribute XML-ID
-			// xmlid is part of info below
-			hsize_t stringDim = 1;
-//			StrType st = StrType(PredType::C_S1, colId.toLocal8Bit().length());
-//			Attribute attrib = colInfo->dset.createAttribute("XML-ID", st, DataSpace(1, &stringDim));
-//			attrib.write(st, qPrintable(colId));
-
-			// add more attributes
-			foreach(QString infoLine, colInfo->info){
-				QStringList infoSplit = infoLine.split(":");
-				if (infoSplit.count() > 1){
-					QString attribName = infoSplit.takeFirst();
-					QString attribValue = infoSplit.join(":");
-					if ((attribName.length() > 0) && (attribValue.length() > 0)) {
-						StrType st = StrType(PredType::C_S1, attribValue.toLocal8Bit().length());
-						Attribute attrib = colInfo->dset.createAttribute(qPrintable(attribName), st, DataSpace(1, &stringDim));
-						attrib.write(st, qPrintable(attribValue));
-					}
-				}
-			}
-			colInfo->currentOffset[0] = 0;
-		}
-		catch( Exception error )
-		{
-			errorString = QString("HDF5Plugin:addData: Exception: %1").arg(error.getCDetailMsg());
-			setIdList.removeAll(setID);
-			return ERROR;
-		}
-		colInfo->isNotInit = false;
-
-
-	}
-
-	DataSpace filespace = colInfo->dset.getSpace();
-	hsize_t dims1[] = {1};             /* data1 dimensions */
-	filespace.selectHyperslab( H5S_SELECT_SET, dims1, colInfo->currentOffset );
-
-	// zero the memory buffer
-	memset(colInfo->memBuffer, 0, colInfo->memSize);
-	colInfo->memBuffer->positionCount = data->getPositionCount();
-	if ((data->getDataType() == eveEnum16T) || (data->getDataType() == eveStringT) || (data->getDataType() == eveDateTimeT)){
-		int stringLength;
-		if (data->getDataType() == eveStringT) {
-			stringLength = STANDARD_STRINGSIZE+1;
-		}
-		else if (data->getDataType() == eveDateTimeT){
-			stringLength = DATETIME_STRINGSIZE+1;
-		}
-		else {
-			stringLength = STANDARD_ENUM_STRINGSIZE+1;
-		}
-
-		char *start = (char*) &colInfo->memBuffer->aPtr;
-		foreach(QString dataString, data->getStringArray()){
-			if((start + stringLength) <= (((char*) &colInfo->memBuffer->aPtr) + colInfo->memSize - sizeof(qint32))){
-				strncpy(start, dataString.toLocal8Bit().constData(), stringLength);
-				start += stringLength;
-			}
-		}
+	if (dsNameHash.contains(dsname)) {
+		ds = dsNameHash.value(dsname);
 	}
 	else {
-		void *buffer = getDataBufferAddress(data);
-		colInfo->memBuffer->positionCount = data->getPositionCount();
-		memcpy(&colInfo->memBuffer->aPtr, buffer, getMinimumDataBufferLength(data, colInfo->memSize - sizeof(qint32)));
+		ds = new hdf5DataSet(dsname, data->getXmlId(), data->getName(), QStringList(), dataFile);
+		dsNameHash.insert(dsname, ds);
+		ds->setSizeIncrement(defaultSizeIncrement);
 	}
-	colInfo->dset.write( (void*)colInfo->memBuffer, colInfo->compoundType, colInfo->memspace, filespace );
-
-	++colInfo->currentOffset[0];
-	if (colInfo->currentOffset[0] >= colInfo->currentDim[0]){
-		colInfo->currentDim[0] += sizeIncrement;
-		colInfo->dset.extend( colInfo->currentDim );
-	}
-	errorString = QString("HDF5Plugin:addData: successfully added %1. value").arg(colInfo->currentOffset[0]-1);
-    return SUCCESS;
+	status = ds->addData(data);
+	errorString = ds->getError();
+	return status;
 }
+
+/**
+ * \brief create the datasets, since we now know the datatype
+ *
+ * @param pathId		dataset-identification (chain-id)
+ * @param data		data to write to file
+ * @return			error severity
+ */
+//int hdf5Plugin::addArrayData(int pathId, eveDataMessage* data)
+//{
+//
+//	QString dsname = getDSName(pathId, data->getXmlId());
+//	if (!dsNameHash.contains(dsname)){
+//		createGroup(pathId);
+//		dsNameHash.insert(dsname, new columnInfo(data->getName(), QStringList()));
+//	}
+//	columnInfo* colInfo = dsNameHash.value(dsname);
+//
+//	if (colInfo->isNotInit){
+//		colInfo->arraySize = data->getArraySize();
+//		colInfo->dataType = data->getDataType();
+//		if (initArrayDataSet(dsname, colInfo, data->getXmlId()) == ERROR) return ERROR;
+//		addLink(pathId, dsname, data->getName());
+//	}
+//
+//	// create a new dataset if positionCounter increased
+//	if (data->getPositionCount() > colInfo->posCounter){
+//		if (colInfo->dsetOpen){
+//			// TODO
+//			// colInfo->dset.extend( colInfo->currentOffset );
+//			colInfo->dset.close();
+//		}
+//		colInfo->posCounter = data->getPositionCount();
+//		// Create the dataset.
+//		dsname = QString("%1/%2").arg(dsname).arg(colInfo->posCounter);
+//		colInfo->dset = dataFile->createDataSet(qPrintable(dsname), convertToHdf5Type(colInfo->dataType), colInfo->dspace, colInfo->createProps);
+//		colInfo->dset.extend( colInfo->currentDim );
+//	}
+//	else if (data->getPositionCount() == colInfo->posCounter){
+//
+//	}
+//	else {
+//		errorString = QString("HDF5Plugin:addData: posCounter must be monotonically increasing");
+//		return ERROR;
+//	}
+//
+//	DataSpace filespace = colInfo->dset.getSpace();
+//	hsize_t dims1[2];             /* data1 dimensions */
+//	dims1[0] = colInfo->arraySize;
+//	dims1[1] = 1;
+//	filespace.selectHyperslab( H5S_SELECT_SET, dims1, colInfo->currentOffset );
+//
+//	colInfo->dset.write( getDataBufferAddress(data), convertToHdf5Type(colInfo->dataType), colInfo->memspace, filespace );
+//
+//	++colInfo->currentOffset[1];
+//	if (colInfo->currentOffset[1] >= colInfo->currentDim[1]){
+//		colInfo->currentDim[1] += colInfo->sizeIncrement;
+//		colInfo->dset.extend( colInfo->currentDim );
+//	}
+//	errorString = QString("HDF5Plugin:addData: successfully added %1. value").arg(colInfo->currentOffset[0]-1);
+//    return DEBUG;
+//}
+
+/**
+ * \brief create the datasets, since we now know the datatype
+ *
+ * @param pathId		dataset-identification (chain-id)
+ * @param data		data to write to file
+ * @return			error severity
+ */
+//int hdf5Plugin::addSingleData(int pathId, eveDataMessage* data)
+//{
+//
+//	QString dsname = getDSName(pathId, data->getXmlId());
+//	if (!dsNameHash.contains(dsname)){
+//		createGroup(pathId);
+//		dsNameHash.insert(dsname, new columnInfo(data->getName(), QStringList()));
+//	}
+//	columnInfo* colInfo = dsNameHash.value(dsname);
+//
+//	if (colInfo->isNotInit){
+//		colInfo->arraySize = 1;
+//		colInfo->dataType = data->getDataType();
+//		if (initDataSet(dsname, colInfo, data->getXmlId()) == ERROR) return ERROR;
+//		addLink(pathId, dsname, data->getName());
+//	}
+//
+//	DataSpace filespace = colInfo->dset.getSpace();
+//	hsize_t dims1[] = {1};             /* data1 dimensions */
+//	filespace.selectHyperslab( H5S_SELECT_SET, dims1, colInfo->currentOffset );
+//
+//	// zero the memory buffer
+//	memset(colInfo->memBuffer, 0, colInfo->memSize);
+//	colInfo->memBuffer->positionCount = data->getPositionCount();
+//	if ((data->getDataType() == eveEnum16T) || (data->getDataType() == eveStringT) || (data->getDataType() == eveDateTimeT)){
+//		int stringLength;
+//		if (data->getDataType() == eveStringT) {
+//			stringLength = STANDARD_STRINGSIZE+1;
+//		}
+//		else if (data->getDataType() == eveDateTimeT){
+//			stringLength = DATETIME_STRINGSIZE+1;
+//		}
+//		else {
+//			stringLength = STANDARD_ENUM_STRINGSIZE+1;
+//		}
+//
+//		char *start = (char*) &colInfo->memBuffer->aPtr;
+//		foreach(QString dataString, data->getStringArray()){
+//			if((start + stringLength) <= (((char*) &colInfo->memBuffer->aPtr) + colInfo->memSize - sizeof(qint32))){
+//				strncpy(start, dataString.toLocal8Bit().constData(), stringLength);
+//				start += stringLength;
+//			}
+//		}
+//	}
+//	else {
+//		void *buffer = getDataBufferAddress(data);
+//		colInfo->memBuffer->positionCount = data->getPositionCount();
+//		memcpy(&colInfo->memBuffer->aPtr, buffer, getMinimumDataBufferLength(data, colInfo->memSize - sizeof(qint32)));
+//	}
+//	colInfo->dset.write( (void*)colInfo->memBuffer, colInfo->compoundType, colInfo->memspace, filespace );
+//
+//	++colInfo->currentOffset[0];
+//	if (colInfo->currentOffset[0] >= colInfo->currentDim[0]){
+//		colInfo->currentDim[0] += colInfo->sizeIncrement;
+//		colInfo->dset.extend( colInfo->currentDim );
+//	}
+//	errorString = QString("HDF5Plugin:addData: successfully added %1. value").arg(colInfo->currentOffset[0]-1);
+//    return DEBUG;
+//}
+//
+//int hdf5Plugin::initDataSet(QString dsname, columnInfo* colInfo, QString colId){
+//
+//	try {
+//		Exception::dontPrint();
+//
+//		colInfo->sizeIncrement = defaultSizeIncrement;
+//
+//		//Create the data space.
+//		hsize_t maxdim[] = {H5S_UNLIMITED};   /* Dataspace dimensions file*/
+//		colInfo->currentDim[0] = colInfo->sizeIncrement;
+//		colInfo->dspace = DataSpace( 1, colInfo->currentDim, maxdim );
+//
+//		hsize_t memdim[] = {1};   			/* Dataspace dimensions memory*/
+//		colInfo->memspace = DataSpace( 1, memdim );
+//
+//		//Modify dataset creation properties, i.e. enable chunking.
+//		DSetCreatPropList createProps;
+//		hsize_t chunk_dims[] = {1};
+//		createProps.setChunk( 1, chunk_dims );
+//
+//
+//		// Create the memory buffer.
+//		colInfo->memSize = colInfo->compoundType.getSize();
+//		colInfo->memBuffer = (memSpace_t *) calloc(1, colInfo->memSize);
+//
+//		// Create the dataset.
+//		colInfo->dset = dataFile->createDataSet(qPrintable(dsname), colInfo->compoundType, colInfo->dspace, createProps);
+//		colInfo->dset.extend( colInfo->currentDim );
+//
+//		// add attributes
+//		hsize_t stringDim = 1;
+//		while (!colInfo->info.isEmpty()){
+//			QStringList infoSplit = colInfo->info.takeFirst().split(":");
+//			if (infoSplit.count() > 1){
+//				QString attribName = infoSplit.takeFirst();
+//				QString attribValue = infoSplit.join(":");
+//				if ((attribName.length() > 0) && (attribValue.length() > 0)) {
+//					StrType st = StrType(PredType::C_S1, attribValue.toLocal8Bit().length());
+//					Attribute attrib = colInfo->dset.createAttribute(qPrintable(attribName), st, DataSpace(1, &stringDim));
+//					attrib.write(st, qPrintable(attribValue));
+//				}
+//			}
+//		}
+//		colInfo->currentOffset[0] = 0;
+//	}
+//	catch( Exception error )
+//	{
+//		errorString = QString("HDF5Plugin:initDataSet Exception: %1").arg(error.getCDetailMsg());
+//		return ERROR;
+//	}
+//	colInfo->isNotInit = false;
+//	return DEBUG;
+//}
+//
+//int hdf5Plugin::initArrayDataSet(QString dsname, columnInfo* colInfo, QString colId){
+//
+//	try {
+//		Exception::dontPrint();
+//
+//		colInfo->sizeIncrement = 1;
+//
+//		//Create the data space.
+//		const int rank = 2;
+//		hsize_t maxdim[2];   /* Dataspace dimensions file*/
+//		colInfo->currentDim[0] = colInfo->arraySize;
+//		colInfo->currentDim[1] = colInfo->sizeIncrement;
+//		maxdim[0] = colInfo->arraySize;
+//		maxdim[1] = H5S_UNLIMITED;
+//
+//		colInfo->dspace = DataSpace( rank, colInfo->currentDim, maxdim );
+//
+//		hsize_t memdim[2];   			/* Dataspace dimensions memory*/
+//		memdim[0] = colInfo->arraySize;
+//		memdim[1] = 1;
+//		colInfo->memspace = DataSpace( rank, memdim );
+//
+//		//Modify dataset creation properties, i.e. enable chunking.
+//		hsize_t chunk_dims[2];
+//		chunk_dims[0] = colInfo->arraySize;
+//		chunk_dims[1] = 1;
+//		colInfo->createProps.setChunk( rank, chunk_dims );
+//
+//	    /*
+//	     * Set fill value for the dataset
+//	     * use default (0)
+//	     */
+//
+//		// Create the group
+//		Group targetGroup = dataFile->createGroup(qPrintable(dsname));
+//
+//		// add attributes
+//		hsize_t stringDim = 1;
+//		while (!colInfo->info.isEmpty()){
+//			QStringList infoSplit = colInfo->info.takeFirst().split(":");
+//			if (infoSplit.count() > 1){
+//				QString attribName = infoSplit.takeFirst();
+//				QString attribValue = infoSplit.join(":");
+//				if ((attribName.length() > 0) && (attribValue.length() > 0)) {
+//					StrType st = StrType(PredType::C_S1, attribValue.toLatin1().length());
+//					Attribute attrib = targetGroup.createAttribute(qPrintable(attribName), st, DataSpace(1, &stringDim));
+//					attrib.write(st, qPrintable(attribValue));
+//				}
+//			}
+//		}
+//		targetGroup.close();
+//		colInfo->currentOffset[1] = 0;
+//	}
+//	catch( Exception error )
+//	{
+//		errorString = QString("HDF5Plugin:initDataSet Exception: %1").arg(error.getCDetailMsg());
+//		return ERROR;
+//	}
+//	colInfo->isNotInit = false;
+//	return DEBUG;
+//}
 
 /**
  * @brief add a metadata (e.g. comment) to be written at end of file
  */
-int hdf5Plugin::addMetaData(int setID, QString attribute, QString stringVal){
+int hdf5Plugin::addMetaData(int pathId, QString attribute, QString stringVal){
+	if (!isFileOpen) {
+		errorString = QString("HDF5Plugin:addData: data file has not been opened");
+		return ERROR;
+	}
 	errorString.clear();
-	if (setID == 0){
-		if ((attribute.length() > 0)) metaData.insert(attribute, stringVal);
-		return SUCCESS;
+
+	try {
+		hsize_t stringDim = 1;
+		Group targetGroup = dataFile->openGroup(qPrintable(createGroup(pathId)));
+		unsigned int index = 0;
+		// check if we already have this attribute
+		QString compare = QString(attribute);
+		QString newVal = QString(stringVal);
+		targetGroup.iterateAttrs(&compareNames, &index, (void *) &compare);
+		if (compare.isEmpty()){
+			Attribute attrib = targetGroup.openAttribute(qPrintable(attribute));
+			StrType stread = StrType(attrib.getStrType());
+			int length = stread.getSize();
+			char *strg_C = new char [(size_t)length+1];
+			attrib.read(stread, strg_C);
+			strg_C[length] = 0;
+			// errorString += QString("existing Attribute: %1 (%2 / %3)").arg(QString::fromLatin1(strg_C)).arg(QString::fromLatin1(strg_C).length()).arg(length);
+			attrib.close();
+			targetGroup.removeAttr(qPrintable(attribute));
+			newVal = QString("%1; %2").arg(QString::fromLatin1(strg_C)).arg(stringVal);
+			delete []strg_C;
+		}
+		StrType st = StrType(PredType::C_S1, newVal.toLatin1().length());
+		// UTF8 funktioniert leider nicht (st.setCset(H5T_CSET_UTF8);)
+		Attribute attrib = targetGroup.createAttribute(qPrintable(attribute), st, DataSpace(1, &stringDim));
+		attrib.write(st, newVal.toLatin1().data());
+		errorString += QString("new Attribute: %1 (%2)").arg(attribute).arg(newVal);
+		targetGroup.close();
 	}
-	else if (setIdList.contains(setID)) {
-		// TODO this metadata belongs to the chain not metaData
-		if ((attribute.length() > 0)) metaData.insert(attribute, stringVal);
-		return SUCCESS;
+	catch( Exception error )
+	{
+		errorString += QString(": %1").arg(error.getCDetailMsg());
+		return ERROR;
 	}
-	else {
-		errorString = QString("HDF5Plugin:addMetaData: setID %1 has not been initialized").arg(setID);
+
+	return DEBUG;
+}
+
+void hdf5Plugin::compareNames(H5Object& obj, string str, void* data){
+	QString *search = (QString*)(data);
+	string other = string(qPrintable(*search));
+	if (str == string(qPrintable(*search))) {
+		search->clear();
 	}
-	return ERROR;
 }
 
 
 /**
  * @brief			close File
- * @param setID		dataset-identification (chain-id)
+ * @param pathId		dataset-identification (chain-id)
  * @return			error severity
  */
-int hdf5Plugin::close(int setID)
+int hdf5Plugin::close()
 {
-	if (!setIdList.contains(setID)) {
-		errorString = QString("HDF5Plugin:close: unable to close; setID %1 has not been initialized").arg(setID);
-		return ERROR;
-	}
-	setIdList.removeAll(setID);
-	if (!idHash.contains(setID)) {
-		errorString = QString("HDF5Plugin:close: Columns for setID %1 not set").arg(setID);
-		return MINOR;
-	}
 	if (!isFileOpen) {
-		errorString = QString("HDF5Plugin:close: file already closed");
+		errorString = QString("HDF5Plugin::close: file %1 already closed").arg(fileName);
 		return MINOR;
 	}
-	int status = SUCCESS;
-	errorString = QString("HDF5Plugin");
+	int status = DEBUG;
+	errorString = QString("HDF5Plugin::close:");
 
-	// write the comment into root group of file
-	QList<QString> keyList = metaData.uniqueKeys();
-	foreach(QString key, keyList){
-		QString value;
-		while (metaData.count(key) > 0){
-			if (value.size() > 0) value.append("; ");
-			value.append(metaData.take(key));
-		}
-		try {
-			if (value.length() > 0) {
-				hsize_t stringDim = 1;
-				StrType st = StrType(PredType::C_S1, value.toLocal8Bit().length());
-				Group rootGroup = dataFile->openGroup("/");
-				Attribute attrib = rootGroup.createAttribute(qPrintable(key), st, DataSpace(1, &stringDim));
-				attrib.write(st, qPrintable(value));
-			}
-		}
-		catch( Exception error )
-		{
-			errorString += QString(": %1").arg(error.getCDetailMsg());
-			status = ERROR;
-			break;
-		}
+	foreach (hdf5DataSet* ds, dsNameHash.values()){
+		delete ds;
 	}
+	dsNameHash.clear();
 
-
-	QHash<QString, columnInfo* >* columnHash = idHash.take(setID);
-	foreach (columnInfo* colInfo, *columnHash){
-		if (!colInfo->isNotInit){
-			try {
-				colInfo->dset.extend( colInfo->currentOffset );
-				colInfo->dset.close();
-			}
-			catch( Exception error )
-			{
-				errorString += QString(": %1").arg(error.getCDetailMsg());
-				status = ERROR;
-			}
-		}
-		delete colInfo;
+	try {
+		isFileOpen = false;
+		dataFile->close();
+		delete dataFile;
+		dataFile = NULL;
+		errorString += QString(": successfully closed file: %1").arg(fileName);
 	}
-	delete columnHash;
-	idHash.remove(setID);
-
-	if (idHash.isEmpty()){
-		try {
-			dataFile->close();
-			isFileOpen = false;
-			delete dataFile;
-			dataFile = NULL;
-			errorString += QString(": successfully closed file: %1").arg(fileName);
-		}
-		catch( Exception error )
-		{
-			errorString += QString(": closingFile: %1").arg(error.getCDetailMsg());
-			status = ERROR;
-		}
+	catch( Exception error )
+	{
+		errorString += QString(": closingFile: %1").arg(error.getCDetailMsg());
+		status = ERROR;
 	}
     return status;
 }
@@ -409,158 +517,51 @@ QString hdf5Plugin::errorText()
     return errorString;
 }
 
-hdf5Plugin::columnInfo::columnInfo(QString colname, QStringList colinfo){
-	isNotInit = true;
-	name = colname;
-	info = colinfo;
-	memBuffer = NULL;
+QString hdf5Plugin::getDSName(int id, QString name){
+
+	if (id == 0)
+		return QString("/%1").arg(name);
+	else
+		return QString("/%1/%2").arg(id).arg(name);
 }
 
-hdf5Plugin::columnInfo::~columnInfo(){
-	if (memBuffer) free(memBuffer);
-}
+int hdf5Plugin::addLink(int pathId, QString dsname, QString linkname){
 
-PredType hdf5Plugin::convertToHdf5Type(eveType type){
-	switch (type) {
-		case eveInt8T:
-			return PredType::NATIVE_INT8;
-		case eveUInt8T:
-			return PredType::NATIVE_UINT8;
-		case eveInt16T:
-			return PredType::NATIVE_INT16;
-		case eveUInt16T:
-			return PredType::NATIVE_UINT16;
-		case eveInt32T:
-			return PredType::NATIVE_INT32;
-		case eveUInt32T:
-			return PredType::NATIVE_UINT32;
-		case eveFloat32T:
-			return PredType::NATIVE_FLOAT;
-		case eveFloat64T:
-			return PredType::NATIVE_DOUBLE;
-		case eveDateTimeT:
-		case eveEnum16T:
-		case eveStringT:
-			return PredType::C_S1;
-		default:
-			return PredType::NATIVE_UINT32;
+	if (linkname.length() > 0){
+		linkname.replace(" ","_");
+		linkname.replace("/","%");
+		linkname = getDSName(pathId, linkname);
+		if (!linkNames.contains(linkname)){
+			dataFile->link(H5G_LINK_SOFT, qPrintable(dsname), qPrintable(linkname));
+			linkNames.append(linkname);
+			errorString = QString("HDF5Plugin::addLink Successfully added link %1").arg(linkname);
+			return DEBUG;
+		}
+		else {
+			errorString = QString("HDF5Plugin::addLink link %1 already in use").arg(linkname);
+			return MINOR;
+		}
 	}
+	errorString = QString("HDF5Plugin::addLink zero length link name not added");
+	return DEBUG;
 }
 
+QString hdf5Plugin::createGroup(int pathId){
 
-CompType hdf5Plugin::createDataType(QString name1, QString name2, eveType type, int arrayCount){
-
-	int ndims=1;
-	hsize_t arrayDims = arrayCount;
-	DataType typeA(PredType::NATIVE_INT32);
-	DataType typeB;
-
-	switch (type) {
-	case eveInt8T:
-	case eveUInt8T:
-	case eveInt16T:
-	case eveUInt16T:
-	case eveInt32T:
-	case eveUInt32T:
-	case eveFloat32T:
-	case eveFloat64T:
-		if (arrayCount == 1)
-			typeB = AtomType(convertToHdf5Type(type));
-		else
-			typeB = ArrayType (convertToHdf5Type(type), ndims, &arrayDims);
-		break;
-	case eveEnum16T:
-		if (arrayCount == 1)
-			typeB = AtomType(StrType(PredType::C_S1, STANDARD_ENUM_STRINGSIZE+1));
-		else
-			typeB = ArrayType (StrType(PredType::C_S1, STANDARD_ENUM_STRINGSIZE+1), ndims, &arrayDims);
-		break;
-	case eveStringT:
-		if (arrayCount == 1)
-			typeB = AtomType(StrType(PredType::C_S1, STANDARD_STRINGSIZE+1));
-		else
-			typeB = ArrayType (StrType(PredType::C_S1, STANDARD_STRINGSIZE+1), ndims, &arrayDims);
-		break;
-	case eveDateTimeT:
-		if (arrayCount == 1)
-			typeB = AtomType(StrType(PredType::C_S1, DATETIME_STRINGSIZE+1));
-		else
-			typeB = ArrayType (StrType(PredType::C_S1, DATETIME_STRINGSIZE+1), ndims, &arrayDims);
-		break;
-	default:
-		return CompType(0);
+	if (pathId == 0) return QString("/");
+	QString groupname = QString("/%1/").arg(pathId);
+	if (!groupList.contains(pathId) && isFileOpen) {
+		try
+		{
+			dataFile->createGroup(qPrintable(groupname));
+			groupList.append(pathId);
+		}
+		catch( Exception error )
+		{
+			errorString += QString("createGroup: %1").arg(error.getCDetailMsg());
+		}
 	}
-
-	CompType comptype( typeA.getSize() + typeB.getSize());
-	comptype.insertMember( qPrintable(name1), 0, typeA);
-	comptype.insertMember( qPrintable(name2), typeA.getSize(), typeB);
-	return comptype;
-}
-
-
-void* hdf5Plugin::getDataBufferAddress(eveDataMessage* data){
-
-	switch (data->getDataType()) {
-	case eveInt8T:
-	case eveUInt8T:
-		return (void*) data->getCharArray().constData();
-		break;
-	case eveInt16T:
-	case eveUInt16T:
-		return (void*) data->getShortArray().constData();
-		break;
-	case eveInt32T:
-	case eveUInt32T:
-		return (void*) data->getIntArray().constData();
-		break;
-	case eveFloat32T:
-		return (void*) data->getFloatArray().constData();
-		break;
-	case eveFloat64T:
-		return (void*) data->getDoubleArray().constData();
-		break;
-	default:
-		return NULL;
-	}
-}
-
-/**
- *
- * @param data eveDataMessage
- * @param number compare to this
- * @return the minimum of number and the used bytes in the data array
- */
-int hdf5Plugin::getMinimumDataBufferLength(eveDataMessage* data, int other){
-
-	int arraySize = data->getArraySize();
-	int bufferSize = 0;
-
-	switch (data->getDataType()) {
-	case eveInt8T:
-	case eveUInt8T:
-		bufferSize = 1;
-		break;
-	case eveInt16T:
-	case eveUInt16T:
-		bufferSize = 2;
-		break;
-	case eveInt32T:
-	case eveUInt32T:
-	case eveFloat32T:
-		bufferSize = 4;
-		break;
-	case eveFloat64T:
-		bufferSize = 8;
-		break;
-	default:
-		break;
-	}
-	bufferSize *= arraySize;
-
-	if (bufferSize < other)
-		return bufferSize;
-
-	return other;
+	return QString("/%1/").arg(pathId);
 }
 
 Q_EXPORT_PLUGIN2(hdf5plugin, hdf5Plugin);

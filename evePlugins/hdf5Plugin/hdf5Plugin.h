@@ -10,27 +10,18 @@
 
 #include <QObject>
 #include <QMultiHash>
+#include <QStringList>
+#include <QString>
 #include "eveFileWriter.h"
 #include "eveTypes.h"
 #include "H5Cpp.h"
+#include "hdf5DataSet.h"
 
 #ifndef H5_NO_NAMESPACE
      using namespace H5;
 #endif
+     using namespace std;
 
-#define STANDARD_STRINGSIZE 40
-#define STANDARD_ENUM_STRINGSIZE 16
-#define DATETIME_STRINGSIZE 40
-
-
-typedef struct {
-	qint32 positionCount;
-	void *aPtr;
-} memSpace_t;
-
-/*
- *
- */
 class hdf5Plugin : public QObject, eveFileWriter{
 
 	Q_OBJECT
@@ -39,10 +30,10 @@ class hdf5Plugin : public QObject, eveFileWriter{
 public:
 	hdf5Plugin();
 	virtual ~hdf5Plugin();
-	int init(int, QString, QString, QHash<QString, QString>&);
+	int init(QString, QString, QHash<QString, QString>&);
 	int setCols(int, QString, QString, QStringList);
-	int open(int);
-	int close(int);
+	int open();
+	int close();
 	int addData(int, eveDataMessage*);
 	int addMetaData(int, QString, QString);
 	int setXMLData(QByteArray*);
@@ -50,36 +41,22 @@ public:
 	QString errorText();
 
 private:
-	static CompType createDataType(QString, QString, eveType, int);
-	static PredType convertToHdf5Type(eveType);
-	void* getDataBufferAddress(eveDataMessage*);
-	int getMinimumDataBufferLength(eveDataMessage*, int);
+	static void compareNames(H5Object&, std::string, void*);
+	int addSingleData(int, eveDataMessage*);
+	int addArrayData(int, eveDataMessage*);
+	QString getDSName(int, QString);
+	int addLink(int, QString, QString);
+	QString createGroup(int pathId);
 	bool isFileOpen;
-	class columnInfo {
-		public:
-		columnInfo(QString, QStringList);
-		~columnInfo();
-		bool isNotInit;
-		int arraySize;
-		memSpace_t *memBuffer;
-		size_t memSize;
-		QString name;
-		QStringList info;
-		DataSpace dspace;
-		DataSpace memspace;
-		DataSet dset;
-		hsize_t currentDim[1];
-		hsize_t currentOffset[1];
-		CompType compoundType;
-	};
-	QList<int> setIdList;
+	char string_buffer[201];
+	QList<int> groupList;
 	QString fileName;
 	QString fileFormat;
 	QString errorString;
 	H5File* dataFile;
-	int sizeIncrement;
-	QMultiHash<QString, QString> metaData;
-	QHash<int, QHash<QString, columnInfo* >* > idHash;
+	int defaultSizeIncrement;
+	QHash<QString, hdf5DataSet* > dsNameHash;
+	QStringList linkNames;
 
 };
 
