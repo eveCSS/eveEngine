@@ -12,6 +12,7 @@
 #include <QMultiHash>
 #include <QStringList>
 #include <QString>
+#include "eveMessage.h"
 #include "eveFileWriter.h"
 #include "eveTypes.h"
 #include "H5Cpp.h"
@@ -31,25 +32,25 @@ public:
 	hdf5Plugin();
 	virtual ~hdf5Plugin();
 	int init(QString, QString, QHash<QString, QString>&);
-	int setCols(int, QString, QString, QStringList);
+//	int setCols(int, QString, QString, QStringList);
+	int addColumn(eveDevInfoMessage* message);
 	int open();
 	int close();
 	int addData(int, eveDataMessage*);
 	int addMetaData(int, QString, QString);
 	int setXMLData(QByteArray*);
-
-	QString errorText();
+	QString errorText(){return errorString;};
 
 private:
 	static void compareNames(H5Object&, std::string, void*);
 	int addSingleData(int, eveDataMessage*);
 	int addArrayData(int, eveDataMessage*);
-	QString getDSName(int, QString);
-	int addLink(int, QString, QString);
+	QString getDSName(int, QString, eveDataModType, QString);
 	QString createGroup(int pathId);
+	QString createGroup(QString);
 	bool isFileOpen;
 	char string_buffer[201];
-	QList<int> groupList;
+	QStringList groupList;
 	QString fileName;
 	QString fileFormat;
 	QString errorString;
@@ -57,7 +58,7 @@ private:
 	int defaultSizeIncrement;
 	QHash<QString, hdf5DataSet* > dsNameHash;
 	QStringList linkNames;
-
+	QHash<eveDataModType, QString>modificationHash;
 };
 
 #endif /* HDF5PLUGIN_H_ */

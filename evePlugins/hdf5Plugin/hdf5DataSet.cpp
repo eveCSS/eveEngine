@@ -6,6 +6,8 @@
  */
 
 #include "hdf5DataSet.h"
+#include <QDateTime>
+#include "eveStartTime.h"
 
 hdf5DataSet::hdf5DataSet(QString path, QString colid, QString devicename, QStringList info, H5File* file) {
 
@@ -50,12 +52,23 @@ int hdf5DataSet::addData(eveDataMessage* data){
 
 	QString dsname = dspath;
 	if (arraySize == 1){
-		DataSpace filespace = dset.getSpace();
-		filespace.selectHyperslab( H5S_SELECT_SET, chunk_dims, currentOffset );
+		DataSpace filespace;
+		try {
+			filespace = dset.getSpace();
+			filespace.selectHyperslab( H5S_SELECT_SET, chunk_dims, currentOffset );
+
+		}
+		catch (...) {
+			errorString += QString("hdf5DataSet:addData: error opening dataset %1").arg(dsname);
+			return ERROR;
+		}
 
 		// zero the memory buffer
 		memset(memBuffer, 0, compoundType.getSize());
-		memBuffer->positionCount = data->getPositionCount();
+		if (data->getChainId() == 0)
+			memBuffer->positionCount = data->getMSecsSinceStart();
+		else
+			memBuffer->positionCount = data->getPositionCount();
 		if ((data->getDataType() == eveEnum16T) || (data->getDataType() == eveStringT) || (data->getDataType() == eveDateTimeT)){
 			int stringLength;
 			if (data->getDataType() == eveStringT) {
@@ -78,7 +91,11 @@ int hdf5DataSet::addData(eveDataMessage* data){
 		}
 		else {
 			void *buffer = getDataBufferAddress(data);
-			memBuffer->positionCount = data->getPositionCount();
+			if (data->getChainId() == 0)
+				memBuffer->positionCount = data->getMSecsSinceStart();
+			else
+				memBuffer->positionCount = data->getPositionCount();
+
 			memcpy(&memBuffer->aPtr, buffer, getMinimumDataBufferLength(data, compoundType.getSize() - sizeof(qint32)));
 		}
 		dset.write( (void*)memBuffer, compoundType, memspace, filespace );
@@ -182,7 +199,10 @@ void hdf5DataSet::init(eveDataMessage* data){
 		createProps.setChunk( rank, chunk_dims );
 
 		if (arraySize == 1){
-			compoundType = createDataType(QString("PosCounter"), qPrintable(basename), data->getDataType(), arraySize);
+			QString index = "PosCounter";
+			if (data->getChainId() == 0) index = "mSecsSinceStart";
+
+			compoundType = createDataType(index, qPrintable(basename), data->getDataType(), arraySize);
 			// Create the memory buffer.
 			memBuffer = new memSpace_t [compoundType.getSize()];
 
@@ -200,7 +220,7 @@ void hdf5DataSet::init(eveDataMessage* data){
 	}
 	catch( Exception error )
 	{
-		errorString += QString("HDF5Plugin:initDataSet Exception: %1").arg(error.getCDetailMsg());
+		errorString += QString("hdf5DataSet::init: Exception: %1").arg(error.getCDetailMsg());
 		status = ERROR;
 	}
 	addLink(dspath, basename, name);
