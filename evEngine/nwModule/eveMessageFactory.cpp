@@ -210,57 +210,60 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 		case EVEMESSAGETYPE_DATA:
 		{
 			quint32 chid, smid, poscounter, dtype;
-			eveDataStatus stat;
 			quint32 dataMod;
 			quint32 seconds, nanoseconds;
 			QString xmlId;
 			QString name = "";
+			quint8 severity;
+			quint8 condition;
+			quint16 acqStatus;
 
 			inStream >> chid >> smid >> poscounter;
-			inStream >> dtype >> dataMod >> stat.severity >> stat.condition >> stat.acqStatus;
+			inStream >> dtype >> dataMod >> severity >> condition >> acqStatus;
 			inStream >> seconds >> nanoseconds >> xmlId;
 			eveTime timeStamp = eveTime::eveTimeFromTime_tNano(seconds, nanoseconds);
+			eveDataStatus dstatus = eveDataStatus(severity, condition, acqStatus);
 
 			switch (dtype) {
 				case eveInt8T:					/* eveInt8 */
 				{
 					QVector<qint8> cArray;
 					inStream >> cArray;
-					message = new eveDataMessage(xmlId, name, stat, (eveDataModType)dataMod, timeStamp, cArray);
+					message = new eveDataMessage(xmlId, name, dstatus, (eveDataModType)dataMod, timeStamp, cArray);
 				}
 				break;
 				case eveInt16T:					/* eveInt16 */
 				{
 					QVector<short> sArray;
 					inStream >> sArray;
-					message = new eveDataMessage(xmlId, name, stat, (eveDataModType)dataMod, timeStamp, sArray);
+					message = new eveDataMessage(xmlId, name, dstatus, (eveDataModType)dataMod, timeStamp, sArray);
 				}
 				break;
 				case eveInt32T:					/* eveInt32 */
 				{
 					QVector<int> iArray;
 					inStream >> iArray;
-					message = new eveDataMessage(xmlId, name, stat, (eveDataModType)dataMod, timeStamp, iArray);
+					message = new eveDataMessage(xmlId, name, dstatus, (eveDataModType)dataMod, timeStamp, iArray);
 				}
 				break;
 				case eveFloat32T:					/* eveFLoat32 */
 				{
 					QVector<float> fArray;
 					inStream >> fArray;
-					message = new eveDataMessage(xmlId, name, stat, (eveDataModType)dataMod, timeStamp, fArray);
+					message = new eveDataMessage(xmlId, name, dstatus, (eveDataModType)dataMod, timeStamp, fArray);
 				}break;
 				case eveFloat64T:					/* eveFloat64 */
 				{
 					QVector<double> dArray;
 					inStream >> dArray;
-					message = new eveDataMessage(xmlId, name, stat, (eveDataModType)dataMod, timeStamp, dArray);
+					message = new eveDataMessage(xmlId, name, dstatus, (eveDataModType)dataMod, timeStamp, dArray);
 				}
 				break;
 				case eveStringT:					/* eveString */
 				{
 					QStringList stringData;
 					inStream >> stringData;
-					message = new eveDataMessage(xmlId, name, stat, (eveDataModType)dataMod, timeStamp, stringData);
+					message = new eveDataMessage(xmlId, name, dstatus, (eveDataModType)dataMod, timeStamp, stringData);
 				}
 				break;
 				case eveDateTimeT:					/* eveString */
@@ -269,7 +272,7 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 					inStream >> stringData;
 					QDateTime dt = QDateTime::fromString(stringData.at(0), "HH:mm:ss.zzz");
 					if (!dt.isValid()) dt = QDateTime();
-					message = new eveDataMessage(xmlId, name, stat, (eveDataModType)dataMod, timeStamp, dt);
+					message = new eveDataMessage(xmlId, name, dstatus, (eveDataModType)dataMod, timeStamp, dt);
 				}
 				break;
 			}
@@ -411,13 +414,13 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 			quint32 smid = ((eveDataMessage*)message)->getSmId();
 			quint32 poscounter = ((eveDataMessage*)message)->getPositionCount();
 			quint32 dtype = (quint32)((eveDataMessage*)message)->getDataType();
-			eveDataStatus stat = ((eveDataMessage*)message)->getDataStatus();
+			eveDataStatus dstatus = ((eveDataMessage*)message)->getDataStatus();
 			quint32 dataMod = (quint32)((eveDataMessage*)message)->getDataMod();
 			eveTime dtime = ((eveDataMessage*)message)->getDataTimeStamp();
 			QString xmlId = ((eveDataMessage*)message)->getXmlId();
 			quint32 messageLength = 0;
 			outStream << messageLength << chid << smid << poscounter << dtype << dataMod;
-			outStream << stat.severity << stat.condition << stat.acqStatus << dtime.seconds() << dtime.nanoSeconds() << xmlId;
+			outStream << dstatus.getSeverity() << dstatus.getAlarmCondition() << dstatus.getAcquisitionStatus() << dtime.seconds() << dtime.nanoSeconds() << xmlId;
 			switch (dtype) {
 				case eveInt8T:					/* eveInt8 */
 				{

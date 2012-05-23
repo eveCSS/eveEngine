@@ -11,6 +11,7 @@
 #include <eveTypes.h>
 #include <alarm.h>
 #include "eveVariant.h"
+#include "eveDataStatus.h"
 
 #define EVEMESSAGE_STARTTAG 0x0d0f0d0a
 #define EVEMESSAGE_VERSION 0x0100
@@ -49,6 +50,7 @@
 #define EVEMESSAGETYPE_STORAGECONFIG 0x1000
 #define EVEMESSAGETYPE_DEVINFO 0x1002
 #define EVEMESSAGETYPE_EVENTREGISTER 0x1003
+#define EVEMESSAGETYPE_MONITORREGISTER 0x1004
 
 #define EVEREQUESTTYPE_YESNO 0x00
 #define EVEREQUESTTYPE_OKCANCEL 0x01
@@ -102,21 +104,13 @@
 #define EVEENGINESTATUS_EXECUTING 0x03		// executing
 #define EVEENGINESTATUS_AUTOSTART 0x0100		// autostart bit
 
-
-struct eveDataStatus {
-	quint8	severity;
-	quint8	condition;
-	quint16	acqStatus;
-};
-
 struct evePlayListEntry {
 	int pid;
 	QString name;
 	QString author;
 };
 
-enum eveDataModType {DMTunmodified, DMTcenter, DMTedge, DMTmin, DMTmax, DMTfwhm, DMTmean, DMTstandarddev, DMTsum, DMTnormalized, DMTpeak, DMTunknown};
-enum eveAcqStatus {ACQSTATok, ACQSTATmaxattempt};
+enum eveDataModType {DMTunmodified, DMTcenter, DMTedge, DMTmin, DMTmax, DMTfwhm, DMTmean, DMTstandarddev, DMTsum, DMTnormalized, DMTpeak, DMTdeviceData, DMTunknown};
 
 /**
  * \brief base class for errorMessage, engineStatus, chainStatus, dataMessage ...
@@ -417,6 +411,7 @@ class eveBaseDataMessage : public eveMessage
 {
 public:
 	eveBaseDataMessage(int, int prio=0, int dest=0);
+	eveBaseDataMessage(int, int, int, QString, QString, QString, eveDataModType mod=DMTunmodified, int msecs=-1, int prio=0, int dest=0);
 	eveBaseDataMessage(int, int, int, QString, QString, int prio=0, int dest=0);
 	virtual ~eveBaseDataMessage();
 	virtual eveBaseDataMessage* clone();
@@ -429,12 +424,21 @@ public:
 	void setXmlId(QString id){xmlId = id;};
 	QString getName(){return name;};
 	void setName(QString id){name = id;};
+	void setAuxString(QString aux){auxInfo = aux;};
+	QString getAuxString(){return auxInfo;};
+	eveDataModType getDataMod(){return dataModifier;};
+	void setDataMod(eveDataModType mod){dataModifier=mod;};
+	int getMSecsSinceStart(){return mSecsSinceStart;};
 
 protected:
+	void setMSecsSinceStart(int msecs){mSecsSinceStart = msecs;};
 	int chainId;
 	int smId;
+	eveDataModType dataModifier;
 	QString name;
 	QString xmlId;
+	QString auxInfo;
+	int mSecsSinceStart;
 };
 
 /**
@@ -462,9 +466,8 @@ public:
 	const QStringList& getStringArray(){return dataStrings;};
 	eveDataStatus getDataStatus(){return dataStatus;};
 	eveType getDataType(){return dataType;};
-	eveDataModType getDataMod(){return dataModifier;};
 	eveTime getDataTimeStamp(){return timestamp;};
-	eveTime getDateTime(){return eveTime::eveTimeFromDateTime(dateTime);};
+	eveTime geteveDT(){return eveTime::eveTimeFromDateTime(dateTime);};
 	bool isEmpty(){return !(arraySize);};
 	int getArraySize(){return arraySize;};
 	int getPositionCount(){return posCount;};
@@ -472,6 +475,8 @@ public:
 	virtual eveDataMessage* clone();
 	eveVariant toVariant();
 	virtual bool compare(eveMessage *);
+	bool isInteger();
+	bool isFloat();
 
 private:
 	int posCount;
@@ -479,7 +484,6 @@ private:
 	quint32 arraySize;
 	eveDataStatus dataStatus;				// epicsSeverity, SeverityCondition, AcquisitionStatus
 	eveType dataType;
-	eveDataModType dataModifier;
 	QVector<int> dataArrayInt;
 	QVector<short> dataArrayShort;
 	QVector<signed char> dataArrayChar;
@@ -496,8 +500,9 @@ class eveDevInfoMessage : public eveBaseDataMessage
 {
 public:
 	eveDevInfoMessage(QStringList*, int prio=0, int dest=0);
-	eveDevInfoMessage(int, int, QString, QString, eveType, bool, QStringList*, int prio=0, int dest=0);
+	eveDevInfoMessage(int, int, QString, QString, eveType, bool, eveDataModType, QString, QStringList*, int prio=0, int dest=0);
 	eveDevInfoMessage(QString, QString, QStringList*, int prio=0, int dest=0);
+	eveDevInfoMessage(QString, QString, QStringList*, eveDataModType, QString, int prio=0, int dest=0);
 	virtual ~eveDevInfoMessage();
 	QStringList* getText(){return infoList;};
 	bool isArray(){return isarray;};

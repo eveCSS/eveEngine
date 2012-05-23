@@ -3,6 +3,7 @@
 #include <assert.h>
 #include "eveMessage.h"
 #include "eveError.h"
+#include "eveStartTime.h"
 
 eveMessage::eveMessage()
 {
@@ -37,7 +38,8 @@ eveMessage::eveMessage(int mtype, int prio, int dest)
 			(type == EVEMESSAGETYPE_EVENTREGISTER) ||
 			(type == EVEMESSAGETYPE_LIVEDESCRIPTION) ||
 			(type == EVEMESSAGETYPE_METADATA) ||
-			(type == EVEMESSAGETYPE_REMOVEFROMPLAYLIST));
+			(type == EVEMESSAGETYPE_REMOVEFROMPLAYLIST) ||
+			(type == EVEMESSAGETYPE_MONITORREGISTER));
 }
 
 eveMessage::~eveMessage()
@@ -498,18 +500,36 @@ bool eveErrorMessage::compare(eveMessage *message)
 /*
  * Class eveBaseDataMessage
  */
-eveBaseDataMessage::eveBaseDataMessage(int mtype, int cid, int smid, QString xmlid, QString nam, int prio, int dest) :
+eveBaseDataMessage::eveBaseDataMessage(int mtype, int cid, int smid, QString xmlid, QString nam, QString auxinfo, eveDataModType mod, int msecs, int prio, int dest) :
 	eveMessage(mtype, prio, dest)
 {
+	dataModifier = mod;
+	auxInfo=auxinfo;
 	chainId = cid;
 	smId = smid;
 	name = QString(nam);
 	xmlId = QString(xmlid);
+	if (msecs < 0)
+		mSecsSinceStart = eveStartTime::getMSecsSinceStart();
+	else
+		mSecsSinceStart = msecs;
+}
+
+eveBaseDataMessage::eveBaseDataMessage(int mtype, int cid, int smid, QString xmlid, QString nam, int prio, int dest) :
+	eveMessage(mtype, prio, dest)
+{
+	dataModifier = DMTunmodified;
+	chainId = cid;
+	smId = smid;
+	name = QString(nam);
+	xmlId = QString(xmlid);
+	mSecsSinceStart = eveStartTime::getMSecsSinceStart();
 }
 
 eveBaseDataMessage::eveBaseDataMessage(int mtype, int prio, int dest) :
 	eveMessage(mtype, prio, dest)
 {
+	mSecsSinceStart = eveStartTime::getMSecsSinceStart();
 }
 
 eveBaseDataMessage::~eveBaseDataMessage()
@@ -521,7 +541,7 @@ eveBaseDataMessage::~eveBaseDataMessage()
  */
 eveBaseDataMessage* eveBaseDataMessage::clone(){
 
-	return new eveBaseDataMessage(EVEMESSAGETYPE_BASEDATA, chainId, smId, xmlId, name, priority, destination);
+	return new eveBaseDataMessage(EVEMESSAGETYPE_BASEDATA, chainId, smId, xmlId, name, auxInfo, dataModifier, mSecsSinceStart, priority, destination);
 }
 
 /**
@@ -542,15 +562,15 @@ bool eveBaseDataMessage::compare(eveMessage* with){
  * \param data integer array data
  */
 eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QVector<int> data, int prio, int dest) :
-	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, prio, dest)
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, QString(), dmod, -1, prio, dest)
 {
-	dataStatus = stat;
-	dataModifier = dmod;
+	dataStatus = eveDataStatus(stat);
 	dataType = eveInt32T;
 	dataArrayInt = QVector<int>(data);
 	arraySize = dataArrayInt.size();
 	timestamp = eveTime(mtime);
 	posCount = 0;
+	dateTime = QDateTime::currentDateTime();
 }
 /**
  * \param Id id (name) of Device which sent the data
@@ -560,15 +580,15 @@ eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, 
  * \param data short array data
  */
 eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QVector<short> data, int prio, int dest) :
-	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, prio, dest)
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, QString(), dmod, -1, prio, dest)
 {
 	dataStatus = stat;
-	dataModifier = dmod;
 	dataType = eveInt16T;
 	dataArrayShort = QVector<short>(data);
 	arraySize = dataArrayShort.size();
 	timestamp = eveTime(mtime);
 	posCount = 0;
+	dateTime = QDateTime::currentDateTime();
 }
 /**
  * \param Id id (name) of Device which sent the data
@@ -578,15 +598,15 @@ eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, 
  * \param data char array data
  */
 eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QVector<signed char> data, int prio, int dest) :
-	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, prio, dest)
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, QString(), dmod, -1, prio, dest)
 {
 	dataStatus = stat;
-	dataModifier = dmod;
 	dataType = eveInt8T;
 	dataArrayChar = QVector<signed char>(data);
 	arraySize = dataArrayChar.size();
 	timestamp = eveTime(mtime);
 	posCount = 0;
+	dateTime = QDateTime::currentDateTime();
 }
 /**
  * \param Id id (name) of Device which sent the data
@@ -596,15 +616,15 @@ eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, 
  * \param data float array data
  */
 eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QVector<float> data, int prio, int dest) :
-	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, prio, dest)
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, QString(), dmod, -1, prio, dest)
 {
 	dataStatus = stat;
-	dataModifier = dmod;
 	dataType = eveFloat32T;
 	dataArrayFloat = QVector<float>(data);
 	arraySize = dataArrayFloat.size();
 	timestamp = eveTime(mtime);
 	posCount = 0;
+	dateTime = QDateTime::currentDateTime();
 }
 /**
  * \param Id id (name) of Device which sent the data
@@ -614,15 +634,15 @@ eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, 
  * \param data double array data
  */
 eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QVector<double> data, int prio, int dest) :
-	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, prio, dest)
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, QString(), dmod, -1, prio, dest)
 {
 	dataStatus = stat;
-	dataModifier = dmod;
 	dataType = eveFloat64T;
 	dataArrayDouble = QVector<double>(data);
 	arraySize = dataArrayDouble.size();
 	timestamp = eveTime(mtime);
 	posCount = 0;
+	dateTime = QDateTime::currentDateTime();
 }
 /**
  * \param Id id (name) of Device which sent the data
@@ -632,15 +652,15 @@ eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, 
  * \param data double array data
  */
 eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QStringList data, int prio, int dest) :
-	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, prio, dest)
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, QString(), dmod, -1, prio, dest)
 {
 	dataStatus = stat;
-	dataModifier = dmod;
 	dataType = eveStringT;
 	dataStrings = QStringList(data);
 	arraySize = dataStrings.size();
 	timestamp = eveTime(mtime);
 	posCount = 0;
+	dateTime = QDateTime::currentDateTime();
 }
 /**
  * \param Id id (name) of Device which sent the data
@@ -650,12 +670,11 @@ eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, 
  * \param data double array data
  */
 eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, eveDataModType dmod, eveTime mtime, QDateTime datetime, int prio, int dest) :
-	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, prio, dest)
+	eveBaseDataMessage(EVEMESSAGETYPE_DATA, 0, 0, xmlid, name, QString(), dmod, -1, prio, dest)
 {
 	dataStatus = stat;
-	dataModifier = dmod;
 	dataType = eveDateTimeT;
-	dateTime = QDateTime(datetime);
+	dateTime = datetime;
 	arraySize = 1;
 	timestamp = eveTime(mtime);
 	posCount = 0;
@@ -709,6 +728,8 @@ eveDataMessage* eveDataMessage::clone(){
 	message->setXmlId(xmlId);
 	message->setName(name);
 	message->setPositionCount(posCount);
+	message->setAuxString(auxInfo);
+	message->setMSecsSinceStart(mSecsSinceStart);
 	return message;
 }
 /**
@@ -757,15 +778,30 @@ eveVariant eveDataMessage::toVariant(){
 	return result;
 }
 
-eveDevInfoMessage::eveDevInfoMessage(int cid, int sid, QString xmlid, QString name, eveType dtype, bool arr, QStringList* info, int prio, int dest) :
-	eveBaseDataMessage(EVEMESSAGETYPE_DEVINFO, cid, sid, xmlid, name, prio, dest)
+bool eveDataMessage::isFloat(){
+	return ((dataType == eveFloat32T) || (dataType == eveFloat64T));
+}
+
+bool eveDataMessage::isInteger(){
+	return ((dataType == eveInt8T) || (dataType == eveInt16T) || (dataType == eveInt32T));
+}
+
+eveDevInfoMessage::eveDevInfoMessage(int cid, int sid, QString xmlid, QString name, eveType dtype, bool arr, eveDataModType dataMod, QString auxinfo, QStringList* info, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DEVINFO, cid, sid, xmlid, name, auxinfo, dataMod, prio, dest)
 {
 	dataType = dtype;
 	isarray = arr;
 	infoList = info;
+	dataModifier = DMTunmodified;
 }
 eveDevInfoMessage::eveDevInfoMessage(QString xmlid, QString name, QStringList* info, int prio, int dest) :
 	eveBaseDataMessage(EVEMESSAGETYPE_DEVINFO, 0, 0, xmlid, name, prio, dest)
+{
+	infoList = info;
+	dataModifier = DMTunmodified;
+}
+eveDevInfoMessage::eveDevInfoMessage(QString xmlid, QString name, QStringList* info, eveDataModType dataMod, QString auxinfo, int prio, int dest) :
+	eveBaseDataMessage(EVEMESSAGETYPE_DEVINFO, 0, 0, xmlid, name, auxinfo, dataMod, prio, dest)
 {
 	infoList = info;
 }
@@ -773,6 +809,7 @@ eveDevInfoMessage::eveDevInfoMessage(QStringList* info, int prio, int dest) :
 	eveBaseDataMessage(EVEMESSAGETYPE_DEVINFO, 0, 0, QString(), QString(), prio, dest)
 {
 	infoList = info;
+	dataModifier = DMTunmodified;
 }
 
 eveDevInfoMessage::~eveDevInfoMessage() {
@@ -783,7 +820,7 @@ eveDevInfoMessage::~eveDevInfoMessage() {
 }
 
 eveDevInfoMessage* eveDevInfoMessage::clone() {
-	return new eveDevInfoMessage(chainId, smId, xmlId, name, dataType, isarray, infoList, priority, destination);
+	return new eveDevInfoMessage(chainId, smId, xmlId, name, dataType, isarray, dataModifier, auxInfo, infoList, priority, destination);
 }
 
 /**

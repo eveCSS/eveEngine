@@ -229,6 +229,12 @@ void eveMessageHub::newMessage(int messageSource)
 			}
 			case EVEMESSAGETYPE_DATA:
 				{
+					if (((eveDataMessage*)message)->getDataMod() == DMTdeviceData){
+						int channel = message->getDestination();
+						if (mChanHash.contains(channel) && (mChanHash.value(channel)->queueMessage(message)))
+							message = NULL;
+						break;
+					}
 					/* send data to viewers if available */
 					if (mChanHash.contains(EVECHANNEL_NET)){
 						eveMessage *mclone = message->clone();
@@ -354,6 +360,10 @@ void eveMessageHub::newMessage(int messageSource)
 				}
 				break;
 			case EVEMESSAGETYPE_EVENTREGISTER:
+				if (mChanHash.contains(EVECHANNEL_EVENT)){
+					if (mChanHash.value(EVECHANNEL_EVENT)->queueMessage(message)) message = NULL;
+				}
+			case EVEMESSAGETYPE_MONITORREGISTER:
 				if (mChanHash.contains(EVECHANNEL_EVENT)){
 					if (mChanHash.value(EVECHANNEL_EVENT)->queueMessage(message)) message = NULL;
 				}
