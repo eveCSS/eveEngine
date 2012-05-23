@@ -23,6 +23,8 @@
 #endif
      using namespace std;
 
+#define SAVEPLUGIN_VERSION "1.3-1"
+
 class hdf5Plugin : public QObject, eveFileWriter{
 
 	Q_OBJECT
@@ -33,6 +35,7 @@ public:
 	virtual ~hdf5Plugin();
 	int init(QString, QString, QHash<QString, QString>&);
 //	int setCols(int, QString, QString, QStringList);
+	QString getVersionString(){return SAVEPLUGIN_VERSION;};
 	int addColumn(eveDevInfoMessage* message);
 	int open();
 	int close();

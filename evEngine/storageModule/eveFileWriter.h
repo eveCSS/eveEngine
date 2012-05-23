@@ -30,6 +30,11 @@ public:
       \sa hdf5Plugin::init, eveAsciiFileWriter::init
     */
 	virtual int init(QString filename, QString format, QHash<QString, QString>& parameters) = 0;
+	/*!
+	 *
+	 * @return a version string to verify library integrity
+	 */
+	virtual QString getVersionString() = 0;
     //! define a column/dataset, must be called before data may be sent for this column/dataset
     /*!
       \param chainId chainId or Groupname

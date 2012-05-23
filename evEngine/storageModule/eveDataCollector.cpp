@@ -190,11 +190,19 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QStri
 		    	fileWriter = qobject_cast<eveFileWriter *>(plugin);
 		    	if (!fileWriter)
 					sman->sendError(ERROR, 0, QString("eveDataCollector: Cast Error while loading plugin %1").arg(fullname));
-		    	else
-					sman->sendError(DEBUG, 0, QString("eveDataCollector: successfully loaded plugin %1").arg(fullname));
+		    	else {
+					if (fileWriter->getVersionString() == eveParameter::getParameter("savepluginversion"))
+						sman->sendError(DEBUG, 0, QString("eveDataCollector: successfully loaded plugin %1").arg(fullname));
+					else {
+						sman->sendError(ERROR, 0, QString("eveDataCollector: plugin %1 version error, version is %2 should be %3").arg(
+								fullname).arg(fileWriter->getVersionString()).arg(eveParameter::getParameter("savepluginversion")));
+						fileWriter = NULL;
+					}
+
+		    	}
 		    }
 		    else {
-				sman->sendError(ERROR, 0, QString("eveDataCollector: Load Error while loading plugin %1").arg(fullname));
+				sman->sendError(FATAL, 0, QString("eveDataCollector: Load Error while loading plugin %1").arg(fullname));
 		    }
 	}
 

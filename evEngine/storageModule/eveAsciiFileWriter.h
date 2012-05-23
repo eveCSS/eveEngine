@@ -15,6 +15,7 @@
 #include <QMultiHash>
 #include <QFile>
 #include "eveFileWriter.h"
+#include "eveParameter.h"
 
 class eveAsciiFileWriter: public eveFileWriter {
 public:
@@ -23,6 +24,8 @@ public:
 
 	int init(QString, QString, QHash<QString, QString>&);
 //	int setCols(int, QString, QString, QStringList);
+	// this is not a real plugin
+	QString getVersionString(){return eveParameter::getParameter("savepluginversion");};
 	int addColumn(eveDevInfoMessage* message);
 	int open();
 	int addData(int, eveDataMessage* );
