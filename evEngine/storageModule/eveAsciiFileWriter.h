@@ -35,26 +35,12 @@ public:
 	QString errorText() {return errorString;};
 
 private:
-	class columnInfo {
-		public:
-		columnInfo(QString, QString, QStringList);
-		QString id;
-		QString name;
-		QStringList info;
-	};
-	void nextPosition();
-	QHash<QString, columnInfo* > colHash;
 	QString errorString;
-	int setId;
-	int currentIndex;
 	bool initDone;
 	bool fileOpen;
 	QString fileName;
 	QString fileFormat;
-	QMultiHash<QString, QString> metaData;
 	QFile *filePtr;
-	QStringList colList;
-	QHash<QString, QString> lineHash;
 };
 
 #endif /* EVEASCIIFILEWRITER_H_ */

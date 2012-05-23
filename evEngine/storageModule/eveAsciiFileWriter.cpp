@@ -12,7 +12,6 @@
 eveAsciiFileWriter::eveAsciiFileWriter() {
 	initDone = false;
 	fileOpen = false;
-	currentIndex = -1;
 	// TODO Auto-generated constructor stub
 
 }
@@ -40,12 +39,11 @@ int eveAsciiFileWriter::init(QString filename, QString format, QHash<QString, QS
 	fileName = filename;
 	fileFormat = format;
 	errorString.clear();
-	metaData.clear();
-	return SUCCESS;
+	return DEBUG;
 }
 
 int eveAsciiFileWriter::setXMLData(QByteArray* xmldata){
-	int retval = SUCCESS;
+	int retval = DEBUG;
 	if (initDone) {
 		QString xmlfilename = fileName + ".scml";
 		QFile* xmlfilePtr = new QFile(xmlfilename);
@@ -75,25 +73,24 @@ int eveAsciiFileWriter::setXMLData(QByteArray* xmldata){
  */
 int eveAsciiFileWriter::addColumn(eveDevInfoMessage* message){
 
-	if (setId != message->getChainId()) {
-		errorString=QString("AsciiFileWriter does not support multiple Data Sets, give each chain a different Filename!");
-		return ERROR;
-	}
 	if (!initDone) {
 		errorString = "AsciiFileWriter not initialized";
 		return ERROR;
 	}
-
-	if (!colHash.contains(message->getXmlId())){
-		columnInfo* colinfo = new columnInfo(message->getXmlId(), message->getName(), *(message->getText()));
-		colHash.insert(message->getXmlId(), colinfo);
-	}
-	else {
-		errorString=QString("device already in column list");
+	errorString.clear();
+	if (!fileOpen) open();
+	if (!fileOpen) {
+		errorString += " unable to open file";
 		return ERROR;
 	}
-	errorString.clear();
-	return SUCCESS;
+
+    QTextStream out(filePtr);
+    out << "Device Information; ";
+	out << "ChainId: " << message->getChainId() << "; XML-ID: " << message->getXmlId() << "; Name: " << message->getName() << "; ";
+    foreach (QString info, *(message->getText())) out << info << " ";
+    out << "\n";
+
+	return DEBUG;
 }
 
 /**
@@ -102,10 +99,15 @@ int eveAsciiFileWriter::addColumn(eveDevInfoMessage* message){
  * @return			error severity
  */
 int eveAsciiFileWriter::open(){
-//	if (setId != setID) {
-//		errorString=QString("AsciiFileWriter does not support multiple Data Sets, give each chain a different Filename!");
-//		return ERROR;
-//	}
+
+	if (!initDone) {
+		errorString = "AsciiFileWriter not initialized";
+		return ERROR;
+	}
+	if (fileOpen){
+		errorString = QString("AsciiFileWriter: File %1 has already been opened").arg(fileName);
+		return DEBUG;
+	}
 	filePtr = new QFile(fileName);
 	if (!filePtr->open(QIODevice::ReadWrite)){
 		errorString = QString("AsciiFileWriter: error opening File %1").arg(fileName);
@@ -113,19 +115,8 @@ int eveAsciiFileWriter::open(){
 	}
 	fileOpen = true;
     QTextStream out(filePtr);
-    out << "Column Separator: ; \n<<<DATA>>>\n PosCnt ";
-    colList = colHash.keys();
-    // TODO make sure colinfo does not contain any "
-    foreach (QString id, colList){
-    	columnInfo* colinfo = colHash.value(id);
-    	out << "; \"" << colinfo->name << " (" << colinfo->id << " / " << colinfo->info.join(", ")  << ")\"";
-    	colHash.remove(id);
-    	delete colinfo;
-    }
-    out << "\n";
-    lineHash.clear();
-	errorString.clear();
-	return SUCCESS;
+    out << "Column Separator: \";\" \n";
+	return DEBUG;
 }
 
 /**
@@ -135,68 +126,59 @@ int eveAsciiFileWriter::open(){
  * @return			error severity
  */
 int eveAsciiFileWriter::addData(int setID, eveDataMessage* data){
-	if (setId != setID) {
-		errorString=QString("AsciiFileWriter does not support multiple Data Sets, give each chain a different Filename!");
+
+	if (!initDone) {
+		errorString = "AsciiFileWriter not initialized";
 		return ERROR;
 	}
+	errorString.clear();
+	if (!fileOpen) open();
 	if (!fileOpen) {
-		errorString = "AsciiFileWriter unable to add data, file not open";
+		errorString += " unable to open file";
 		return ERROR;
 	}
+
 	eveVariant tempData = data->toVariant();
 
-	if (data->getPositionCount() > currentIndex){
-		currentIndex = data->getPositionCount();
-		nextPosition();
-	}
-	else if (data->getPositionCount() < currentIndex){
-		errorString = "AsciiFileWriter: invalid positionCounter";
-		return ERROR;
-	}
-	// TODO make sure data does not contain "
-	if (tempData.getType() == eveSTRING)
-		lineHash.insert(data->getXmlId(), QString("\"%1\"").arg(tempData.toString()));
-	else
-		lineHash.insert(data->getXmlId(), data->toVariant().toString());
-
-	errorString.clear();
-	return SUCCESS;
-}
-
-/**
- * @brief	new position has been reached (increment the row-count)
- */
-void eveAsciiFileWriter::nextPosition(){
-
     QTextStream out(filePtr);
-    out << currentIndex ;
-    foreach (QString id, colList){
-    	if (lineHash.contains(id)){
-    		out << "; " << lineHash.value(id) ;
-    	}
-    	else {
-    		out << " ; " ;
-    	}
-    }
-    out << "\n" ;
+    out << "Data; ";
+	out << "ChainId: " << data->getChainId() << "; XML-ID: " << data->getXmlId() << "; ";
 
-    lineHash.clear();
+	if (data->getChainId() == 0)
+		out << "MSecsSinceStart: " << data->getMSecsSinceStart() << "; ";
+	else
+		out << "PositionCount: " << data->getPositionCount() << "; ";
+
+	if (tempData.getType() == eveSTRING)
+		out << QString("\"%1\"").arg(tempData.toString()) << "\n";
+	else
+		out << tempData.toString() << "\n";
+
+	return DEBUG;
 }
 
 /**
  * @brief add metadata (e.g. comment) to be written at end of file
  */
 int eveAsciiFileWriter::addMetaData(int setID, QString attribute, QString stringVal){
-	if (setId != setID) {
-		errorString=QString("AsciiFileWriter does not support multiple Data Sets. Each chain needs a different Filename!");
+
+	if (!initDone) {
+		errorString = "AsciiFileWriter not initialized";
 		return ERROR;
 	}
-	else {
-		if ((attribute.length() > 0) && (stringVal.length() > 0))
-			metaData.insert(attribute, stringVal);
-	}
 	errorString.clear();
-	return SUCCESS;
+	if (!fileOpen) open();
+	if (!fileOpen) {
+		errorString += " unable to open file";
+		return ERROR;
+	}
+
+    QTextStream out(filePtr);
+    out << "Metadata; ";
+	out << "ChainId: " << setID << "; ";
+	out << attribute << ":" << stringVal << "\n";
+
+	return DEBUG;
 }
 
 /**
@@ -205,23 +187,13 @@ int eveAsciiFileWriter::addMetaData(int setID, QString attribute, QString string
  * @return			error severity
  */
 int eveAsciiFileWriter::close() {
+
+	errorString.clear();
 	if (fileOpen) {
-	    QTextStream out(filePtr);
-		QList<QString> keyList = metaData.uniqueKeys();
-		foreach(QString key, keyList){
-			while (metaData.count(key) > 0)
-				out << "\n" << key << ": " << metaData.take(key) << "\n";
-		}
 		filePtr->close();
 		fileOpen = false;
+		errorString = QString("AsciiFileWriter: closed File %1").arg(fileName);
 	}
-	errorString.clear();
-	return SUCCESS;
-}
-
-eveAsciiFileWriter::columnInfo::columnInfo(QString colid, QString colname, QStringList colinfo){
-	id = colid;
-	name = colname;
-	info = colinfo;
+	return DEBUG;
 }
 
