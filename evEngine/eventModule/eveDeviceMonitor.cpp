@@ -24,7 +24,7 @@ eveDeviceMonitor::eveDeviceMonitor(eveEventManager* eventManager, eveEventProper
 			if (event->getDevCommand()->getTrans()->getTransType() == eveTRANS_CA){
 				monitorTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)event->getDevCommand()->getTrans());
 				if (monitorTrans != NULL) {
-					connect(monitorTrans, SIGNAL(valueChanged(eveVariant*)), this, SLOT(valueChange(eveVariant*)));
+					connect(monitorTrans, SIGNAL(valueChanged(eveDataMessage*)), this, SLOT(valueChange(eveDataMessage*)));
 
 					if (event->getCompareOperator() == "eq")
 						compare = &eveDeviceMonitor::operatorEQ;
@@ -49,14 +49,37 @@ eveDeviceMonitor::eveDeviceMonitor(eveEventManager* eventManager, eveEventProper
 
 }
 
+eveDeviceMonitor::eveDeviceMonitor(eveEventManager* eventManager, eveMonitorRegisterMessage* message) : eveSMBaseDevice(eventManager){
+
+	manager = eventManager;
+	name = message->getName();
+	xmlId = message->getXMLId();
+	destination = message->getStorageChannel();
+
+	if ((message->getTransport() != NULL) && (message->getTransport()->getTransType() == eveTRANS_CA)) {
+		monitorTrans = new eveCaTransport(this, xmlId, name, message->getTransport());
+		connect(monitorTrans, SIGNAL(valueChanged(eveDataMessage*)), this, SLOT(saveValue(eveDataMessage*)));
+	}
+	if (monitorTrans == NULL)
+		manager->sendError(ERROR, 0, QString("unable to create a monitor transport for %1").arg(name));
+	else {
+		int status = monitorTrans->monitorTrans();
+	}
+	eveError::log(DEBUG, "eveDeviceMonitor: new Monitor", EVEMESSAGEFACILITY_EVENT);
+}
+
 eveDeviceMonitor::~eveDeviceMonitor() {
 	// TODO Auto-generated destructor stub
 	if (monitorTrans != NULL) delete monitorTrans;
 }
 
 // slot, called by underlying transport for every value change
-void eveDeviceMonitor::valueChange(eveVariant* newValue) {
+void eveDeviceMonitor::valueChange(eveDataMessage* newdata) {
 
+	if (newdata == NULL) return;
+
+	eveVariant* newValue = new eveVariant(newdata->toVariant());
+	delete newdata;
 
 	bool newState = (this->*compare)(*newValue);
 
@@ -83,6 +106,29 @@ void eveDeviceMonitor::valueChange(eveVariant* newValue) {
 		manager->sendError(ERROR,0,QString("C++ Exception %1 eveDeviceMonitor::valueChange").arg(e.what()));
 	}
 	if (newValue != NULL) delete newValue;
+}
+
+// slot, called by underlying transport for every value change
+void eveDeviceMonitor::saveValue(eveDataMessage* newdata) {
+
+	// TODO remove this debug stuff
+	eveVariant* newValue = new eveVariant(newdata->toVariant());
+	if (newValue->canConvert(QVariant::String)){
+		manager->sendError(DEBUG, 0, QString("valueChange monitor, newValue: %1").arg(newValue->toString()));
+	}
+	if (newdata != NULL){
+		newdata->setDestination(destination);
+		newdata->setDataMod(DMTdeviceData);
+		manager->addMessage(newdata);
+		if ((newdata->getDataStatus().getSeverity() != 0) || (newdata->getDataStatus().getAlarmCondition() != 0)){
+			int status = MINOR;
+			quint8 dstatus = newdata->getDataStatus().getAlarmCondition();
+			if (dstatus > 1) status = ERROR;
+			manager->sendError(status, 0, QString("device: %1 (%2) Severity: %3 Alarm Condition: %4").arg(
+					newdata->getXmlId()).arg(newdata->getName()).arg(newdata->getDataStatus().getSeverityString()).arg(newdata->getDataStatus().getAlarmString()));
+		}
+		manager->sendError(DEBUG, 0, QString("valueChange monitor send to: %1").arg(destination));
+	}
 }
 
 void eveDeviceMonitor::sendError(int severity, int facility, int errorType, QString message){

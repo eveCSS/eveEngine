@@ -34,6 +34,7 @@ private:
 	QHash<quint64, eveEventProperty* > scheduleHash;
 	QHash<QString, eveEventProperty* > detectorHash;
 	QHash<eveEventProperty*, eveDeviceMonitor* > monitorHash;
+	QList<eveDeviceMonitor*> moniOnlyList;
 
 };
 

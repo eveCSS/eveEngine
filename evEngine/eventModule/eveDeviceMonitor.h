@@ -12,6 +12,7 @@
 #include "eveEventProperty.h"
 #include "eveBaseTransport.h"
 #include "eveSMBaseDevice.h"
+#include "eveMonitorRegisterMessage.h"
 
 class eveEventManager;
 /*
@@ -23,11 +24,13 @@ class eveDeviceMonitor : public eveSMBaseDevice {
 
 public:
 	eveDeviceMonitor(eveEventManager*, eveEventProperty*);
+	eveDeviceMonitor(eveEventManager*, eveMonitorRegisterMessage*);
 	virtual ~eveDeviceMonitor();
 	void sendError(int, int, int, QString);
 
 public slots:
-	void valueChange(eveVariant*);
+	void valueChange(eveDataMessage*);
+	void saveValue(eveDataMessage*);
 
 private:
 	bool operatorEQ(eveVariant value){return (value == limit);};
@@ -39,6 +42,8 @@ private:
 	eveEventManager* manager;
 	eveVariant limit;
 	bool(eveDeviceMonitor::* compare)(eveVariant);
+	QString xmlId;
+	int destination;
 };
 
 #endif /* EVEDEVICEMONITOR_H_ */

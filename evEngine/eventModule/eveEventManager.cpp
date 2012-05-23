@@ -29,6 +29,13 @@ void eveEventManager::handleMessage(eveMessage *message){
 		case EVEMESSAGETYPE_EVENTREGISTER:
 			registerEvent((eveEventRegisterMessage*)message);
 			break;
+		case EVEMESSAGETYPE_MONITORREGISTER:
+			if (!shutdownPending){
+				sendError(DEBUG, 0, "registering monitor");
+				eveDeviceMonitor* devMon = new eveDeviceMonitor(this, (eveMonitorRegisterMessage*)message);
+				moniOnlyList.append(devMon);
+			}
+			break;
 		case EVEMESSAGETYPE_CHAINSTATUS:
 		{
 			int chainId = ((eveChainStatusMessage*)message)->getChainId();
@@ -155,6 +162,10 @@ void eveEventManager::shutdown(){
 			delete event;
 		}
 		scheduleHash.clear();
+		foreach (eveDeviceMonitor* monitor, moniOnlyList){
+			delete monitor;
+		}
+		moniOnlyList.clear();
 		foreach (eveEventProperty* monevent, monitorHash.keys()){
 			delete monitorHash.take(monevent);
 			delete monevent;
