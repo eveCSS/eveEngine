@@ -52,8 +52,7 @@ eveDataMessage* eveCounter::getData(){
  */
 int eveCounter::readData(bool queue){
 
-	eveDataStatus status = {0,0,0};
-	newData = new eveDataMessage(xmlId, name, status, DMTunmodified, eveTime::getCurrent(), QVector<int>(1,currentCount));
+	newData = new eveDataMessage(xmlId, name, eveDataStatus(), DMTunmodified, eveTime::getCurrent(), QVector<int>(1,currentCount));
 	emit done(0);
 	return 0;
 }

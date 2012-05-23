@@ -593,15 +593,8 @@ void eveCaTransport::eveCaTransportMonitorCB(struct event_handler_args arg){
 	eveCaTransport *pv = (eveCaTransport *) ca_puser(arg.chid);
 	epicsAlarmSeverity severity = (epicsAlarmSeverity)((struct dbr_time_short *)arg.dbr)->severity;
 
-	if ((arg.status == ECA_NORMAL)
-					&& (arg.count == pv->getElemCnt())
-					&& (arg.type == pv->getRequestType())
-					&& (severity != epicsSevInvalid))
-	{
-		eveDataMessage* newdata = getDataMessage(arg);
-		eveVariant* newValue = new eveVariant(newdata->toVariant());
-		delete newdata;
-		emit pv->valueChanged(newValue);
+	if ((arg.count == pv->getElemCnt()) && (arg.type == pv->getRequestType())) {
+		emit pv->valueChanged(getDataMessage(arg));
 	}
 }
 
@@ -613,10 +606,7 @@ eveDataMessage* eveCaTransport::getDataMessage(struct event_handler_args arg){
 	QString name = pv->getName();
 	QString xmlId = pv->getXmlId();
 	epicsTimeStamp ets = ((struct dbr_time_short *)arg.dbr)->stamp;
-	eveDataStatus dStatus;
-	dStatus.condition = (quint8) status;
-	dStatus.severity = (quint8) severity;
-	dStatus.acqStatus = 1;
+	eveDataStatus dStatus((quint8) severity, (quint8) status, (quint16) 0);
 	eveDataModType dataMod = DMTunmodified;
 	epicsTime etime = ets;
 	eveDataMessage *newdata = NULL;

@@ -648,7 +648,6 @@ void eveScanModule::stgNextPos() {
 
 				if (manualTrigger) manager->cancelRequest(triggerRid);
 
-				sendNextPos();
 				foreach (eveSMAxis *axis, *axisList){
 					++signalCounter;
 					sendError(INFO, 0, QString("Moving axis %1").arg(axis->getName()));
@@ -670,6 +669,7 @@ void eveScanModule::stgNextPos() {
 				if(!axis->isDone()) allDone = false;
 			}
 			if (allDone){
+				sendNextPos();
 				++ currentPosition;
 				foreach (eveSMAxis *axis, *axisList){
 					eveDataMessage* posMesg = axis->getPositionMessage();
@@ -827,7 +827,8 @@ void eveScanModule::execStage() {
 		}
 		if (!myStatus.isPaused())(this->*stageHash.value(currentStage))();
 	}
-	else if ((currentStage == eveStgINIT) || (currentStage == eveStgREADPOS) || (currentStage == eveStgGOTOSTART)){
+	else if ((currentStage == eveStgINIT) || (currentStage == eveStgREADPOS) ||
+			(currentStage == eveStgGOTOSTART) || (currentStage == eveStgFINISH)){
 		// the stages which usually do not proceed if they are ready and may have been called from parent
 		if (currentStageReady){
 			currentStage = (stageT)(((int) currentStage)+1);

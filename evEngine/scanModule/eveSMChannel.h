@@ -33,17 +33,16 @@ class eveSMChannel : public eveSMBaseDevice {
 	Q_OBJECT
 
 public:
-	eveSMChannel(eveScanModule*, eveDetectorChannel*, QHash<QString, QString>, QList<eveEventProperty* >*);
+	eveSMChannel(eveScanModule*, eveDetectorChannel*, QHash<QString, QString>, QList<eveEventProperty* >*, eveSMChannel*);
 	virtual ~eveSMChannel();
 	void init();
-//	void trigger(bool);
 	void triggerRead(bool);
 	void stop(bool);
 	bool isDone(){return ready;};
 	bool isOK(){return channelOK;};
 	bool hasConfirmTrigger(){return confirmTrigger;};
 	QString getUnit(){return unit;};
-	eveDevInfoMessage* getDeviceInfo();
+	virtual eveDevInfoMessage* getDeviceInfo();
 	eveDataMessage* getValueMessage();
 	void sendError(int, int, int, QString);
 	void addPositioner(eveCalc* pos){positionerList.append(pos);};
@@ -53,20 +52,23 @@ public:
 
 public slots:
 	void transportReady(int);
+	void normalizeChannelReady();
 	void newEvent(eveEventProperty*);
 
 signals:
-	void channelDone();
+	virtual void channelDone();
 
 private:
-	void initAll();
+	virtual void signalReady();
 	void sendError(int, int, QString);
+	bool ready;
+	void initAll();
 	void read(bool);
-	void signalReady();
+	bool retrieveData();
+	eveSMChannel* normalizeChannel;
 	bool timeoutShort;
 	bool isTimer;
 	bool redo;
-	bool ready;
 	bool haveValue;
 	bool haveStop;
 	bool haveTrigger;

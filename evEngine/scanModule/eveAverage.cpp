@@ -166,9 +166,9 @@ eveVariant eveAverage::getResult(){
 
 eveDataMessage* eveAverage::getResultMessage(){
 	QVector<double> data;
-	eveDataStatus dstatus = {0,0,0};
+	eveDataStatus dstatus(0,0,0);
 	// TODO do we need an additional status for averageSuccess, averageAbort
-	if (attempt >= maxAttempt) dstatus.acqStatus = (eveAcqStatus)ACQSTATmaxattempt;
+	if (attempt >= maxAttempt) dstatus.setAcquisitionStatus(ACQSTATmaxattempt);
 	data.append(getResult().toDouble());
 	return new eveDataMessage(QString(), QString(), dstatus, DMTunmodified, eveTime(), data);
 }

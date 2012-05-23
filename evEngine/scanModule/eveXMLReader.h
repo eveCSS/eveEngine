@@ -54,13 +54,14 @@ public:
 	QHash<QString, QString> getChainPlugin(int, QString);
 	QList<QHash<QString, QString>* >* getPositionerPluginList(int, int);
 	QList<eveMathConfig*>* getFilteredMathConfigs(int);
+	QList<eveDevice *>* getMonitorDeviceList();
 
 private:
 	void getMathConfigFromPlot(int, int, QList<eveMathConfig*>*);
 	void sendError(int, int,  QString);
 	void createDetectorDefinition(QDomNode);
 	void createMotorDefinition(QDomNode);
-	void createDeviceDefinition(QDomNode);
+	void createDeviceDefinition(QDomElement);
 	//void createEventDefinition(QDomNode);
 	int getIntValueOfTag(int, int, QString);
 	int repeatCount;
@@ -81,6 +82,7 @@ private:
 	QHash<int, int> rootSMHash; // has id of the root sm in chain
 	QList<eveEventProperty*>* getEventList(QDomElement);
 	//eveEventTypeT getEventType(QString);
+	QStringList monitorList;
 
 };
 

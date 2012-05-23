@@ -13,12 +13,15 @@
 #include "eveRequestManager.h"
 #include "eveMessageHub.h"
 #include "eveError.h"
+#include "eveDevice.h"
 #include "eveXMLReader.h"
 #include "eveScanManager.h"
 #include "eveScanThread.h"
 #include "eveStorageThread.h"
 #include "eveMathThread.h"
 #include "eveParameter.h"
+#include "eveMonitorRegisterMessage.h"
+#include "eveStartTime.h"
 
 /**
  * \brief init and register with messageHub
@@ -212,6 +215,7 @@ bool eveManager::loadPlayListEntry(){
  */
 bool eveManager::createSMs(QByteArray xmldata, bool isRepeat) {
 
+	eveStartTime::setStartTime(QDateTime::currentDateTime());
 	eveXMLReader* scmlParser = new eveXMLReader(this);
     if (scmlParser->read(xmldata)) {
     	sendError(INFO,0,"eveManager::createSMs: successfully parsed XML");
@@ -227,8 +231,9 @@ bool eveManager::createSMs(QByteArray xmldata, bool isRepeat) {
 
 	QStringList fileNameList;
 	scanThreadList.clear();
+	int storageChannelId = -1;
 	foreach (int chainId, scmlParser->getChainIdList()){
-		int storageChannelId = 0;
+		storageChannelId = 0;
 		// we start a storage thread, if we have a savefilename and the name is not already on the list
 		// for now: each filename has its storage thread
 		QString value = scmlParser->getChainString(chainId, "savefilename");
@@ -251,6 +256,14 @@ bool eveManager::createSMs(QByteArray xmldata, bool isRepeat) {
 		scanThreadList.append(chainThread);
 		QThread *mathThread = new eveMathThread(chainId, scmlParser->getFilteredMathConfigs(chainId));
 		mathThread->start();
+	}
+	// create monitors
+	if (storageChannelId > 0){
+		QList<eveDevice *>* monitors = scmlParser->getMonitorDeviceList();
+		foreach (eveDevice * monitorOption, *monitors){
+			addMessage(new eveMonitorRegisterMessage(monitorOption, storageChannelId));
+		}
+		delete monitors;
 	}
 	delete scmlParser;
 

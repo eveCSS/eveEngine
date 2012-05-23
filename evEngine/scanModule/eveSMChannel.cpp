@@ -19,7 +19,7 @@
  * @param definition corresponding detectorchannel definition
  * @return
  */
-eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveDetectorChannel* definition, QHash<QString, QString> parameter, QList<eveEventProperty* >* eventlist)  :
+eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveDetectorChannel* definition, QHash<QString, QString> parameter, QList<eveEventProperty* >* eventlist, eveSMChannel* normalizeWith)  :
 eveSMBaseDevice(scanmodule) {
 
 	scanModule = scanmodule;
@@ -45,6 +45,7 @@ eveSMBaseDevice(scanmodule) {
 	isTimer = false;
 	// true if read timeout is <= 10s
 	timeoutShort = true;
+	normalizeChannel = normalizeWith;
 
 	if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
       eveTransportDef* transdef = (eveTransportDef*)definition->getValueCmd()->getTrans();
@@ -141,6 +142,10 @@ eveSMBaseDevice(scanmodule) {
 eveSMChannel::~eveSMChannel() {
 	try
 	{
+		if (normalizeChannel){
+			delete normalizeChannel;
+			normalizeChannel = NULL;
+		}
 		if (haveValue) delete valueTrans;
 		if (haveStop) delete stopTrans;
 		if (haveTrigger) delete triggerTrans;
@@ -168,6 +173,11 @@ void eveSMChannel::init() {
 	signalCounter = 0;
 	ready = false;
 
+	if (normalizeChannel){
+	    connect (normalizeChannel, SIGNAL(channelDone()), this, SLOT(normalizeChannelReady()), Qt::QueuedConnection);
+		normalizeChannel->init();
+		++signalCounter;
+	}
 	if (haveValue){
 		connect (valueTrans, SIGNAL(done(int)), this, SLOT(transportReady(int)), Qt::QueuedConnection);
 		++signalCounter;
@@ -221,6 +231,11 @@ void eveSMChannel::initAll() {
 		haveUnit=false;
 		sendError(ERROR, 0, "Unable to connect Unit Transport");
 	}
+	if ((normalizeChannel) && (!normalizeChannel->isOK())){
+		sendError(ERROR, 0, QString("Unable to use channel %1 for normalization").arg(normalizeChannel->getName()));
+		delete normalizeChannel;
+		normalizeChannel = NULL;
+	}
 	//TODO check if all are done
 	if (haveValue) channelOK = true;
 }
@@ -263,59 +278,63 @@ void eveSMChannel::transportReady(int status) {
 		channelStatus = eveCHANNELIDLE;
 		signalReady();
 	}
-	else if (channelStatus == eveCHANNELTRIGGER){
-		// trigger is ready, we do nothing
-		signalReady();
-	}
+//	else if (channelStatus == eveCHANNELTRIGGER){
+//		// trigger is ready, we do nothing
+//		signalReady();
+//	}
 	else if (channelStatus == eveCHANNELTRIGGERREAD){
-		// trigger is ready, we call read
-		if (status == 0) {
-			read(false);
-		}
-		else {
-			sendError(ERROR, 0, "error while triggering");
-			signalReady();
+		--signalCounter;
+		if (signalCounter <= 0) {
+			// trigger is ready, we call read
+			if (status == 0) {
+				read(false);
+			}
+			else {
+				sendError(ERROR, 0, "trigger error");
+				signalReady();
+			}
 		}
 	}
 	else if (channelStatus == eveCHANNELREAD){
-		if (curValue != NULL) delete curValue;
-		curValue = valueTrans->getData();
+		--signalCounter;
+		if ((signalCounter <= 0) && retrieveData()) {
 
-		channelStatus = eveCHANNELIDLE;
+			channelStatus = eveCHANNELIDLE;
 
-		if (redo){
-			// for now we repeat from start
-			// if needed we could just repeat the last detector value
-			valueCalc->reset();
-			triggerRead(false);
-		}
-		else if (curValue == NULL){
-			// message and bail out
-			sendError(ERROR, 0, "unable to read current value");
-			signalReady();
-		}
-		else if (valueCalc){
-			// we need to do average measurements
-			valueCalc->addValue(curValue->toVariant());
-			sendError(DEBUG, 0, QString("Channel %1, Raw Value %2").arg(curValue->getXmlId()).arg(curValue->toVariant().toDouble()));
-			if(valueCalc->isDone()){
-				// ready with average measurements
-				delete curValue;
-				curValue = valueCalc->getResultMessage();
+			if (redo){
+				// for now we repeat from start
+				// if needed we could just repeat the last detector value
 				valueCalc->reset();
+				triggerRead(false);
+			}
+			else if (curValue == NULL){
+				// message and bail out
+				sendError(ERROR, 0, "unable to read current value");
+				signalReady();
+			}
+			else if (valueCalc){
+				// we need to do average measurements
+				valueCalc->addValue(curValue->toVariant());
+				sendError(DEBUG, 0, QString("Channel %1, Raw Value %2").arg(curValue->getXmlId()).arg(curValue->toVariant().toDouble()));
+				if(valueCalc->isDone()){
+					// ready with average measurements
+					delete curValue;
+					curValue = valueCalc->getResultMessage();
+					valueCalc->reset();
+					curValue->setXmlId(xmlId);
+					curValue->setName(name);
+					signalReady();
+					sendError(DEBUG, 0, QString("Channel %1, Average Value %2").arg(curValue->getXmlId()).arg(curValue->toVariant().toDouble()));
+				}
+				else
+					triggerRead(false);
+			}
+			else {
 				curValue->setXmlId(xmlId);
 				curValue->setName(name);
+				currentValue = curValue->toVariant();
 				signalReady();
-				sendError(DEBUG, 0, QString("Channel %1, Average Value %2").arg(curValue->getXmlId()).arg(curValue->toVariant().toDouble()));
 			}
-			else
-				triggerRead(false);
-		}
-		else {
-			curValue->setXmlId(xmlId);
-			curValue->setName(name);
-			currentValue = curValue->toVariant();
-			signalReady();
 		}
 	}
 }
@@ -372,6 +391,11 @@ void eveSMChannel::triggerRead(bool queue) {
 	ready = false;
 	if (channelOK && (channelStatus == eveCHANNELIDLE)) {
 		redo = false;
+		signalCounter = 1;
+		if (normalizeChannel) {
+			++signalCounter;
+			normalizeChannel->triggerRead(queue);
+		}
 		if (haveTrigger){
 			channelStatus = eveCHANNELTRIGGERREAD;
 			if (triggerTrans->writeData(triggerValue, queue)) {
@@ -442,11 +466,63 @@ eveDataMessage* eveSMChannel::getValueMessage(){
 
 /**
  *
+ * @return true if NormalizeChannel is ready
+ */
+bool eveSMChannel::retrieveData(){
+
+	if ((normalizeChannel) && (!normalizeChannel->isDone())) return false;
+
+	if (curValue != NULL) delete curValue;
+	curValue = valueTrans->getData();
+	if (curValue == NULL) return true;
+
+	if (normalizeChannel){
+		bool status = true;
+		eveDataMessage* normChannelMesg = normalizeChannel->getValueMessage();
+		if (normChannelMesg == NULL){
+			sendError(ERROR,0,"unable to retrieve value of normalized Channel");
+			return true;
+		}
+		else if ((normChannelMesg->getDataType() != curValue->getDataType()) ||
+				!(normChannelMesg->isFloat() || normChannelMesg->isInteger())){
+			sendError(ERROR,0,"unable to do normalization with current datatype");
+		}
+		else if (normChannelMesg->getArraySize() == curValue->getArraySize()){
+			QVector<double> current = curValue->getDoubleArray();
+			QVector<double> normalized = normChannelMesg->getDoubleArray();
+			QVector<double> result(curValue->getArraySize());
+			for(int i=0; i<curValue->getArraySize(); ++i){
+				if (normalized[i] != 0.0){
+					result[i]=current[i] / normalized[i];
+				}
+				else {
+					sendError(ERROR,0,"value of normalization channel is zero");
+					status = false;
+					break;
+				}
+			}
+			if (status){
+				eveDataMessage* normalizedValue = new eveDataMessage(curValue->getXmlId(), curValue->getName(), curValue->getDataStatus(), DMTnormalized, curValue->getDataTimeStamp(), result);
+				normalizedValue->setAuxString(normalizeChannel->getXmlId());
+				delete curValue;
+				curValue = normalizedValue;
+			}
+		}
+		delete normChannelMesg;
+	}
+	return true;
+}
+
+/**
+ *
  * @return pointer to a message with all info about this channel
  */
 eveDevInfoMessage* eveSMChannel::getDeviceInfo(){
 
 	QStringList* sl;
+	QString auxInfo = "";
+	eveDataModType dataMod = DMTunmodified;
+
 	if (haveValue)
 		sl = valueTrans->getInfo();
 	else
@@ -465,7 +541,13 @@ eveDevInfoMessage* eveSMChannel::getDeviceInfo(){
 		sl->append(QString("maxDeviation:%1").arg(maxDeviation));
 		sl->append(QString("minimum:%1").arg(minimum));
 	}
-	return new eveDevInfoMessage(xmlId, name, sl);
+	if (normalizeChannel){
+		sl->append(QString("NormalizeChannelID:%1").arg(normalizeChannel->getXmlId()));
+		dataMod = DMTnormalized;
+		auxInfo = normalizeChannel->getXmlId();
+	}
+
+	return new eveDevInfoMessage(xmlId, name, sl, dataMod, auxInfo);
 }
 
 void eveSMChannel::loadPositioner(int pc){
@@ -492,6 +574,11 @@ void eveSMChannel::setTimer(QDateTime start) {
 	if (isTimer){
 		((eveTimer*)valueTrans)->setStartTime(start);
 	}
+}
+
+void eveSMChannel::normalizeChannelReady(){
+	sendError(DEBUG, 0, "received normalize channel ready");
+	emit transportReady(0);
 }
 
 /**

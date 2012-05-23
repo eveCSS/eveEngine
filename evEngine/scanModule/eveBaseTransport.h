@@ -36,7 +36,7 @@ public:
 
 signals:
 	void done(int);
-	void valueChanged(eveVariant*);
+	void valueChanged(eveDataMessage*);
 
 protected:
 	void setData(eveDataMessage *data){newData=data;};

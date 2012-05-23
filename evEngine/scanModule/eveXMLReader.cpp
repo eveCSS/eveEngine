@@ -17,6 +17,7 @@
 #include "evePosCalc.h"
 #include "eveError.h"
 #include "eveParameter.h"
+#include "eveSMChannel.h"
 
 #define EVE_XML_VERSION        1
 #define EVE_XML_REVISION       0
@@ -124,6 +125,15 @@ bool eveXMLReader::read(QByteArray xmldata)
 			}
 			domElem = domElem.nextSiblingElement("chain");
 		}
+		// get the list of ids which should be monitored
+		domElem = scanElem.firstChildElement("monitoroptions");
+		if (!domElem.isNull()) {
+			QDomElement domId = domElem.firstChildElement("id");
+			while (!domId.isNull()) {
+				if (domId.text().length() > 0) monitorList.append(domId.text());
+				domId = domId.nextSiblingElement("id");
+			}
+		}
     }
 
     QDomElement domElem = root.firstChildElement("detectors");
@@ -136,13 +146,13 @@ bool eveXMLReader::read(QByteArray xmldata)
 	for (unsigned int i=0; i < motorNodeList.length(); ++i) createMotorDefinition(motorNodeList.item(i));
 
 	domElem = root.firstChildElement("devices");
-	QDomNodeList deviceNodeList = domElem.childNodes();
-	for (unsigned int i=0; i < deviceNodeList.length(); ++i) createDeviceDefinition(deviceNodeList.item(i));
-
-//    domElem = root.firstChildElement("events");
-//    QDomNodeList eventNodeList = domElem.childNodes();
-//    for (unsigned int i=0; i < eventNodeList.length(); ++i) createEventDefinition(eventNodeList.item(i));
-
+	if (!domElem.isNull()) {
+		QDomElement domOption = domElem.firstChildElement("device");
+		while (!domOption.isNull()) {
+			createDeviceDefinition(domOption);
+			domOption = domOption.nextSiblingElement("device");
+		}
+	}
 	return true;
 }
 
@@ -515,7 +525,7 @@ eveDeviceCommand * eveXMLReader::createDeviceCommand(QDomNode node){
 /** \brief create an option or a device from XML
  * \param node the <option> or <device> DomNode
  */
-void eveXMLReader::createDeviceDefinition(QDomNode device){
+void eveXMLReader::createDeviceDefinition(QDomElement device){
 
 	QString name;
 	QString id;
@@ -536,6 +546,7 @@ void eveXMLReader::createDeviceDefinition(QDomNode device){
     	sendError(ERROR,0,"eveXMLReader::createDevice: empty <id> Tag");
     	return;
     }
+	if (device.hasAttribute("monitor") && (device.attribute("monitor").toLower() == "true")) monitorList.append(id);
     domElement = device.firstChildElement("name");
     if (!domElement.isNull()) name = domElement.text();
 
@@ -561,70 +572,9 @@ void eveXMLReader::createDeviceDefinition(QDomNode device){
 		return;
 	}
 	deviceList.insert(id, new eveDevice(unit, valueTrans, name, id));
+
 }
 
-/** \brief parse XML for event definitions
- * \param node the <event> DomNode
- */
-/*
-void eveXMLReader::createEventDefinition(QDomNode event){
-
-	QString name;
-	QString id;
-	eveDeviceCommand* valueTrans;
-	eveEventTypeT eventType;
-
-	if (event.isNull()){
-		sendError(INFO,0,"eveXMLReader::createEventDefinition: cannot create Null event, check XML-Syntax");
-		return;
-	}
-	QDomElement eventElem = event.toElement();
-	if (eventElem.isNull()){
-		sendError(INFO,0,"eveXMLReader::createEventDefinition: <event> domnode not an element, check XML-Syntax");
-		return;
-	}
-
-	QDomElement domElement = event.firstChildElement("id");
-    if (domElement.isNull()) {
-    	sendError(ERROR,0,"eveXMLReader::createEventDefinition: missing <id> Tag");
-    	return;
-    }
-    id = domElement.text();
-    if (id.length() < 1) {
-    	sendError(ERROR,0,"eveXMLReader::createEventDefinition: empty <id> Tag");
-    	return;
-    }
-
-    domElement = event.firstChildElement("name");
-    if (!domElement.isNull())
-    	name = domElement.text();
-    else
-    	name = id;
-    if (name.length() < 1) name = id;
-
-	if (!eventElem.hasAttribute("type")) {
-		sendError(ERROR,0,QString("eveXMLReader::createEventDefinition: need a type attribute for event %1").arg(name));
-    	return;
-	}
-	eventType = getEventType(eventElem.attribute("type"));
-
-	if (eventType != eveEventMONITOR){
-		sendError(ERROR,0,QString("eveXMLReader::createEventDefinition: only monitor events are supported, please correct %1").arg(name));
-		return;
-	}
-
-    domElement = event.firstChildElement("value");
-	if (!domElement.isNull())
-		valueTrans = createDeviceCommand(domElement);
-	else {
-		sendError(ERROR,0,QString("eveXMLReader::createEventDefinition: need a valid <value> tag for %1").arg(name));
-		return;
-	}
-	deviceList.insert(id, new eveEventDefinition(valueTrans, eventType, name, id));
-	// TODO remove this
-    sendError(DEBUG,0,QString("eveXMLReader::createEventDefinition: Found id: %1, name: %2").arg(id).arg(name));
-}
-*/
 
 /**
  *
@@ -983,40 +933,50 @@ QList<eveSMChannel*>* eveXMLReader::getChannelList(eveScanModule* scanmodule, in
 
 	try
 	{
-	if (!smIdHash.contains(chain)) return channellist;
-	QDomElement domElement = smIdHash.value(chain)->value(smid);
-	domElement = domElement.firstChildElement("smchannel");
-	while (!domElement.isNull()) {
-		QHash<QString, QString> paraHash;
-		QDomElement domId = domElement.firstChildElement("channelid");
-		eveDetectorChannel* channelDefinition = deviceList.getChannelDef(domId.text());
-		if (channelDefinition == NULL){
-			sendError(ERROR,0,QString("no channeldefinition found for %1").arg(domId.text()));
-			return channellist;
-		}
-		QList<eveEventProperty* > *eventList = new QList<eveEventProperty* >;
-		domId = domElement.firstChildElement();
-		while (!domId.isNull()){
-			if (domId.nodeName() == "redoevent"){
-				// TODO get event
-				eveEventProperty* event = getEvent(eveEventProperty::REDO, domId);
-				if (event != NULL ) eventList->append(event);
+		QString normalizeChannel = "";
+		if (!smIdHash.contains(chain)) return channellist;
+		QDomElement domElement = smIdHash.value(chain)->value(smid);
+		domElement = domElement.firstChildElement("smchannel");
+		while (!domElement.isNull()) {
+			QHash<QString, QString> paraHash;
+			QDomElement domId = domElement.firstChildElement("channelid");
+			eveDetectorChannel* channelDefinition = deviceList.getChannelDef(domId.text());
+			if (channelDefinition == NULL){
+				sendError(ERROR,0,QString("no channeldefinition found for %1").arg(domId.text()));
+				return channellist;
 			}
-			else {
-				paraHash.insert(domId.nodeName(), domId.text().trimmed());
+			QList<eveEventProperty* > *eventList = new QList<eveEventProperty* >;
+			domId = domElement.firstChildElement();
+			while (!domId.isNull()){
+				if (domId.nodeName() == "redoevent"){
+					eveEventProperty* event = getEvent(eveEventProperty::REDO, domId);
+					if (event != NULL ) eventList->append(event);
+				}
+				else if (domId.nodeName() == "normalize_id"){
+					normalizeChannel = domId.text();
+				}
+				else {
+					paraHash.insert(domId.nodeName(), domId.text().trimmed());
+				}
+				domId = domId.nextSiblingElement();
 			}
-			domId = domId.nextSiblingElement();
-		}
 
-		channellist->append(new eveSMChannel(scanmodule, channelDefinition, paraHash, eventList));
-		domElement = domElement.nextSiblingElement("smchannel");
-	}
+			eveSMChannel* nmChannel = NULL;
+			if (normalizeChannel.length() > 0){
+				eveDetectorChannel* normalizeDefinition = deviceList.getChannelDef(normalizeChannel);
+				if (normalizeDefinition != NULL)
+					nmChannel = new eveSMChannel(scanmodule, normalizeDefinition, QHash<QString, QString>(), new QList<eveEventProperty* >, NULL);
+			}
+			channellist->append(new eveSMChannel(scanmodule, channelDefinition, paraHash, eventList, nmChannel));
+			domElement = domElement.nextSiblingElement("smchannel");
+		}
 	}
 	catch (std::exception& e)
 	{
 		//printf("C++ Exception %s\n",e.what());
 		sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getChannelList").arg(e.what()));
 	}
+
 	return channellist;
 }
 
@@ -1217,6 +1177,23 @@ eveEventProperty* eveXMLReader::getEvent(eveEventProperty::actionTypeT action, Q
 		return NULL;
 	}
 }
+
+QList<eveDevice *>* eveXMLReader::getMonitorDeviceList(){
+
+	QList<eveDevice *>* monitors = new QList<eveDevice *>();
+
+	foreach(QString xmlid, monitorList){
+		eveDevice* deviceDef = deviceList.getAnyDef(xmlid);
+		if ((deviceDef == NULL) || (deviceDef->getValueCmd() == NULL)){
+			sendError(ERROR, 0, QString("MonitorList: no or invalid device definition found for %1").arg(xmlid));
+		}
+		else{
+			monitors->append(deviceDef);
+		}
+	}
+	return monitors;
+}
+
 
 /**
  * returns a list with all detector/xaxis/normalize_id with corresponding plot id.

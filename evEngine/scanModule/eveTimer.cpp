@@ -56,7 +56,6 @@ eveDataMessage* eveTimer::getData(){
  */
 int eveTimer::readData(bool queue){
 
-	eveDataStatus status = {0,0,0};
 	eveTime currentTime = eveTime::getCurrent();
 	// TODO
 	// for some reason the first conversion doesn't work (mSecs are always 0)
@@ -67,7 +66,7 @@ int eveTimer::readData(bool queue){
 
 	if (datatype == eveDateTimeT){
 		// absolute time
-		newData = new eveDataMessage(xmlId, name, status, DMTunmodified, currentTime, now);
+		newData = new eveDataMessage(xmlId, name, eveDataStatus(), DMTunmodified, currentTime, now);
 	}
 	else if (datatype == eveINT){
 		// not absolute time
@@ -78,7 +77,7 @@ int eveTimer::readData(bool queue){
 		else {
 			iArray.append(0);
 		}
-		newData = new eveDataMessage(xmlId, name, status, DMTunmodified, currentTime, iArray);
+		newData = new eveDataMessage(xmlId, name, eveDataStatus(), DMTunmodified, currentTime, iArray);
 	}
 	else if (datatype == eveDOUBLE){
 		// not absolute time
@@ -89,7 +88,7 @@ int eveTimer::readData(bool queue){
 		else {
 			dArray.append(0.0);
 		}
-		newData = new eveDataMessage(xmlId, name, status, DMTunmodified, currentTime, dArray);
+		newData = new eveDataMessage(xmlId, name, eveDataStatus(), DMTunmodified, currentTime, dArray);
 	}
 	else {
 		sendError(MINOR, 0, QString("unknown datatype (%1) for Timer").arg((int)datatype));
