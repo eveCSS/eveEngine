@@ -34,9 +34,8 @@ eveMath::~eveMath() {
  */
 void eveMath::addValue(QString deviceId, int smid, int pos, eveVariant dataVar){
 	if (((eveCalc*)this)->addValue(deviceId, pos, dataVar)) {
-		eveDataStatus status = {1,1,1};
 		eveDataMessage *normalizedMessage = new eveDataMessage(detectorId, QString(),
-				status, DMTnormalized, eveTime::getCurrent(), QVector<double>(1,ydata));
+				eveDataStatus(), DMTnormalized, eveTime::getCurrent(), QVector<double>(1,ydata));
 		// TODO remove
 		manager->sendError(DEBUG, 0, QString("normalized value: %1").arg(ydata));
 		normalizedMessage->setPositionCount(ypos);

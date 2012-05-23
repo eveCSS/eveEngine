@@ -161,4 +161,6 @@ void eveMathManager::sendError(int severity, int facility, int errorType,  QStri
 void eveMathManager::sendMessage(eveDataMessage* message){
 	message->setChainId(chid);
 	addMessage(message);
+	if (message->getDataMod() == DMTnormalized)
+		sendError(DEBUG,0,QString("sending normalized DataMessage: %1").arg(message->getName()));
 }
