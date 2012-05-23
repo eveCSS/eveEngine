@@ -28,6 +28,7 @@
 #define DEFAULT_LOGLEVEL 3
 
 #define EVE_VERSION "1.3"
+#define SAVEPLUGIN_VERSION "1.3-1" // only plugins with exactly this version string will be loaded
 
 int main(int argc, char *argv[])
 {
@@ -173,6 +174,7 @@ int main(int argc, char *argv[])
 
 	paralist->setParameter("port", QString().setNum(portNumber));
 	paralist->setParameter("version", EVE_VERSION);
+	paralist->setParameter("savepluginversion", SAVEPLUGIN_VERSION);
 	paralist->setParameter("interfaces", interfaces);
 	if (!eveRoot.isEmpty()) paralist->setParameter("eveRoot", eveRoot);
 	if (!xmlFileName.isEmpty()) paralist->setParameter("startFile",xmlFileName );
