@@ -27,6 +27,8 @@
 // loglevel 5: send FATAL,ERROR,MINOR,INFO,DEBUG errors
 #define DEFAULT_LOGLEVEL 3
 
+#define EVE_VERSION "1.3"
+
 int main(int argc, char *argv[])
 {
 	bool useGui = false;
@@ -170,6 +172,7 @@ int main(int argc, char *argv[])
 	paralist->setParameter("loglevel",QString("%1").arg(loglevel));
 
 	paralist->setParameter("port", QString().setNum(portNumber));
+	paralist->setParameter("version", EVE_VERSION);
 	paralist->setParameter("interfaces", interfaces);
 	if (!eveRoot.isEmpty()) paralist->setParameter("eveRoot", eveRoot);
 	if (!xmlFileName.isEmpty()) paralist->setParameter("startFile",xmlFileName );
