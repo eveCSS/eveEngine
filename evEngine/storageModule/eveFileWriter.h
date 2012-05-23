@@ -39,7 +39,14 @@ public:
       \return status (DEBUG/INFO/MINOR/ERROR/FATAL)
       \sa hdf5Plugin::setCols, eveAsciiFileWriter::setCols
     */
-	virtual int setCols(int chainId, QString xmlid, QString name, QStringList info) = 0;
+//	virtual int setCols(int chainId, QString xmlid, QString name, QStringList info) = 0;
+    //! add a column/dataset, must be called before data may be sent for this column/dataset
+    /*!
+      \param message column / dataset description
+      \return status (DEBUG/INFO/MINOR/ERROR/FATAL)
+      \sa hdf5Plugin::addColumn, eveAsciiFileWriter::addColumn
+    */
+	virtual int addColumn(eveDevInfoMessage* message) = 0;
     //! open the file
     /*!
       \return status (DEBUG/INFO/MINOR/ERROR/FATAL)

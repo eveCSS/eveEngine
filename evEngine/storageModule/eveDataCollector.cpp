@@ -232,20 +232,15 @@ eveDataCollector::~eveDataCollector() {
  */
 void eveDataCollector::addData(eveDataMessage* message) {
 
-	if (fwInitDone && deviceList.contains(message->getXmlId())) {
+	if (fwInitDone && ((message->getChainId() == 0 ) || deviceList.contains(message->getXmlId()))) {
 		if (!fwOpenDone){
 			int status = fileWriter->open();
-			if (status <= ERROR){
-				manager->sendError(status, 0, QString("addData: %1").arg(fileWriter->errorText()));
-			}
-			else {
-				manager->sendError(status, 0, QString("addData: %1").arg(fileWriter->errorText()));
-				fwOpenDone = true;
-			}
+			if (status > ERROR) fwOpenDone = true;
+			manager->sendError(status, 0, QString("openFile: %1").arg(fileWriter->errorText()));
 		}
 		if (fwOpenDone){
 			int status = fileWriter->addData(message->getChainId(), message);
-			manager->sendError(status, 0, fileWriter->errorText());
+			manager->sendError(status, 0, QString("addData: %1").arg(fileWriter->errorText()));
 		}
 	}
 	else {
@@ -287,13 +282,13 @@ void eveDataCollector::addMetaData(int Id, QString attribute, QString& messageTe
  */
 void eveDataCollector::addDevice(eveDevInfoMessage* message) {
 
-	if (fwInitDone && !fwOpenDone){
+	if (fwInitDone){
 		if (deviceList.contains(message->getXmlId()))
 			manager->sendError(DEBUG, 0, QString("DataCollector: already received device info for %1").arg(message->getXmlId()));
 		else {
 			deviceList.append(message->getXmlId());
 			manager->sendError(DEBUG, 0, QString("DataCollector: setting device info for %1").arg(message->getXmlId()));
-			int status = fileWriter->setCols(message->getChainId(),message->getXmlId(), message->getName(), *(message->getText()));
+			int status = fileWriter->addColumn(message);
 			manager->sendError(status, 0, QString("addDevice: %1").arg(fileWriter->errorText()));
 		}
 	}

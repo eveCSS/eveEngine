@@ -73,9 +73,9 @@ int eveAsciiFileWriter::setXMLData(QByteArray* xmldata){
  * @param info		stringlist with additional info
  * @return			error severity
  */
-int eveAsciiFileWriter::setCols(int setID, QString colid, QString rname, QStringList info){
+int eveAsciiFileWriter::addColumn(eveDevInfoMessage* message){
 
-	if (setId != setID) {
+	if (setId != message->getChainId()) {
 		errorString=QString("AsciiFileWriter does not support multiple Data Sets, give each chain a different Filename!");
 		return ERROR;
 	}
@@ -84,9 +84,9 @@ int eveAsciiFileWriter::setCols(int setID, QString colid, QString rname, QString
 		return ERROR;
 	}
 
-	if (!colHash.contains(colid)){
-		columnInfo* colinfo = new columnInfo(colid, rname, info);
-		colHash.insert(colid, colinfo);
+	if (!colHash.contains(message->getXmlId())){
+		columnInfo* colinfo = new columnInfo(message->getXmlId(), message->getName(), *(message->getText()));
+		colHash.insert(message->getXmlId(), colinfo);
 	}
 	else {
 		errorString=QString("device already in column list");

@@ -22,7 +22,8 @@ public:
 	virtual ~eveAsciiFileWriter();
 
 	int init(QString, QString, QHash<QString, QString>&);
-	int setCols(int, QString, QString, QStringList);
+//	int setCols(int, QString, QString, QStringList);
+	int addColumn(eveDevInfoMessage* message);
 	int open();
 	int addData(int, eveDataMessage* );
 	int addMetaData(int, QString, QString);

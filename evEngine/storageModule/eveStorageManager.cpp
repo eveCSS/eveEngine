@@ -30,8 +30,10 @@ eveStorageManager::eveStorageManager(QString filename, int chainId, eveXMLReader
 	pluginHash.insert("filename", filename);
 
 	dc = new eveDataCollector(this, pluginHash, xmldata);
-	QString param = eveParameter::getParameter("xmlversion");
+	QString param = eveParameter::getParameter("version");
 	dc->addMetaData(0, "Version", param);
+	param = eveParameter::getParameter("xmlversion");
+	dc->addMetaData(0, "XMLversion", param);
 	param = eveParameter::getParameter("location");
 	dc->addMetaData(0, "Location", param);
 }
@@ -76,7 +78,7 @@ void eveStorageManager::handleMessage(eveMessage *message){
 		case EVEMESSAGETYPE_DATA:
 		{
 			int id = ((eveDataMessage*)message)->getChainId();
-			if (chainIdChannelHash.contains(id)){
+			if ((id == 0) || chainIdChannelHash.contains(id)){
 				dc->addData((eveDataMessage*)message);
 			}
 			else
