@@ -374,21 +374,28 @@ void eveScanModule::stgGotoStart() {
 			--signalCounter;
 		}
 		else {
+			// check if all axes are done
+			bool allDone = true;
 			foreach (eveSMAxis *axis, *axisList){
-				eveDataMessage* posMesg = axis->getPositionMessage();
-				if (posMesg == NULL)
-					sendError(ERROR,0,QString("%1: no position data available").arg(axis->getName()));
-				else {
-					bool ok = false;
-					double dval = posMesg->toVariant().toDouble(&ok);
-					if (ok) sendError(INFO,0,QString("%1: at position %2").arg(axis->getName()).arg(dval));
-					axis->loadPositioner(manager->getPositionCount());
-					sendMessage(posMesg);
-				}
+				if(!axis->isDone()) allDone = false;
 			}
-			sendError(DEBUG, 0, "stgGotoStart done");
-			currentStageReady=true;
-			emit sigExecStage();
+			if (allDone){
+				foreach (eveSMAxis *axis, *axisList){
+					eveDataMessage* posMesg = axis->getPositionMessage();
+					if (posMesg == NULL)
+						sendError(ERROR,0,QString("%1: no position data available").arg(axis->getName()));
+					else {
+						bool ok = false;
+						double dval = posMesg->toVariant().toDouble(&ok);
+						if (ok) sendError(INFO,0,QString("%1: at position %2").arg(axis->getName()).arg(dval));
+						axis->loadPositioner(manager->getPositionCount());
+						sendMessage(posMesg);
+					}
+				}
+				sendError(DEBUG, 0, "stgGotoStart done");
+				currentStageReady=true;
+				emit sigExecStage();
+			}
 		}
 	}
 }
