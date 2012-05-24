@@ -86,6 +86,7 @@ eveSMBaseDevice(scanmodule) {
 			triggerValue.setValue(definition->getTrigCmd()->getValueString());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
+		if (definition->getTrigCmd()->getTrans()->getTimeout() > 10.0) timeoutShort = false;
 	}
 	if (triggerTrans != NULL) haveTrigger = true;
 
