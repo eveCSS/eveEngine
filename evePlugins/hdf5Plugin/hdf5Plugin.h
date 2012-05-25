@@ -23,7 +23,7 @@
 #endif
      using namespace std;
 
-#define SAVEPLUGIN_VERSION "1.3-1"
+#define SAVEPLUGIN_VERSION "1.3"
 
 class hdf5Plugin : public QObject, eveFileWriter{
 

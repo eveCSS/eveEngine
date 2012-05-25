@@ -338,44 +338,6 @@ QString hdf5Plugin::getDSName(int id, QString name, eveDataModType modified, QSt
 	return groupname+newname;
 }
 
-//QString hdf5Plugin::createGroup1(int pathId, eveDataModType modified ){
-//
-//	QString groupname = "/";
-//
-//	if (pathId != 0) {
-//		groupname = QString("/%1/").arg(pathId);
-//	}
-//
-//	if (!groupList.contains(groupname) && isFileOpen) {
-//		try
-//		{
-//			dataFile->createGroup(qPrintable(groupname));
-//			groupList.append(groupname);
-//		}
-//		catch( Exception error )
-//		{
-//			errorString += QString("createGroup: %1").arg(error.getCDetailMsg());
-//		}
-//	}
-//
-//	if (modified != DMTunmodified){
-//		groupname += QString("%1/").arg(modificationHash.value(modified));
-//		if (!groupList.contains(groupname) && isFileOpen) {
-//			try
-//			{
-//				dataFile->createGroup(qPrintable(groupname));
-//				groupList.append(groupname);
-//			}
-//			catch( Exception error )
-//			{
-//				errorString += QString("createGroup: %1").arg(error.getCDetailMsg());
-//			}
-//		}
-//	}
-//
-//	return groupname;
-//}
-
 QString hdf5Plugin::createGroup( QString name ){
 
 	QString groupname = "/";
