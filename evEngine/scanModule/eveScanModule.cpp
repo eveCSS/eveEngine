@@ -101,7 +101,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	posPluginDataList = parser->getPositionerPluginList(chainId, smId);
 	while (!posPluginDataList->isEmpty()){
 		QHash<QString, QString>* positionerHash = posPluginDataList->takeFirst();
-		QString algorithm = positionerHash->value("algorithm", QString());
+		QString algorithm = positionerHash->value("pluginname", QString());
 		QString xAxisId = positionerHash->value("axis_id", QString());
 		QString channelId = positionerHash->value("channel_id", QString());
 		QString normalizeId = positionerHash->value("normalize_id", QString());
@@ -242,6 +242,7 @@ void eveScanModule::stgInit() {
 			if (allInitDone) foreach (eveSMDevice *device, *postScanList) if (!device->isDone()) allInitDone = false;
 			if (allInitDone) foreach (eveSMAxis *axis, *axisList) if (!axis->isDone()) allInitDone = false;
 			if (allInitDone) foreach (eveSMChannel *channel, *channelList) if (!channel->isDone()) allInitDone = false;
+			if ((nestedSM != NULL) && (!nestedSM->initDone())) allInitDone = false;
 			if ((appendedSM != NULL) && (!appendedSM->initDone())) allInitDone = false;
 			if (allInitDone){
 				currentStageReady=true;
@@ -376,9 +377,7 @@ void eveScanModule::stgGotoStart() {
 		else {
 			// check if all axes are done
 			bool allDone = true;
-			foreach (eveSMAxis *axis, *axisList){
-				if(!axis->isDone()) allDone = false;
-			}
+			foreach (eveSMAxis *axis, *axisList) allDone = axis->isDone();
 			if (allDone){
 				foreach (eveSMAxis *axis, *axisList){
 					eveDataMessage* posMesg = axis->getPositionMessage();
@@ -422,28 +421,40 @@ void eveScanModule::stgPrescan() {
 				++signalCounter;
 			}
 		}
-		if (!signalCounter) emit sigExecStage();
+		emit sigExecStage();
 	}
 	else if (currentStageCounter == 1){
-		// TODO shouldn't we loop over device->isDone() here, to be sure?
-		sendError(INFO,0,"stgPrescan write");
-		currentStageCounter=2;
-		signalCounter = 0;
-		foreach (eveSMDevice *device, *preScanList){
-			device->writeValue(false);
-			++signalCounter;
+		if (signalCounter > 0){
+			--signalCounter;
 		}
-		emit sigExecStage();
+		else {
+			bool allDone = true;
+			foreach (eveSMDevice *device, *postScanList)
+					if (device->resetNeeded()) allDone = device->isDone();
+			if (allDone) {
+				sendError(INFO,0,"stgPrescan write");
+				currentStageCounter=2;
+				signalCounter = 0;
+				foreach (eveSMDevice *device, *preScanList){
+					device->writeValue(false);
+					++signalCounter;
+				}
+				emit sigExecStage();
+			}
+		}
 	}
 	else {
 		if (signalCounter > 0){
 			--signalCounter;
 		}
 		else {
-			// TODO shouldn't we loop over device->isDone() here, to be sure?
-			sendError(INFO,0,"stgPrescan Done");
-			currentStageReady=true;
-			emit sigExecStage();
+			bool allDone = true;
+			foreach (eveSMDevice *device, *preScanList) allDone = device->isDone();
+			if (allDone) {
+				sendError(INFO,0,"stgPrescan Done");
+				currentStageReady=true;
+				emit sigExecStage();
+			}
 		}
 	}
 }
@@ -494,7 +505,7 @@ void eveScanModule::stgSettleTime() {
 void eveScanModule::stgTrigRead() {
 
 	if (currentStageCounter == 0){
-		sendError(INFO,0,"stgTrigRead start");
+		sendError(DEBUG,0,"stgTrigRead start");
 		currentStageCounter=1;
 		triggerTime.start();
 		QTimer::singleShot(triggerDelay, this, SLOT(execStage()));
@@ -510,13 +521,12 @@ void eveScanModule::stgTrigRead() {
 				triggerDetecRid = manager->sendRequest(smId, "Trigger Detector");
 				if (myStatus.triggerDetecStart(triggerDetecRid))
 							manager->setStatus(smId, myStatus.getStatus());
-				++signalCounter;
 			}
-			emit sigExecStage();
+			else
+				emit sigExecStage();
 		}
 	}
 	else if (currentStageCounter == 2){
-		// check if trigger event received
 		if (manDetTrigger){
 			if (!myStatus.isTriggerDetecWait()){
 				currentStageCounter=3;
@@ -531,11 +541,9 @@ void eveScanModule::stgTrigRead() {
 	}
 	else if (currentStageCounter == 3){
 		if (!(doRedo && myStatus.isRedo())) {
-			sendError(DEBUG,0,"stgTrigRead redoStart");
 			if (doRedo) myStatus.redoStart();
 			currentStageCounter=4;
 			signalCounter = 0;
-			sendError(DEBUG, 0, "stgTrigRead");
 			foreach (eveSMChannel *channel, *channelList){
 				sendError(INFO,0,QString("triggering detector channel %1").arg(channel->getName()));
 				channel->triggerRead(true);
@@ -568,8 +576,10 @@ void eveScanModule::stgTrigRead() {
 		}
 		else {
 			bool ready = true;
-			foreach (eveSMChannel *channel, *channelList){
-				if (channel->isDone()){
+			foreach (eveSMChannel *channel, *channelList) ready = channel->isDone();
+			if (nestedSM) ready = nestedSM->isDone();
+			if (ready) {
+				foreach (eveSMChannel *channel, *channelList){
 					eveDataMessage* dmesg = channel->getValueMessage();
 					if (dmesg == NULL)
 						sendError(ERROR, 0, QString("%1: no data available").arg(channel->getName()));
@@ -582,16 +592,6 @@ void eveScanModule::stgTrigRead() {
 						sendMessage(dmesg);
 					}
 				}
-				else {
-					ready = false;
-					sendError(ERROR, 0, QString("%1: not ready in TrigRead").arg(channel->getName()));
-				}
-			}
-			if (nestedSM && !nestedSM->isDone()) {
-				ready = false;
-	 			sendError(DEBUG, 0, "stgTrigRead: called done but nested not ready");
-			}
-			if (ready) {
 				sendError(DEBUG, 0, "stgTrigRead Done");
 				currentStageReady=true;
 				emit sigExecStage();
@@ -622,9 +622,7 @@ void eveScanModule::stgNextPos() {
 
 		// check if all axes are done
 		bool allDone = true;
-		foreach (eveSMAxis *axis, *axisList){
-			if(!axis->isAtEndPos()) allDone = false;
-		}
+		foreach (eveSMAxis *axis, *axisList) allDone = axis->isAtEndPos();
 
 		if (allDone){
 			sendError(INFO,0,"stgNextPos Done");
@@ -658,7 +656,6 @@ void eveScanModule::stgNextPos() {
 				foreach (eveSMAxis *axis, *axisList){
 					++signalCounter;
 					sendError(INFO, 0, QString("Moving axis %1").arg(axis->getName()));
-					// TODO here we need to insert the trigger delay?
 					axis->gotoNextPos(false);
 				}
 				emit sigExecStage();
@@ -672,9 +669,7 @@ void eveScanModule::stgNextPos() {
 		else {
 			// check if all axes are done
 			bool allDone = true;
-			foreach (eveSMAxis *axis, *axisList){
-				if(!axis->isDone()) allDone = false;
-			}
+			foreach (eveSMAxis *axis, *axisList) allDone = axis->isDone();
 			if (allDone){
 				sendNextPos();
 				++ currentPosition;
@@ -710,11 +705,11 @@ void eveScanModule::stgNextPos() {
 void eveScanModule::stgPostscan() {
 
 	if (currentStageCounter == 0){
-		sendError(INFO,0,"stgPostScan");
+		sendError(DEBUG,0,"stgPostScan");
 		currentStageCounter=1;
 		signalCounter = 0;
 		foreach (eveSMDevice *device, *postScanList){
-			sendError(INFO,0,"stgPostScan writing");
+			sendError(DEBUG,0,"stgPostScan writing");
 			device->writeValue(false);
 			++signalCounter;
 		}
@@ -725,9 +720,13 @@ void eveScanModule::stgPostscan() {
 			--signalCounter;
 		}
 		else {
-			sendError(INFO,0,"stgPostScan Done");
-			currentStageReady=true;
-			emit sigExecStage();
+			bool allDone = true;
+			foreach (eveSMDevice *device, *postScanList) allDone = device->isDone();
+			if (allDone) {
+				sendError(DEBUG,0,"stgPostScan Done");
+				currentStageReady=true;
+				emit sigExecStage();
+			}
 		}
 	}
 }
@@ -738,18 +737,6 @@ void eveScanModule::stgPostscan() {
  */
 void eveScanModule::stgEndPos() {
 
-//	if (currentStageCounter == 0){
-//		currentStageCounter=1;
-//		QTimer::singleShot(1000, this, SLOT(execStage()));
-//	}
-//	else {
-//		sendError(INFO,0,"stgEndPos");
-//
-//		// set true if stage done
-//		currentStageReady=true;
-//
-//		emit sigExecStage();
-//	}
 	if (currentStageCounter == 0){
 		sendError(DEBUG,0,"stgEndPos");
 		currentStageCounter = 1;
@@ -764,22 +751,25 @@ void eveScanModule::stgEndPos() {
 			--signalCounter;
 		}
 		else {
-			//TODO check if motors are really done
-			foreach (eveSMAxis *axis, *axisList){
-				if (axis->havePositioner()){
-					eveDataMessage* posMesg = axis->getPositionMessage();
-					if (posMesg != NULL){
-						bool ok;
-						double dval = posMesg->toVariant().toDouble(&ok);
-						if (ok) sendError(INFO,0,QString("%1: at position %2").arg(axis->getName()).arg(dval));
+			bool allDone = true;
+			foreach (eveSMAxis *axis, *axisList) if (axis->havePositioner()) allDone = axis->isDone();
+			if (allDone){
+				foreach (eveSMAxis *axis, *axisList){
+					if (axis->havePositioner()){
+						eveDataMessage* posMesg = axis->getPositionMessage();
+						if (posMesg != NULL){
+							bool ok;
+							double dval = posMesg->toVariant().toDouble(&ok);
+							if (ok) sendError(INFO,0,QString("%1: at position %2").arg(axis->getName()).arg(dval));
+						}
+						else
+							sendError(MINOR,0,QString("Positioning: %1: no position data available").arg(axis->getName()));
 					}
-					else
-						sendError(MINOR,0,QString("Positioning: %1: no position data available").arg(axis->getName()));
 				}
+				sendError(DEBUG, 0, "stgEndPos done");
+				currentStageReady=true;
+				emit sigExecStage();
 			}
-			sendError(DEBUG, 0, "stgEndPos done");
-			currentStageReady=true;
-			emit sigExecStage();
 		}
 	}
 }
@@ -795,9 +785,9 @@ void eveScanModule::stgEndPos() {
  */
 void eveScanModule::stgFinish() {
 
-	sendError(INFO,0,"stgFinish");
+	sendError(DEBUG,0,"stgFinish");
 	if (appendedSM && (currentStageCounter == 0)) {
-		++currentStageCounter;
+		currentStageCounter = 1;
 		if (myStatus.setStatus(eveSmAPPEND)) manager->setStatus(smId, myStatus.getStatus());
 		appendedSM->startExec();
 	}
