@@ -29,8 +29,8 @@ eveAsciiFileWriter::~eveAsciiFileWriter() {
  */
 int eveAsciiFileWriter::init(QString filename, QString format, QHash<QString, QString>& parameter){
 	if (initDone) {
-		errorString = QString("AsciiFileWriter does not support multiple Data Sets, initialize only once");
-		return ERROR;
+		errorString = QString("AsciiFileWriter has already been initialized");
+		return MINOR;
 	}
 	// asciiFileWriter ignores parameter
 	initDone = true;
@@ -149,6 +149,7 @@ int eveAsciiFileWriter::addData(int setID, eveDataMessage* data){
 	else
 		out << "PositionCount: " << data->getPositionCount() << "; ";
 
+	// TODO array output missing
 	if (tempData.getType() == eveSTRING)
 		out << QString("\"%1\"").arg(tempData.toString()) << "\n";
 	else

@@ -23,7 +23,6 @@ public:
 	virtual ~eveAsciiFileWriter();
 
 	int init(QString, QString, QHash<QString, QString>&);
-//	int setCols(int, QString, QString, QStringList);
 	// this is not a real plugin
 	QString getVersionString(){return eveParameter::getParameter("savepluginversion");};
 	int addColumn(eveDevInfoMessage* message);
