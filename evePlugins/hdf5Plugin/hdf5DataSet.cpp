@@ -65,10 +65,12 @@ int hdf5DataSet::addData(eveDataMessage* data){
 
 		// zero the memory buffer
 		memset(memBuffer, 0, compoundType.getSize());
+
 		if (data->getChainId() == 0)
 			memBuffer->positionCount = data->getMSecsSinceStart();
 		else
 			memBuffer->positionCount = data->getPositionCount();
+
 		if ((data->getDataType() == eveEnum16T) || (data->getDataType() == eveStringT) || (data->getDataType() == eveDateTimeT)){
 			int stringLength;
 			if (data->getDataType() == eveStringT) {
@@ -91,11 +93,6 @@ int hdf5DataSet::addData(eveDataMessage* data){
 		}
 		else {
 			void *buffer = getDataBufferAddress(data);
-			if (data->getChainId() == 0)
-				memBuffer->positionCount = data->getMSecsSinceStart();
-			else
-				memBuffer->positionCount = data->getPositionCount();
-
 			memcpy(&memBuffer->aPtr, buffer, getMinimumDataBufferLength(data, compoundType.getSize() - sizeof(qint32)));
 		}
 		dset.write( (void*)memBuffer, compoundType, memspace, filespace );
