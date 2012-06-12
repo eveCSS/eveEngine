@@ -30,6 +30,7 @@ public:
 	int getChannelId(){return channelId;};
 
 private:
+	void initShutdown();
 	bool configStorage(eveStorageMessage*);
 	void addToHash(QHash<QString, QString>&, int, QString, eveXMLReader*);
 	QHash<int, int> chainIdChannelHash;

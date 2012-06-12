@@ -228,7 +228,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QStri
 eveDataCollector::~eveDataCollector() {
 	if (fileWriter){
 		int status = fileWriter->close();
-		manager->sendError(status, 0, QString("FileWriter: close error: %1").arg(fileWriter->errorText()));
+		manager->sendError(status, 0, QString("FileWriter: close message: %1").arg(fileWriter->errorText()));
 		delete fileWriter;
 	}
 	deviceList.clear();
@@ -244,11 +244,11 @@ void eveDataCollector::addData(eveDataMessage* message) {
 		if (!fwOpenDone){
 			int status = fileWriter->open();
 			if (status > ERROR) fwOpenDone = true;
-			manager->sendError(status, 0, QString("openFile: %1").arg(fileWriter->errorText()));
+			manager->sendError(status, 0, QString("FileWriter: openFile: %1").arg(fileWriter->errorText()));
 		}
 		if (fwOpenDone){
 			int status = fileWriter->addData(message->getChainId(), message);
-			manager->sendError(status, 0, QString("addData: %1").arg(fileWriter->errorText()));
+			manager->sendError(status, 0, QString("FileWriter: addData: %1").arg(fileWriter->errorText()));
 		}
 	}
 	else {

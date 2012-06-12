@@ -112,10 +112,11 @@ void eveDeviceMonitor::valueChange(eveDataMessage* newdata) {
 void eveDeviceMonitor::saveValue(eveDataMessage* newdata) {
 
 	// TODO remove this debug stuff
-	eveVariant* newValue = new eveVariant(newdata->toVariant());
-	if (newValue->canConvert(QVariant::String)){
-		manager->sendError(DEBUG, 0, QString("valueChange monitor, newValue: %1").arg(newValue->toString()));
+	eveVariant newValue = newdata->toVariant();
+	if (newValue.canConvert(QVariant::String)){
+		manager->sendError(DEBUG, 0, QString("valueChange monitor, newValue: %1").arg(newValue.toString()));
 	}
+
 	if (newdata != NULL){
 		newdata->setDestination(destination);
 		newdata->setDataMod(DMTdeviceData);

@@ -233,6 +233,9 @@ void eveMessageHub::newMessage(int messageSource)
 						int channel = message->getDestination();
 						if (mChanHash.contains(channel) && (mChanHash.value(channel)->queueMessage(message)))
 							message = NULL;
+						else {
+							addError(MINOR, 0, QString("unable to deliver DataMessage to channel").arg(channel));
+						}
 						break;
 					}
 					/* send data to viewers if available */

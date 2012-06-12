@@ -1334,6 +1334,10 @@ void eveScanModule::redoChain() {
 }
  */
 
+/**
+ *
+ * @param message to be sent
+ */
 void eveScanModule::sendMessage(eveMessage* message){
 
 	if (message != NULL){
