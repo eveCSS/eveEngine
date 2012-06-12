@@ -18,3 +18,10 @@ Makefile.Release$
 .*\.hd5$
 .*\.hdf$
 .*\.so$
+
+syntax: regexp
+^Test-SimplePV/Test-SimplePV$
+syntax: regexp
+^evEngine/nochZuTun\.textile$
+syntax: regexp
+^evEngine/README_FSM$
