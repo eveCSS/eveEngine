@@ -233,6 +233,9 @@ void eveMessageHub::newMessage(int messageSource)
 						int channel = message->getDestination();
 						if (mChanHash.contains(channel) && (mChanHash.value(channel)->queueMessage(message)))
 							message = NULL;
+						else {
+							addError(MINOR, 0, QString("unable to deliver DataMessage to channel %1").arg(channel));
+						}
 						break;
 					}
 					/* send data to viewers if available */
@@ -364,6 +367,11 @@ void eveMessageHub::newMessage(int messageSource)
 					if (mChanHash.value(EVECHANNEL_EVENT)->queueMessage(message)) message = NULL;
 				}
 			case EVEMESSAGETYPE_MONITORREGISTER:
+				if (mChanHash.contains(EVECHANNEL_EVENT)){
+					if (mChanHash.value(EVECHANNEL_EVENT)->queueMessage(message)) message = NULL;
+				}
+				break;
+			case EVEMESSAGETYPE_STORAGEDONE:
 				if (mChanHash.contains(EVECHANNEL_EVENT)){
 					if (mChanHash.value(EVECHANNEL_EVENT)->queueMessage(message)) message = NULL;
 				}

@@ -43,6 +43,22 @@ void eveEventManager::handleMessage(eveMessage *message){
 			if (scheduleHash.contains(eveVariant::getMangled(chainId,smId))) triggerSchedule(chainId, smId, (eveChainStatusMessage*)message);
 			break;
 		}
+		case EVEMESSAGETYPE_STORAGEDONE:
+		{
+			int channel = ((eveMessageInt*)message)->getInt();
+			QList<eveDeviceMonitor*> newList;
+			while (!moniOnlyList.isEmpty()) {
+				eveDeviceMonitor* monitor = moniOnlyList.takeFirst();
+				if (channel == monitor->getDestination()){
+					delete monitor;
+				}
+				else {
+					newList.append(monitor);
+				}
+			}
+			moniOnlyList = newList;
+			break;
+		}
 	default:
 		sendError(ERROR,0,QString("handleMessage: unknown message, type: %1").arg(message->getType()));
 		break;

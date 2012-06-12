@@ -39,6 +39,7 @@ eveMessage::eveMessage(int mtype, int prio, int dest)
 			(type == EVEMESSAGETYPE_LIVEDESCRIPTION) ||
 			(type == EVEMESSAGETYPE_METADATA) ||
 			(type == EVEMESSAGETYPE_REMOVEFROMPLAYLIST) ||
+			(type == EVEMESSAGETYPE_STORAGEDONE) ||
 			(type == EVEMESSAGETYPE_MONITORREGISTER));
 }
 
@@ -137,6 +138,7 @@ eveMessageInt::eveMessageInt(int iType, int ival, int prio, int dest) :
 	value = ival;
 	// check the allowed types
 	assert ((type == EVEMESSAGETYPE_AUTOPLAY) ||
+			(type == EVEMESSAGETYPE_STORAGEDONE) ||
 			(type == EVEMESSAGETYPE_REMOVEFROMPLAYLIST));
 }
 /**

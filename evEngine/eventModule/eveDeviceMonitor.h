@@ -26,6 +26,7 @@ public:
 	eveDeviceMonitor(eveEventManager*, eveEventProperty*);
 	eveDeviceMonitor(eveEventManager*, eveMonitorRegisterMessage*);
 	virtual ~eveDeviceMonitor();
+	int getDestination(){return destination;};
 	void sendError(int, int, int, QString);
 
 public slots:

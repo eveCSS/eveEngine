@@ -47,6 +47,11 @@ eveStorageManager::~eveStorageManager() {
  */
 void eveStorageManager::handleMessage(eveMessage *message){
 
+	if (shutdownPending){
+		delete message;
+		return;
+	}
+
 	switch (message->getType()) {
 		case EVEMESSAGETYPE_STORAGECONFIG:
 			sendError(DEBUG,0,"eveStorageManager::handleMessage: got STORAGECONFIG-message");
@@ -65,13 +70,14 @@ void eveStorageManager::handleMessage(eveMessage *message){
 					sendError(ERROR,0,QString("handleMessage: unable to remove not existing chainId %1 from chainList").arg(id));
 				}
 				else {
-					// close input queue, if we are done
-					if (chainIdChannelHash.isEmpty()) disableInput();
-					eveChainStatusMessage* answer = new eveChainStatusMessage(eveChainSTORAGEDONE, id, 0, 0);
-					// TODO is this redundant?
-					answer->setStatus(eveChainSTORAGEDONE);
-					addMessage(answer);
-					if (chainIdChannelHash.isEmpty()) shutdown();
+					// init  shutdown if no chains left
+					if (chainIdChannelHash.isEmpty()) initShutdown();
+					addMessage(new eveChainStatusMessage(eveChainSTORAGEDONE, id, 0, 0));
+					// do shutdown if initShutdown() has been done
+					if (shutdownPending) {
+						addMessage(new eveMessageInt(EVEMESSAGETYPE_STORAGEDONE, channelId));
+						shutdown();
+					}
 				}
 			}
 			break;
@@ -155,22 +161,25 @@ void eveStorageManager::sendError(int severity, int facility, int errorType,  QS
 void eveStorageManager::shutdown(){
 
 	eveError::log(DEBUG, QString("eveStorageManager: shutdown"));
-
-	// stop input Queue
-	if (!shutdownPending) {
-		shutdownPending = true;
-		delete dc;
-		disableInput();
-		connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
-	}
-
-	// TODO
-	// wait until all data has been saved
+	if (!shutdownPending) initShutdown();
 
 	// make sure mHub reads all outstanding messages before closing the channel
 	shutdownThreadIfQueueIsEmpty();
 }
 
+/**
+ * \brief shutdown StorageManager and this thread
+ */
+void eveStorageManager::initShutdown(){
+
+	if (!shutdownPending) {
+		disableInput();
+		sendError(DEBUG, 0, QString("eveStorageManager: initShutdown"));
+		shutdownPending = true;
+		delete dc;
+		connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
+	}
+}
 /**
  * \brief create a DataCollector for the chain of this message
  * @param message storageConfiguration message from scanmodule chain

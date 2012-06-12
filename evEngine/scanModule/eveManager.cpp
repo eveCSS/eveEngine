@@ -247,6 +247,7 @@ bool eveManager::createSMs(QByteArray xmldata, bool isRepeat) {
 				storageThread->start();
 				waitRegistration.wait(&mutex);
 				storageChannelId = storageThread->getChannelId();
+		    	sendError(DEBUG,0,QString("eveManager::createSMs: created Storage id: %1, filename: %2").arg(storageChannelId).arg(value));
 			}
 		}
 		// start a scanManager for every chain
