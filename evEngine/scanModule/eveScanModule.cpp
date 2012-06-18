@@ -92,6 +92,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     channelList = parser->getChannelList(this, chainId, smId);
 	foreach (eveSMChannel *channel, *channelList){
 	    connect (channel, SIGNAL(channelDone()), this, SLOT(execStage()), Qt::QueuedConnection);
+	    if (!detectorList.contains(channel->getDetector())) detectorList.append(channel->getDetector());
 	    if (channel->hasConfirmTrigger()) manDetTrigger = true;
 	}
 
@@ -145,7 +146,8 @@ eveScanModule::~eveScanModule() {
 		foreach (eveSMDevice *device, *postScanList) delete device;
 		foreach (eveSMAxis *axis, *axisList) delete axis;
 		foreach (eveSMChannel *channel, *channelList) delete channel;
-		foreach (eveCalc *positioner, positionerList) delete positioner;;
+		foreach (eveSMDetector* detector, detectorList) delete detector;
+		foreach (eveCalc *positioner, positionerList) delete positioner;
 		delete preScanList;
 		delete postScanList;
 		delete axisList;

@@ -49,6 +49,7 @@ public:
 	void loadPositioner(int pc);
 	void setTimer(QDateTime start);
 	bool readAtInit(){return timeoutShort;};
+	eveSMDetector* getDetector(){return detector;};
 
 public slots:
 	void transportReady(int);
@@ -95,6 +96,9 @@ private:
 	int averageCount, maxAttempts;
 	double maxDeviation, minimum;
 	bool confirmTrigger;
+	bool isDetectorTrigger;
+	bool isDetectorUnit;
+	eveSMDetector* detector;
 
 };
 

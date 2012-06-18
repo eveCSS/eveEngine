@@ -47,6 +47,9 @@ eveSMBaseDevice(scanmodule) {
 	// true if read timeout is <= 10s
 	timeoutShort = true;
 	normalizeChannel = normalizeWith;
+	isDetectorTrigger = false;
+	isDetectorUnit = false;
+	detector = definition->getDetectorDefinition()->getDetector();
 
 	if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
       eveTransportDef* transdef = (eveTransportDef*)definition->getValueCmd()->getTrans();
@@ -92,8 +95,9 @@ eveSMBaseDevice(scanmodule) {
 		}
 	}
 	else {
-		triggerTrans = definition->getDetectorDefinition()->getDetector()->getTrigTrans();
-		triggerValue = definition->getDetectorDefinition()->getDetector()->getTrigValue();
+		triggerTrans = detector->getTrigTrans();
+		triggerValue = detector->getTrigValue();
+		isDetectorTrigger = true;
 	}
 	if (triggerTrans != NULL) haveTrigger = true;
 
@@ -107,8 +111,9 @@ eveSMBaseDevice(scanmodule) {
 		}
 	}
 	else {
-		unitTrans = definition->getDetectorDefinition()->getDetector()->getUnitTrans();
-		unit = definition->getDetectorDefinition()->getDetector()->getUnitString();
+		unitTrans = detector->getUnitTrans();
+		unit = detector->getUnitString();
+		isDetectorUnit = true;
 	}
 	if (unitTrans != NULL) haveUnit = true;
 
@@ -160,8 +165,8 @@ eveSMChannel::~eveSMChannel() {
 		}
 		if (haveValue) delete valueTrans;
 		if (haveStop) delete stopTrans;
-		if (haveTrigger) delete triggerTrans;
-		if (haveUnit) delete unitTrans;
+		if (haveTrigger && !isDetectorTrigger) delete triggerTrans;
+		if (haveUnit && !isDetectorUnit) delete unitTrans;
 
 		foreach (eveEventProperty* evprop, *eventList){
 			disconnect(evprop, SIGNAL(signalEvent(eveEventProperty*)), this, SLOT(newEvent(eveEventProperty*)));
