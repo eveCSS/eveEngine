@@ -31,7 +31,7 @@ eveCaTransport::eveCaTransport(eveSMBaseDevice *parent, QString xmlid, QString n
 	currentAction = eveIDLE;
 	needEnums = true;
 	enumsInProgress = false;
-	haveMonitor = false;
+	isMonitorOn = false;
 	chanChid = 0;
 	dataPtr = NULL;
 	writeDataPtr = NULL;
@@ -89,13 +89,20 @@ int eveCaTransport::connectTrans(){
 	int status;
 	int retstat=0;
 
-	if (transStatus != eveUNDEFINED) return false;
+	if (currentAction == eveCONNECT) {
+		return 0;
+	}
+	else if (transStatus == eveCONNECTED){
+		sendError(MINOR, 0, "CA Transport already connected");
+		if (currentAction == eveIDLE) emit done(1);
+		return 1;
+	}
 	currentAction = eveCONNECT;
 
 	caThreadContext = ca_current_context();
 	contextLock.lockForWrite();
 	if (caThreadContext == NULL) {
-		sendError(INFO, 0, "creating CA Context");
+		sendError(DEBUG, 0, "creating CA Context");
 		status = ca_context_create (ca_enable_preemptive_callback);
 		caThreadContext = ca_current_context();
 		if (status != ECA_NORMAL) sendError(ERROR, 0, "Error creating CA Context");
@@ -161,7 +168,7 @@ void eveCaTransport::setCnctStatus(int status) {
 		}
 	}
 	else {
-		sendError(INFO, 0, "connected");
+		sendError(DEBUG, 0, "connected");
 		dataCount = ca_element_count(chanChid);
 		elementType = ca_field_type(chanChid);
 		// as request type we always use DBR_TIME_<PRIMITIVE TYPE>
@@ -261,18 +268,9 @@ bool eveCaTransport::getCB(bool flush)
 {
 
 	if (transStatus != eveCONNECTED) return false;
+	if (currentAction == eveREAD) return true;
 	if (currentAction != eveIDLE) return false;
 	currentAction = eveREAD;
-
-	// TODO remove, should not happen
-//	if (caThreadContext != ca_current_context()) {
-//		printf("Thread context: %d (getCB)\n",caThreadContext);
-//		printf("Current context: %d (getCB)\n",ca_current_context());
-//		printf("Thread id: %d\n",QThread::currentThread());
-//		int status = ca_attach_context(caThreadContext);
-//		if (status == ECA_ISATTACHED) printf("getCB context was already attached\n");
-//		else if (status == ECA_NOTTHREADED) printf("getCB context not threaded\n");
-//	}
 
 	if (dataPtr == NULL) {
 		int arraysize = dbr_size_n (requestType, dataCount);
@@ -333,9 +331,11 @@ void eveCaTransport::readDone(eveDataMessage *data) {
  * @return eveDataMessage or NULL
  */
 eveDataMessage *eveCaTransport::getData(){
-	eveDataMessage *return_data = newData;
-	newData = NULL;
-	return return_data;
+
+	if (newData == NULL)
+		return NULL;
+	else
+		return newData->clone();
 };
 
 void eveCaTransport::getTimeout() {
@@ -353,6 +353,7 @@ void eveCaTransport::getTimeout() {
 bool eveCaTransport::putCB(eveType datatype, int elemCount, void* data, bool execute){
 
 	if (transStatus != eveCONNECTED) return false;
+	if (currentAction == eveWRITE) return true;
 	if (currentAction != eveIDLE) return false;
 	if (data == NULL) return false;
 	if (elemCount > dataCount){
@@ -363,14 +364,6 @@ bool eveCaTransport::putCB(eveType datatype, int elemCount, void* data, bool exe
 
 	int status;
 	bool retstatus = true;
-
-	// TODO remove, this should never happen
-//	if (caThreadContext != ca_current_context()) {
-//		printf("putCB CA context mismatch\n");
-//		int status = ca_attach_context(caThreadContext);
-//		if (status == ECA_ISATTACHED) printf("putCB context was already attached\n");
-//		else if (status == ECA_NOTTHREADED) printf("putCB context not threaded\n");
-//	}
 
 	status = ca_array_put_callback(convertEpicsToDBR(convertEveToEpicsType(datatype)), elemCount,
 							chanChid, data, &eveCaTransport::eveCaTransportPutCB, NULL);
@@ -438,12 +431,6 @@ bool eveCaTransport::put(eveType datatype, int elemCount, void* data, bool execu
 	int status;
 	bool retstatus = true;
 
-//	if (caThreadContext != ca_current_context()) {
-//		int status = ca_attach_context(caThreadContext);
-//		if (status == ECA_ISATTACHED) printf("getCB context was already attached\n");
-//		else if (status == ECA_NOTTHREADED) printf("getCB context not threaded\n");
-//	}
-
 	status = ca_array_put(convertEpicsToDBR(convertEveToEpicsType(datatype)), elemCount, chanChid, data);
 	if (status != ECA_NORMAL) {
 		sendError(ERROR, 0, QString("eveCaTransport put ca-message: %1").arg(ca_message(status)));
@@ -461,7 +448,7 @@ void eveCaTransport::caflush(){
  * \param index number of string to return
 */
 QString eveCaTransport::getEnumString(int index) {
-	if (index > enumStringList->size())
+	if (index >= enumStringList->size())
 		return QString();
 	else
 		return enumStringList->at(index);
@@ -552,6 +539,8 @@ int eveCaTransport::writeData(eveVariant writedata, bool queue){
 int eveCaTransport::monitorTrans(){
 
 	int status=0;
+	if (isMonitorOn) return status;
+	isMonitorOn = true;
 	if (transStatus == eveUNDEFINED) {
 		connect (this, SIGNAL(done(int)), this, SLOT(createMonitor(int)));
 		status = connectTrans();

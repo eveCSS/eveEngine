@@ -18,6 +18,7 @@
 #include "eveError.h"
 #include "eveParameter.h"
 #include "eveSMChannel.h"
+#include "eveSMDetector.h"
 
 #define EVE_XML_VERSION        1
 #define EVE_XML_REVISION       0
@@ -156,7 +157,7 @@ bool eveXMLReader::read(QByteArray xmldata)
 	return true;
 }
 
-/** \brief create an eveDetector from XML
+/** \brief create an eveDetectorDefinition from XML
  * \param detector the <detector> DomNode
  */
 void eveXMLReader::createDetectorDefinition(QDomNode detector){
@@ -165,10 +166,10 @@ void eveXMLReader::createDetectorDefinition(QDomNode detector){
 	QString id;
 	eveDeviceCommand *trigger=NULL;
 	eveDeviceCommand *unit=NULL;
-	eveDetectorChannel* channel;
+	eveChannelDefinition* channel;
 
 	if (detector.isNull()){
-		sendError(INFO,0,"eveXMLReader::createDetector: cannot create Null detector, check XML-Syntax");
+		sendError(INFO,0,"eveXMLReader::eveDetectorDefinition: cannot create Null detector, check XML-Syntax");
 		return;
 	}
 	QDomElement domElement = detector.firstChildElement("id");
@@ -176,9 +177,6 @@ void eveXMLReader::createDetectorDefinition(QDomNode detector){
 
     domElement = detector.firstChildElement("name");
     if (!domElement.isNull()) name = domElement.text();
-
-    // TODO do we need motors / detectors, or is axis / detector-channel sufficient
-    // eveDetector* detect = new eveDetector(name, id);
 
     domElement = detector.firstChildElement("trigger");
     if (!domElement.isNull()) trigger = createDeviceCommand(domElement);
@@ -190,17 +188,17 @@ void eveXMLReader::createDetectorDefinition(QDomNode detector){
     		unit = createDeviceCommand(domElement);
     	}
     	else {
-            sendError(DEBUG,0,QString("eveXMLReader::createDetector: found unit with string %1").arg(unitstring.text()));
+            sendError(DEBUG,0,QString("eveXMLReader::eveDetectorDefinition: found unit with string %1").arg(unitstring.text()));
     		unit = new eveDeviceCommand(NULL, unitstring.text(), eveStringT);
     	}
     }
-
+    eveDetectorDefinition* detectDef = new eveDetectorDefinition(name, id, trigger, unit);
 
     domElement = detector.firstChildElement("channel");
 	while (!domElement.isNull()) {
-		channel = createChannelDefinition(domElement, trigger, unit);
+		channel = createChannelDefinition(domElement, detectDef);
 		if (channel != NULL) deviceList.insert(channel->getId(),channel);
-	    sendError(INFO,0,QString("eveXMLReader::createDetector: channel-id: %1").arg(channel->getId()));
+	    sendError(INFO,0,QString("eveXMLReader::eveDetectorDefinition: channel-id: %1").arg(channel->getId()));
 		domElement = domElement.nextSiblingElement("channel");
 	}
 
@@ -209,7 +207,7 @@ void eveXMLReader::createDetectorDefinition(QDomNode detector){
 		createDeviceDefinition(domElement);
  		domElement = domElement.nextSiblingElement("option");
 	}
-    sendError(INFO,0,QString("eveXMLReader::createDetector: id: %1, name: %2").arg(id).arg(name));
+    sendError(INFO,0,QString("eveXMLReader::eveDetectorDefinition: id: %1, name: %2").arg(id).arg(name));
 }
 
 /** \brief create a Transport from XML
@@ -278,13 +276,13 @@ eveTransportDef * eveXMLReader::createTransportDefinition(QDomElement node)
  * \param defaultTrigger the default trigger if avail. else NULL
  * \param defaultUnit the default unit if avail. else NULL
  */
-eveDetectorChannel * eveXMLReader::createChannelDefinition(QDomNode channel, eveDeviceCommand *defaultTrigger, eveDeviceCommand *defaultUnit){
+eveChannelDefinition * eveXMLReader::createChannelDefinition(QDomNode channel, eveDetectorDefinition* detectorDef){
 
 	// name, id, read, unit, trigger
 	QString name;
 	QString id;
-	eveDeviceCommand *trigger=defaultTrigger;
-	eveDeviceCommand *unit=defaultUnit;
+	eveDeviceCommand *trigger=NULL;
+	eveDeviceCommand *unit=NULL;
 	eveDeviceCommand *read=NULL;
 
 	QDomElement domElement = channel.firstChildElement("id");
@@ -293,7 +291,6 @@ eveDetectorChannel * eveXMLReader::createChannelDefinition(QDomNode channel, eve
     domElement = channel.firstChildElement("name");
     if (!domElement.isNull()) name = domElement.text();
 
-
 	domElement = channel.firstChildElement("read");
 	if (!domElement.isNull())
 		read = createDeviceCommand(domElement);
@@ -301,18 +298,8 @@ eveDetectorChannel * eveXMLReader::createChannelDefinition(QDomNode channel, eve
         sendError(ERROR,0,"eveXMLReader::createChannel: Syntax error in channel tag, no <read>");
 
     domElement = channel.firstChildElement("trigger");
-    if (!domElement.isNull())
-    	trigger = createDeviceCommand(domElement);
-    else { // every device needs its private copy of default trigger
-    	if (trigger != NULL) trigger = trigger->clone();
-    }
+    if (!domElement.isNull()) trigger = createDeviceCommand(domElement);
 
-    domElement = channel.firstChildElement("unit");
-    if (!domElement.isNull())
-    	unit = createDeviceCommand(domElement);
-    else { // every device needs its private copy of default unit
-    	if (unit != NULL) unit = unit->clone();
-    }
     domElement = channel.firstChildElement("unit");
     if (!domElement.isNull()){
     	QDomElement unitstring = domElement.firstChildElement("unitstring");
@@ -323,16 +310,8 @@ eveDetectorChannel * eveXMLReader::createChannelDefinition(QDomNode channel, eve
     		unit = new eveDeviceCommand(NULL, unitstring.text(), eveStringT);
     	}
     }
-    else { // every device needs its private copy of default unit
-    	// TODO define a copyConstructor which allocates a new eveTransportDef
-    	// every device command needs its own eveTransportDef
-    	// do not use the default copy constructor or leave clone method
-    	//    	if (unit != NULL) unit = new eveDeviceCommand(*unit);
-    	if (unit != NULL) unit = unit->clone();
-    }
 
-
-	return new eveDetectorChannel(trigger, unit, read, name, id);
+	return new eveChannelDefinition(detectorDef, trigger, unit, read, name, id);
 
 }
 
@@ -940,7 +919,7 @@ QList<eveSMChannel*>* eveXMLReader::getChannelList(eveScanModule* scanmodule, in
 		while (!domElement.isNull()) {
 			QHash<QString, QString> paraHash;
 			QDomElement domId = domElement.firstChildElement("channelid");
-			eveDetectorChannel* channelDefinition = deviceList.getChannelDef(domId.text());
+			eveChannelDefinition* channelDefinition = deviceList.getChannelDef(domId.text());
 			if (channelDefinition == NULL){
 				sendError(ERROR,0,QString("no channeldefinition found for %1").arg(domId.text()));
 				return channellist;
@@ -963,10 +942,13 @@ QList<eveSMChannel*>* eveXMLReader::getChannelList(eveScanModule* scanmodule, in
 
 			eveSMChannel* nmChannel = NULL;
 			if (normalizeChannel.length() > 0){
-				eveDetectorChannel* normalizeDefinition = deviceList.getChannelDef(normalizeChannel);
-				if (normalizeDefinition != NULL)
+				eveChannelDefinition* normalizeDefinition = deviceList.getChannelDef(normalizeChannel);
+				if (normalizeDefinition != NULL){
+					createDetector(scanmodule, normalizeDefinition);
 					nmChannel = new eveSMChannel(scanmodule, normalizeDefinition, QHash<QString, QString>(), new QList<eveEventProperty* >, NULL);
+				}
 			}
+			createDetector(scanmodule, channelDefinition);
 			channellist->append(new eveSMChannel(scanmodule, channelDefinition, paraHash, eventList, nmChannel));
 			domElement = domElement.nextSiblingElement("smchannel");
 		}
@@ -978,6 +960,18 @@ QList<eveSMChannel*>* eveXMLReader::getChannelList(eveScanModule* scanmodule, in
 	}
 
 	return channellist;
+}
+
+/**
+ * \brief create an eveSMDetector if this hasn't been done yet
+ * @param channelDefinition
+ */
+void eveXMLReader::createDetector(eveScanModule* scanmodule, eveChannelDefinition* channelDefinition){
+
+	eveDetectorDefinition* detectorDef = channelDefinition->getDetectorDefinition();
+		if (detectorDef->getDetector() == NULL) {
+		detectorDef->setDetector(new eveSMDetector(scanmodule, detectorDef));
+	}
 }
 
 QList<eveEventProperty*>* eveXMLReader::getSMEventList(int chain, int smid){

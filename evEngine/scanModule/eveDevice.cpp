@@ -94,25 +94,27 @@ eveDevice::~eveDevice() {
 	if (valueCmd != NULL) delete valueCmd;
 }
 
-eveDetectorChannel::eveDetectorChannel(eveDeviceCommand *trigger, eveDeviceCommand *unit, eveDeviceCommand *valuePv, QString channelname, QString channelid) :
+eveChannelDefinition::eveChannelDefinition(eveDetectorDefinition* detectorDef, eveDeviceCommand *trigger, eveDeviceCommand *unit, eveDeviceCommand *valuePv, QString channelname, QString channelid) :
 	eveDevice::eveDevice(unit, valuePv, channelname, channelid)
 {
+	detectorDefinition = detectorDef;
 	triggerCmd = trigger;
 	// TODO
 	stopCmd = NULL;
 }
-eveDetectorChannel::~eveDetectorChannel() {
+eveChannelDefinition::~eveChannelDefinition() {
 	if (triggerCmd != NULL) delete triggerCmd;
 }
 
 
-eveDetector::eveDetector(QString dName, QString dId) :
+eveDetectorDefinition::eveDetectorDefinition(QString dName, QString dId, eveDeviceCommand* triggerDef, eveDeviceCommand* unitDef) :
 	eveBaseDevice::eveBaseDevice(dName, dId)  {
-	// TODO Auto-generated constructor stub
-
+	trigger = triggerDef;
+	unit = unitDef;
+	detector = NULL;
 }
 
-eveDetector::~eveDetector() {
+eveDetectorDefinition::~eveDetectorDefinition() {
 	// TODO Auto-generated destructor stub
 }
 

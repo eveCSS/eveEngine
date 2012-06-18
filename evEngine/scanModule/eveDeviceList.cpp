@@ -24,7 +24,7 @@ void eveDeviceList::clearAll() {
 	{
 		foreach (eveDevice* device, deviceDefinitions) delete device;
 		deviceDefinitions.clear();
-		foreach (eveDetectorChannel* channel, channelDefinitions) delete channel;
+		foreach (eveChannelDefinition* channel, channelDefinitions) delete channel;
 		channelDefinitions.clear();
 		foreach (eveMotorAxis* axis, axisDefinitions) delete axis;
 		axisDefinitions.clear();

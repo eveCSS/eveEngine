@@ -1,0 +1,36 @@
+/*
+ * eveSMDetector.h
+ *
+ *  Created on: 15.06.2012
+ *      Author: eden
+ */
+
+#ifndef EVESMDETECTOR_H_
+#define EVESMDETECTOR_H_
+
+#include <QString>
+#include "eveBaseTransport.h"
+#include "eveDevice.h"
+#include "eveVariant.h"
+#include "eveScanModule.h"
+
+class eveSMDetector: public eveSMBaseDevice {
+public:
+	eveSMDetector(eveScanModule*, eveDetectorDefinition*);
+	virtual ~eveSMDetector();
+	eveBaseTransport* getTrigTrans(){return triggerTrans;};
+	eveBaseTransport* getUnitTrans(){return unitTrans;};
+	eveVariant getTrigValue(){return triggerValue;};
+	QString getUnitString(){return unitString;};
+	void sendError(int, int, int, QString);
+
+private:
+	void sendError(int, int, QString);
+	eveScanModule* scanModule;
+	eveBaseTransport* triggerTrans;
+	eveBaseTransport* unitTrans;
+	QString unitString;
+	eveVariant triggerValue;
+};
+
+#endif /* EVESMDETECTOR_H_ */

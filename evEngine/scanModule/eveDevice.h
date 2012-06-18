@@ -12,10 +12,14 @@
 #include <QList>
 #include <QStringList>
 #include "eveTypes.h"
+// #include "eveSMDetector.h"
 
 enum transMethodT {evePUT, eveGET, evePUTCB, eveGETCB, eveGETPUT, eveGETPUTCB, eveMONITOR};
 enum eveTransportT {eveTRANS_CA, eveTRANS_LOCAL };
 // enum eveEventTypeT {eveEventSCHEDULE, eveEventMONITOR};
+
+class eveDetectorDefinition;
+class eveSMDetector;
 
 /**
  * \brief base class for transports (CA, etc.)
@@ -142,19 +146,20 @@ protected:
 /**
  * \brief a simple detector or a detectorchannel
  */
-class eveDetectorChannel : public eveDevice {
+class eveChannelDefinition : public eveDevice {
 public:
-	eveDetectorChannel(eveDeviceCommand *, eveDeviceCommand *, eveDeviceCommand *, QString, QString);
-	virtual ~eveDetectorChannel();
+	eveChannelDefinition(eveDetectorDefinition*, eveDeviceCommand *, eveDeviceCommand *, eveDeviceCommand *, QString, QString);
+	virtual ~eveChannelDefinition();
 	eveType getChannelType(){return getValueCmd()->getTrans()->getDataType();};
 	eveDeviceCommand * getTrigCmd(){return triggerCmd;};
 	eveDeviceCommand * getStopCmd(){return stopCmd;};
+	eveDetectorDefinition* getDetectorDefinition(){return detectorDefinition;};
 
 protected:
-	//eveDetector *parent; // the corresponding Detector if any (unused)
+	eveDetectorDefinition *parent; // the corresponding Detector if any (unused)
 	eveDeviceCommand *triggerCmd;
 	eveDeviceCommand *stopCmd;
-
+	eveDetectorDefinition* detectorDefinition;
 };
 
 /**
@@ -162,14 +167,21 @@ protected:
  *
  * detector is not actually used, it keeps a list of channels
  */
-class eveDetector : public eveBaseDevice {
+class eveDetectorDefinition : public eveBaseDevice {
 public:
-	eveDetector(QString, QString);
-	virtual ~eveDetector();
-	void addChannel(eveDetectorChannel*);
+	eveDetectorDefinition(QString, QString, eveDeviceCommand*, eveDeviceCommand*);
+	virtual ~eveDetectorDefinition();
+//	void addChannel(eveChannelDefinition*);
+	eveSMDetector* getDetector() {return detector;};
+	void setDetector(eveSMDetector* detec){detector = detec;};
+	eveDeviceCommand * getTrigCmd(){return trigger;};
+	eveDeviceCommand * getUnitCmd(){return unit;};
 
 private:
-	QList<eveDetectorChannel*> channelList;
+//	QList<eveChannelDefinition*> channelList;
+	eveDeviceCommand* trigger;
+	eveDeviceCommand* unit;
+	eveSMDetector* detector;
 };
 
 /**

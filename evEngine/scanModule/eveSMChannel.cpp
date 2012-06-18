@@ -12,6 +12,7 @@
 #include "eveScanModule.h"
 #include "eveTimer.h"
 #include "eveCounter.h"
+#include "eveSMDetector.h"
 
 /**
  *
@@ -19,7 +20,7 @@
  * @param definition corresponding detectorchannel definition
  * @return
  */
-eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveDetectorChannel* definition, QHash<QString, QString> parameter, QList<eveEventProperty* >* eventlist, eveSMChannel* normalizeWith)  :
+eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveChannelDefinition* definition, QHash<QString, QString> parameter, QList<eveEventProperty* >* eventlist, eveSMChannel* normalizeWith)  :
 eveSMBaseDevice(scanmodule) {
 
 	scanModule = scanmodule;
@@ -79,14 +80,20 @@ eveSMBaseDevice(scanmodule) {
 	}
 	if (stopTrans != NULL) haveStop = true;
 
-	if ((definition->getTrigCmd() != NULL) && (definition->getTrigCmd()->getTrans()!= NULL)){
-		if (definition->getTrigCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			triggerTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getTrigCmd()->getTrans());
-			triggerValue.setType(definition->getTrigCmd()->getValueType());
-			triggerValue.setValue(definition->getTrigCmd()->getValueString());
-			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
+	if (definition->getTrigCmd() != NULL){
+		if (definition->getTrigCmd()->getTrans()!= NULL){
+			if (definition->getTrigCmd()->getTrans()->getTransType() == eveTRANS_CA){
+				triggerTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getTrigCmd()->getTrans());
+				triggerValue.setType(definition->getTrigCmd()->getValueType());
+				triggerValue.setValue(definition->getTrigCmd()->getValueString());
+				if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
+			}
+			if (definition->getTrigCmd()->getTrans()->getTimeout() > 10.0) timeoutShort = false;
 		}
-		if (definition->getTrigCmd()->getTrans()->getTimeout() > 10.0) timeoutShort = false;
+	}
+	else {
+		triggerTrans = definition->getDetectorDefinition()->getDetector()->getTrigTrans();
+		triggerValue = definition->getDetectorDefinition()->getDetector()->getTrigValue();
 	}
 	if (triggerTrans != NULL) haveTrigger = true;
 
@@ -98,6 +105,10 @@ eveSMBaseDevice(scanmodule) {
 			unitTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getUnitCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
+	}
+	else {
+		unitTrans = definition->getDetectorDefinition()->getDetector()->getUnitTrans();
+		unit = definition->getDetectorDefinition()->getDetector()->getUnitString();
 	}
 	if (unitTrans != NULL) haveUnit = true;
 

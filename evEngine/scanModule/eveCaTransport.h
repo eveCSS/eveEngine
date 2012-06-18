@@ -98,8 +98,8 @@ private:
 	void *writeDataPtr;
 	bool needEnums;
 	bool enumsInProgress;
-	bool haveMonitor;
 	struct ca_client_context *caThreadContext;
+	bool isMonitorOn;
 
 };
 

@@ -33,7 +33,7 @@ class eveSMChannel : public eveSMBaseDevice {
 	Q_OBJECT
 
 public:
-	eveSMChannel(eveScanModule*, eveDetectorChannel*, QHash<QString, QString>, QList<eveEventProperty* >*, eveSMChannel*);
+	eveSMChannel(eveScanModule*, eveChannelDefinition*, QHash<QString, QString>, QList<eveEventProperty* >*, eveSMChannel*);
 	virtual ~eveSMChannel();
 	void init();
 	void triggerRead(bool);
