@@ -19,6 +19,7 @@
 #include "eveCalc.h"
 #include "eveSMStatus.h"
 #include "eveSMDetector.h"
+#include "eveSMMotor.h"
 
 class eveScanManager;
 
@@ -129,6 +130,7 @@ private:
 	QList<eveSMChannel *> *channelList;
 	QList<eveEventProperty*>* eventList;
 	QList<eveSMDetector *> detectorList;
+	QList<eveSMMotor *> motorList;
 	QTime scanTimer;
 	QTime triggerTime;
 	QTime settleTime;

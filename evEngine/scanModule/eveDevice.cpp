@@ -115,14 +115,15 @@ eveDetectorDefinition::eveDetectorDefinition(QString dName, QString dId, eveDevi
 }
 
 eveDetectorDefinition::~eveDetectorDefinition() {
-	// TODO Auto-generated destructor stub
+	if (trigger != NULL) delete trigger;
+	if (unit != NULL) delete unit;
 }
 
 
-eveMotorAxis::eveMotorAxis(eveDeviceCommand *triggerCom, eveDeviceCommand *aUnit, eveDeviceCommand *gotoCom, eveDeviceCommand *stopCom, eveDeviceCommand *position, eveDeviceCommand *aStatus, eveDeviceCommand *aDeadbCom, QString aName, QString aId) :
+eveAxisDefinition::eveAxisDefinition(eveMotorDefinition* motorDef, eveDeviceCommand *triggerCom, eveDeviceCommand *aUnit, eveDeviceCommand *gotoCom, eveDeviceCommand *stopCom, eveDeviceCommand *position, eveDeviceCommand *aStatus, eveDeviceCommand *aDeadbCom, QString aName, QString aId) :
 	eveDevice::eveDevice(aUnit, position, aName, aId) {
 
-	// TODO gotoCom may not be NULL
+	motorDefinition = motorDef;
 	triggerCmd = triggerCom;
 	gotoCmd = gotoCom;
 	stopCmd = stopCom;
@@ -130,7 +131,7 @@ eveMotorAxis::eveMotorAxis(eveDeviceCommand *triggerCom, eveDeviceCommand *aUnit
 	deadbandCmd = aDeadbCom;
 }
 
-eveMotorAxis::~eveMotorAxis() {
+eveAxisDefinition::~eveAxisDefinition() {
 
 	if (triggerCmd != NULL) delete triggerCmd;
 	if (gotoCmd != NULL) delete gotoCmd;
@@ -141,22 +142,17 @@ eveMotorAxis::~eveMotorAxis() {
 }
 
 
-eveMotor::eveMotor(QString dName, QString dId) :
+eveMotorDefinition::eveMotorDefinition(QString dName, QString dId, eveDeviceCommand* triggerDef, eveDeviceCommand* unitDef) :
 	eveBaseDevice::eveBaseDevice(dName, dId)  {
-	// TODO Auto-generated constructor stub
 
+	trigger = triggerDef;
+	unit = unitDef;
+	motor = NULL;
 }
 
-eveMotor::~eveMotor() {
-	// TODO Auto-generated destructor stub
+eveMotorDefinition::~eveMotorDefinition() {
+
+	if (trigger != NULL) delete trigger;
+	if (unit != NULL) delete unit;
 }
 
-//eveEventDefinition::eveEventDefinition(eveDeviceCommand *dPv, eveEventTypeT evtype, QString dName, QString dId) :
-//	eveBaseDevice(dName, dId) {
-//	valueCmd = dPv;
-//	eventType = evtype;
-//}
-//
-//eveEventDefinition::~eveEventDefinition() {
-//	if (valueCmd != NULL) delete valueCmd;
-//}

@@ -31,7 +31,7 @@ class eveSMAxis: public eveSMBaseDevice {
 	Q_OBJECT
 
 public:
-	eveSMAxis(eveScanModule *, eveMotorAxis *, evePosCalc *);
+	eveSMAxis(eveScanModule *, eveAxisDefinition *, evePosCalc *);
 	virtual ~eveSMAxis();
 	void gotoStartPos(bool);
 	void gotoNextPos(bool);
@@ -55,6 +55,7 @@ public:
 	bool havePositioner(){if(positioner)return true; return false;};
 	bool execPositioner();
 	void setTimer(QDateTime start);
+	eveSMMotor* getMotor(){return motor;};
 
 public slots:
 	void transportReady(int);
@@ -91,6 +92,7 @@ private:
 	eveBaseTransport* triggerTrans;
 	eveBaseTransport* deadbandTrans;
 	eveBaseTransport* unitTrans;
+	eveSMMotor* motor;
 	bool haveDeadband;
 	bool haveTrigger;
 	bool haveUnit;
@@ -100,6 +102,9 @@ private:
 	bool haveGoto;
 	bool axisOK;
 	bool readUnit;
+	bool isMotorTrigger;
+	bool isMotorUnit;
+
 };
 
 #endif /* EVESMAXIS_H_ */

@@ -13,12 +13,13 @@
 #include "eveScanModule.h"
 #include "eveTimer.h"
 #include "eveCounter.h"
+#include "eveSMMotor.h"
 
 // TODO
 // trigger axis after setting new position if a trigger is available
 // read unit string
 
-eveSMAxis::eveSMAxis(eveScanModule *sm, eveMotorAxis* motorAxisDef, evePosCalc *poscalc) :
+eveSMAxis::eveSMAxis(eveScanModule *sm, eveAxisDefinition* motorAxisDef, evePosCalc *poscalc) :
 eveSMBaseDevice(sm){
 
 	posCalc = poscalc;
@@ -50,6 +51,9 @@ eveSMBaseDevice(sm){
 	curPosition = NULL;
 	unit="";
 	positioner = NULL;
+	isMotorTrigger = false;
+	isMotorUnit = false;
+	motor = motorAxisDef->getMotorDefinition()->getMotor();
 
 
 	if ((motorAxisDef->getGotoCmd() != NULL) && (motorAxisDef->getGotoCmd()->getTrans() != NULL)){
@@ -86,13 +90,20 @@ eveSMBaseDevice(sm){
 	else
 		sendError(ERROR, 0, "Unknown Position Transport");
 
-	if ((motorAxisDef->getTrigCmd() != NULL) && (motorAxisDef->getTrigCmd()->getTrans() != NULL)){
-		if (motorAxisDef->getTrigCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			triggerTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)motorAxisDef->getTrigCmd()->getTrans());
-			triggerValue.setType(motorAxisDef->getTrigCmd()->getValueType());
-			triggerValue.setValue(motorAxisDef->getTrigCmd()->getValueString());
-			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
+	if ((motorAxisDef->getTrigCmd() != NULL)){
+		if (motorAxisDef->getTrigCmd()->getTrans() != NULL){
+			if (motorAxisDef->getTrigCmd()->getTrans()->getTransType() == eveTRANS_CA){
+				triggerTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)motorAxisDef->getTrigCmd()->getTrans());
+				triggerValue.setType(motorAxisDef->getTrigCmd()->getValueType());
+				triggerValue.setValue(motorAxisDef->getTrigCmd()->getValueString());
+				if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
+			}
 		}
+	}
+	else {
+		triggerTrans = motor->getTrigTrans();
+		triggerValue = motor->getTrigValue();
+		isMotorTrigger = true;
 	}
 	if (triggerTrans != NULL)
 		haveTrigger = true;
@@ -132,6 +143,11 @@ eveSMBaseDevice(sm){
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}
+	else {
+		unitTrans = motor->getUnitTrans();
+		unit = motor->getUnitString();
+		isMotorUnit = true;
+	}
 	if (unitTrans != NULL) haveUnit = true;
 
 }
@@ -143,10 +159,11 @@ eveSMAxis::~eveSMAxis() {
 		if (haveGoto) delete gotoTrans;
 		if (havePos) delete posTrans;
 		if (haveStop) delete stopTrans;
-		if (haveTrigger) delete triggerTrans;
 		if (haveStatus) delete statusTrans;
 		if (haveDeadband) delete deadbandTrans;
-		if (haveUnit) delete unitTrans;
+		if (haveTrigger && !isMotorTrigger) delete triggerTrans;
+		if (haveUnit && !isMotorUnit) delete unitTrans;
+
 		delete posCalc;
 	}
 	catch (std::exception& e)

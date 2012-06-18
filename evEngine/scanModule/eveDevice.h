@@ -19,7 +19,9 @@ enum eveTransportT {eveTRANS_CA, eveTRANS_LOCAL };
 // enum eveEventTypeT {eveEventSCHEDULE, eveEventMONITOR};
 
 class eveDetectorDefinition;
+class eveMotorDefinition;
 class eveSMDetector;
+class eveSMMotor;
 
 /**
  * \brief base class for transports (CA, etc.)
@@ -165,7 +167,6 @@ protected:
 /**
  * \brief compound detector
  *
- * detector is not actually used, it keeps a list of channels
  */
 class eveDetectorDefinition : public eveBaseDevice {
 public:
@@ -187,10 +188,10 @@ private:
 /**
  * \brief motor axis
  */
-class eveMotorAxis : public eveDevice {
+class eveAxisDefinition : public eveDevice {
 public:
-	eveMotorAxis(eveDeviceCommand *, eveDeviceCommand *, eveDeviceCommand *, eveDeviceCommand *, eveDeviceCommand *,eveDeviceCommand *, eveDeviceCommand *, QString, QString);
-	virtual ~eveMotorAxis();
+	eveAxisDefinition(eveMotorDefinition*, eveDeviceCommand *, eveDeviceCommand *, eveDeviceCommand *, eveDeviceCommand *, eveDeviceCommand *,eveDeviceCommand *, eveDeviceCommand *, QString, QString);
+	virtual ~eveAxisDefinition();
 	eveType getAxisType(){return getGotoCmd()->getTrans()->getDataType();};
 	eveDeviceCommand * getTrigCmd(){return triggerCmd;};
 	eveDeviceCommand * getGotoCmd(){return gotoCmd;};
@@ -198,6 +199,7 @@ public:
 	eveDeviceCommand * getStatusCmd(){return axisStatusCmd;};
 	eveDeviceCommand * getPosCmd(){return valueCmd;};
 	eveDeviceCommand * getDeadbandCmd(){return deadbandCmd;};
+	eveMotorDefinition* getMotorDefinition(){return motorDefinition;};
 
 private:
 	eveDeviceCommand  *deadbandCmd;
@@ -205,36 +207,28 @@ private:
 	eveDeviceCommand  *gotoCmd;
 	eveDeviceCommand *stopCmd;
 	eveDeviceCommand  *axisStatusCmd;
-	//eveMotor *parentMotor;	// the corresponding motor (unused)
+	eveMotorDefinition* motorDefinition;
 
 };
 
 /**
  * \brief compound motor
  *
- * motor is not actually used, it holds a list of axes
  */
-class eveMotor : public eveBaseDevice {
+class eveMotorDefinition : public eveBaseDevice {
 public:
-	eveMotor(QString, QString);
-	virtual ~eveMotor();
-private:
-	QList<eveMotorAxis*> axesList;
-};
-
-
-/*
-class eveEventDefinition : public eveBaseDevice {
-public:
-	eveEventDefinition(eveDeviceCommand *, eveEventTypeT, QString, QString);
-	virtual ~eveEventDefinition();
-	eveDeviceCommand * getValueCmd(){return valueCmd;};
+	eveMotorDefinition(QString, QString, eveDeviceCommand*, eveDeviceCommand*);
+	virtual ~eveMotorDefinition();
+	eveSMMotor* getMotor() {return motor;};
+	void setMotor(eveSMMotor* smmotor){motor = smmotor;};
+	eveDeviceCommand * getTrigCmd(){return trigger;};
+	eveDeviceCommand * getUnitCmd(){return unit;};
 
 private:
-	eveDeviceCommand * valueCmd;
-	eveEventTypeT eventType;
+	eveDeviceCommand* trigger;
+	eveDeviceCommand* unit;
+	eveSMMotor* motor;
 };
 
-*/
 
 #endif /* EVEDEVICE_H_ */

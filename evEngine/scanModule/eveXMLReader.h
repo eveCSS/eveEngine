@@ -63,6 +63,7 @@ private:
 	void createMotorDefinition(QDomNode);
 	void createDeviceDefinition(QDomElement);
 	void createDetector(eveScanModule*, eveChannelDefinition*);
+	void createMotor(eveScanModule*, eveAxisDefinition*);
 	//void createEventDefinition(QDomNode);
 	int getIntValueOfTag(int, int, QString);
 	int repeatCount;
@@ -72,7 +73,7 @@ private:
     QDomDocument *domDocument;
 	eveDeviceCommand * createDeviceCommand(QDomNode);
 	eveChannelDefinition * createChannelDefinition(QDomNode, eveDetectorDefinition *);
-	eveMotorAxis * createAxisDefinition(QDomNode, eveDeviceCommand *, eveDeviceCommand *);
+	eveAxisDefinition * createAxisDefinition(QDomNode, eveMotorDefinition *);
 	void createOption(QDomNode);
 	eveTransportDef* createTransportDefinition(QDomElement node);
 	void getPluginData(QDomElement, QHash<QString, QString>&);

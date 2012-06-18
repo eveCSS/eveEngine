@@ -83,6 +83,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	// get all used axes and their total steps
     axisList = parser->getAxisList(this, chainId, smId);
 	foreach (eveSMAxis *axis, *axisList){
+	    if (!motorList.contains(axis->getMotor())) motorList.append(axis->getMotor());
 	    connect (axis, SIGNAL(axisDone()), this, SLOT(execStage()), Qt::QueuedConnection);
 		if (axis->getTotalSteps() > totalSteps) totalSteps = axis->getTotalSteps();
 	}
@@ -147,6 +148,7 @@ eveScanModule::~eveScanModule() {
 		foreach (eveSMAxis *axis, *axisList) delete axis;
 		foreach (eveSMChannel *channel, *channelList) delete channel;
 		foreach (eveSMDetector* detector, detectorList) delete detector;
+		foreach (eveSMMotor* motor, motorList) delete motor;
 		foreach (eveCalc *positioner, positionerList) delete positioner;
 		delete preScanList;
 		delete postScanList;

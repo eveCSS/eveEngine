@@ -19,6 +19,7 @@
 #include "eveParameter.h"
 #include "eveSMChannel.h"
 #include "eveSMDetector.h"
+#include "eveSMMotor.h"
 
 #define EVE_XML_VERSION        1
 #define EVE_XML_REVISION       0
@@ -36,6 +37,7 @@ eveXMLReader::eveXMLReader(eveManager *parentObject){
 
 eveXMLReader::~eveXMLReader() {
 	if (domDocument != NULL) delete domDocument;
+	deviceList.clearAll();
 }
 
 /** \brief read XML-Data and create all device definitions and various hashes etc.
@@ -330,7 +332,7 @@ void eveXMLReader::createMotorDefinition(QDomNode motor){
 	QString id;
 	eveDeviceCommand *trigger=NULL;
 	eveDeviceCommand *unit=NULL;
-	eveMotorAxis* axis;
+	eveAxisDefinition* axis;
 
 	if (motor.isNull()){
 		sendError(INFO,0,"eveXMLReader::createMotor: cannot create Null motor, check XML-Syntax");
@@ -356,9 +358,11 @@ void eveXMLReader::createMotorDefinition(QDomNode motor){
     	}
     }
 
+    eveMotorDefinition* motorDef = new eveMotorDefinition(name, id, trigger, unit);
+
     domElement = motor.firstChildElement("axis");
 	while (!domElement.isNull()) {
-		axis = createAxisDefinition(domElement, trigger, unit);
+		axis = createAxisDefinition(domElement, motorDef);
 		if (axis != NULL) deviceList.insert(axis->getId(),axis);
 	    sendError(INFO,0,QString("eveXMLReader::createMotor: axis-id: %1").arg(axis->getId()));
 		domElement = domElement.nextSiblingElement("axis");
@@ -378,12 +382,12 @@ void eveXMLReader::createMotorDefinition(QDomNode motor){
  * \param defaultTrigger the default trigger if avail. else NULL
  * \param defaultUnit the default unit if avail. else NULL
  */
-eveMotorAxis * eveXMLReader::createAxisDefinition(QDomNode axis, eveDeviceCommand *defaultTrigger, eveDeviceCommand *defaultUnit){
+eveAxisDefinition * eveXMLReader::createAxisDefinition(QDomNode axis, eveMotorDefinition* motorDef){
 
 	QString name;
 	QString id;
-	eveDeviceCommand *trigger=defaultTrigger;
-	eveDeviceCommand *unit=defaultUnit;
+	eveDeviceCommand *trigger = NULL;
+	eveDeviceCommand *unit = NULL;
 	eveDeviceCommand *stopCommand = NULL;
 	eveDeviceCommand *gotoCommand=NULL;
 	eveDeviceCommand *positionCommand=NULL;
@@ -426,9 +430,6 @@ eveMotorAxis * eveXMLReader::createAxisDefinition(QDomNode axis, eveDeviceComman
     if (!domElement.isNull()){
     	trigger = createDeviceCommand(domElement);
     }
-    else { // every device needs its private copy of default trigger
-    	if (trigger != NULL) trigger = trigger->clone();
-    }
 
     domElement = axis.firstChildElement("unit");
     if (!domElement.isNull()){
@@ -440,11 +441,6 @@ eveMotorAxis * eveXMLReader::createAxisDefinition(QDomNode axis, eveDeviceComman
             sendError(DEBUG,0,QString("eveXMLReader::createAxis: found unit with string %1").arg(unitstring.text()));
     		unit = new eveDeviceCommand(NULL, unitstring.text(), eveStringT);
     	}
-    }
-    else {
-// every device needs its private copy of default unit
-//    	if (unit != NULL) unit = new eveDeviceCommand(*unit);
-    	if (unit != NULL) unit = unit->clone();
     }
 
 	domElement = axis.firstChildElement("deadband");
@@ -459,7 +455,7 @@ eveMotorAxis * eveXMLReader::createAxisDefinition(QDomNode axis, eveDeviceComman
  		domElement = domElement.nextSiblingElement("option");
 	}
 
-	return new eveMotorAxis(trigger, unit, gotoCommand, stopCommand, positionCommand, statusCommand, deadbandCommand, name, id);
+	return new eveAxisDefinition(motorDef, trigger, unit, gotoCommand, stopCommand, positionCommand, statusCommand, deadbandCommand, name, id);
 
 }
 
@@ -838,7 +834,7 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 		eveVariant startvalue;
 		QString stepfunction = "none";
 		QDomElement domId = domElement.firstChildElement("axisid");
-		eveMotorAxis* axisDefinition = deviceList.getAxisDef(domId.text());
+		eveAxisDefinition* axisDefinition = deviceList.getAxisDef(domId.text());
 		if (axisDefinition == NULL){
 			sendError(ERROR,0,QString("no axisdefinition found for %1").arg(domId.text()));
 			return axislist;
@@ -882,6 +878,7 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 		else
 			sendError(ERROR,0,"No values found in XML to calculate motor positions");
 
+		createMotor(scanmodule, axisDefinition);
 		// order is important, since we must make sure all axes with step plugins
 		// which might use reference axes must be called after their reference axes
 		if (prependElement)
@@ -969,8 +966,24 @@ QList<eveSMChannel*>* eveXMLReader::getChannelList(eveScanModule* scanmodule, in
 void eveXMLReader::createDetector(eveScanModule* scanmodule, eveChannelDefinition* channelDefinition){
 
 	eveDetectorDefinition* detectorDef = channelDefinition->getDetectorDefinition();
-		if (detectorDef->getDetector() == NULL) {
-		detectorDef->setDetector(new eveSMDetector(scanmodule, detectorDef));
+	if (detectorDef->getDetector() == NULL) {
+		eveSMDetector* detector =  new eveSMDetector(scanmodule, detectorDef);
+		deviceList.insert(detectorDef->getId(), (eveBaseDevice*) detector);
+		detectorDef->setDetector(detector);
+	}
+}
+
+/**
+ * \brief create an eveSMMotor if this hasn't been done yet
+ * @param axisDefinition
+ */
+void eveXMLReader::createMotor(eveScanModule* scanmodule, eveAxisDefinition* axisDefinition){
+
+	eveMotorDefinition* motorDef = axisDefinition->getMotorDefinition();
+	if (motorDef->getMotor() == NULL) {
+		eveSMMotor* motor = new eveSMMotor(scanmodule, motorDef);
+		deviceList.insert(motorDef->getId(), (eveBaseDevice*) motor);
+		motorDef->setMotor(motor);
 	}
 }
 
