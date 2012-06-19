@@ -4,7 +4,8 @@ QT += core \
     network \
     gui \
     xml
-HEADERS += scanModule/eveSMDetector.h \
+HEADERS += scanModule/eveSMMotor.h \
+    scanModule/eveSMDetector.h \
     scanModule/eveDataStatus.h \
     scanModule/eveStartTime.h \
     eventModule/eveMonitorRegisterMessage.h \
@@ -62,7 +63,8 @@ HEADERS += scanModule/eveSMDetector.h \
     nwModule/evePlayListManager.h \
     mathModule/eveMath.h \
     mathModule/eveMathConfig.h
-SOURCES += scanModule/eveSMDetector.cpp \
+SOURCES += scanModule/eveSMMotor.cpp \
+    scanModule/eveSMDetector.cpp \
     scanModule/eveDataStatus.cpp \
     scanModule/eveStartTime.cpp \
     eventModule/eveMonitorRegisterMessage.cpp \
