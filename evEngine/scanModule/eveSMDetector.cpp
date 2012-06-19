@@ -17,7 +17,7 @@ eveSMDetector::eveSMDetector(eveScanModule* scanmodule, eveDetectorDefinition* d
 
 	if ((definition->getTrigCmd() != NULL) && (definition->getTrigCmd()->getTrans()!= NULL)){
 		if (definition->getTrigCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			triggerTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getTrigCmd()->getTrans());
+			triggerTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)definition->getTrigCmd()->getTrans());
 			triggerValue.setType(definition->getTrigCmd()->getValueType());
 			triggerValue.setValue(definition->getTrigCmd()->getValueString());
 		}
@@ -29,7 +29,7 @@ eveSMDetector::eveSMDetector(eveScanModule* scanmodule, eveDetectorDefinition* d
 			unitString = definition->getUnitCmd()->getValueString();
 		}
 		else if (definition->getUnitCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			unitTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getUnitCmd()->getTrans());
+			unitTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)definition->getUnitCmd()->getTrans());
 		}
 	}
 }

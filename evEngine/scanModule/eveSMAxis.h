@@ -10,7 +10,7 @@
 
 #include <QList>
 #include <QDateTime>
-#include "eveDevice.h"
+#include "eveDeviceDefinitions.h"
 #include "eveSetValue.h"
 #include "evePosCalc.h"
 #include "eveCaTransport.h"

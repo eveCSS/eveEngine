@@ -18,7 +18,7 @@
  * @param deviceCommand CommandDefinition of the monitor device (monitorEvent)
  * @return
  */
-eveEventProperty::eveEventProperty(QString evname, QString operation, eveVariant limit, eventTypeT type, incidentTypeT incident, actionTypeT actiontype, eveDeviceCommand* deviceCommand) : eventLimit(limit)
+eveEventProperty::eveEventProperty(QString evname, QString operation, eveVariant limit, eventTypeT type, incidentTypeT incident, actionTypeT actiontype, eveCommandDefinition* deviceCommand) : eventLimit(limit)
 {
 	devCommand = deviceCommand;
 	eventType = type;

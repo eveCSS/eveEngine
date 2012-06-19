@@ -17,7 +17,7 @@
  * @param resetPrevious if true, we read the value in prescan before writing and reset in postscan
  * @return
  */
-eveSMDevice::eveSMDevice(eveScanModule* scanmodule, eveDevice* definition, eveVariant writeval, bool resetPrevious)  :
+eveSMDevice::eveSMDevice(eveScanModule* scanmodule, eveDeviceDefinition* definition, eveVariant writeval, bool resetPrevious)  :
 	eveSMBaseDevice(scanmodule) {
 
 	setPrevious = resetPrevious;
@@ -34,7 +34,7 @@ eveSMDevice::eveSMDevice(eveScanModule* scanmodule, eveDevice* definition, eveVa
 
 	if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
 		if (definition->getValueCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			valueTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getValueCmd()->getTrans());
+			valueTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)definition->getValueCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}

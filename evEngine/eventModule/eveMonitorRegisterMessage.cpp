@@ -7,10 +7,10 @@
 
 #include "eveMonitorRegisterMessage.h"
 
-eveMonitorRegisterMessage::eveMonitorRegisterMessage(eveDevice * monitordevice, int destination) : eveMessage(EVEMESSAGETYPE_MONITORREGISTER, 0, 0){
+eveMonitorRegisterMessage::eveMonitorRegisterMessage(eveDeviceDefinition * monitordevice, int destination) : eveMessage(EVEMESSAGETYPE_MONITORREGISTER, 0, 0){
 	// TODO Auto-generated constructor stub
 	if ((monitordevice != NULL) && (monitordevice->getValueCmd() != NULL) && (monitordevice->getValueCmd()->getTrans() != NULL)) {
-		transport = new eveTransportDef(*monitordevice->getValueCmd()->getTrans());
+		transport = new eveTransportDefinition(*monitordevice->getValueCmd()->getTrans());
 		xmlid = monitordevice->getId();
 		name = monitordevice->getName();
 		storageChannel = destination;

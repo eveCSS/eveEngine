@@ -13,7 +13,7 @@
 #include "eveRequestManager.h"
 #include "eveMessageHub.h"
 #include "eveError.h"
-#include "eveDevice.h"
+#include "eveDeviceDefinitions.h"
 #include "eveXMLReader.h"
 #include "eveScanManager.h"
 #include "eveScanThread.h"
@@ -260,8 +260,8 @@ bool eveManager::createSMs(QByteArray xmldata, bool isRepeat) {
 	}
 	// create monitors
 	if (storageChannelId > 0){
-		QList<eveDevice *>* monitors = scmlParser->getMonitorDeviceList();
-		foreach (eveDevice * monitorOption, *monitors){
+		QList<eveDeviceDefinition *>* monitors = scmlParser->getMonitorDeviceList();
+		foreach (eveDeviceDefinition * monitorOption, *monitors){
 			addMessage(new eveMonitorRegisterMessage(monitorOption, storageChannelId));
 		}
 		delete monitors;

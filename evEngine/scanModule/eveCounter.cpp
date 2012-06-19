@@ -9,7 +9,7 @@
 #include <QDateTime>
 #include "eveError.h"
 
-eveCounter::eveCounter(eveSMBaseDevice *parent, QString xmlid, QString name, eveTransportDef* transdef) : eveBaseTransport(parent, xmlid, name) {
+eveCounter::eveCounter(eveSMBaseDevice *parent, QString xmlid, QString name, eveTransportDefinition* transdef) : eveBaseTransport(parent, xmlid, name) {
 
 	transStatus = eveUNDEFINED;
 	currentAction = eveIDLE;

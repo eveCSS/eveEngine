@@ -24,7 +24,7 @@ QReadWriteLock eveCaTransport::contextLock;
  * \param transdef definition of EPICS PV related properties
  * \param parent
  */
-eveCaTransport::eveCaTransport(eveSMBaseDevice *parent, QString xmlid, QString name, eveTransportDef* transdef) : eveBaseTransport(parent, xmlid, name)
+eveCaTransport::eveCaTransport(eveSMBaseDevice *parent, QString xmlid, QString name, eveTransportDefinition* transdef) : eveBaseTransport(parent, xmlid, name)
 {
 
 	transStatus = eveUNDEFINED;

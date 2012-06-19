@@ -16,7 +16,7 @@
 #include <QString>
 #include "eveTypes.h"
 #include "eveBaseTransport.h"
-#include "eveDevice.h"
+#include "eveDeviceDefinitions.h"
 #include "eveTime.h"
 
 class eveTimer: public eveBaseTransport {
@@ -24,7 +24,7 @@ class eveTimer: public eveBaseTransport {
 	Q_OBJECT
 
 public:
-	eveTimer(eveSMBaseDevice *, QString, QString, eveTransportDef*);
+	eveTimer(eveSMBaseDevice *, QString, QString, eveTransportDefinition*);
 	virtual ~eveTimer();
 	int readData(bool);
 	int writeData(eveVariant, bool);

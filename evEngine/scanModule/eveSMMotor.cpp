@@ -17,7 +17,7 @@ eveSMMotor::eveSMMotor(eveScanModule* scanmodule, eveMotorDefinition* definition
 
 	if ((definition->getTrigCmd() != NULL) && (definition->getTrigCmd()->getTrans()!= NULL)){
 		if (definition->getTrigCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			triggerTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getTrigCmd()->getTrans());
+			triggerTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)definition->getTrigCmd()->getTrans());
 			triggerValue.setType(definition->getTrigCmd()->getValueType());
 			triggerValue.setValue(definition->getTrigCmd()->getValueString());
 		}
@@ -28,7 +28,7 @@ eveSMMotor::eveSMMotor(eveScanModule* scanmodule, eveMotorDefinition* definition
 			unitString = definition->getUnitCmd()->getValueString();
 		}
 		else if (definition->getUnitCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			unitTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getUnitCmd()->getTrans());
+			unitTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)definition->getUnitCmd()->getTrans());
 		}
 	}
 }

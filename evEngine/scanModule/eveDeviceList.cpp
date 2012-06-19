@@ -22,13 +22,13 @@ void eveDeviceList::clearAll() {
 
 	try
 	{
-		foreach (eveDevice* device, deviceDefinitions) delete device;
+		foreach (eveDeviceDefinition* device, deviceDefinitions) delete device;
 		deviceDefinitions.clear();
 		foreach (eveChannelDefinition* channel, channelDefinitions) delete channel;
 		channelDefinitions.clear();
 		foreach (eveAxisDefinition* axis, axisDefinitions) delete axis;
 		axisDefinitions.clear();
-		foreach (eveBaseDevice* basedevice, baseDeviceDefinitions) delete basedevice;
+		foreach (eveBaseDeviceDefinition* basedevice, baseDeviceDefinitions) delete basedevice;
 		baseDeviceDefinitions.clear();
 	}
 	catch (std::exception& e)
@@ -38,7 +38,7 @@ void eveDeviceList::clearAll() {
 
 }
 
-eveDevice* eveDeviceList::getAnyDef(QString name){
+eveDeviceDefinition* eveDeviceList::getAnyDef(QString name){
 
 	if (axisDefinitions.contains(name)) return getAxisDef(name);
 	if (channelDefinitions.contains(name)) return getChannelDef(name);

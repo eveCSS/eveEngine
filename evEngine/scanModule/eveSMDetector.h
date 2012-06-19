@@ -10,7 +10,7 @@
 
 #include <QString>
 #include "eveBaseTransport.h"
-#include "eveDevice.h"
+#include "eveDeviceDefinitions.h"
 #include "eveVariant.h"
 #include "eveScanModule.h"
 

@@ -12,7 +12,7 @@
 #include <QDomElement>
 #include <QHash>
 #include <QByteArray>
-#include "eveDevice.h"
+#include "eveDeviceDefinitions.h"
 #include "eveManager.h"
 #include "eveDeviceList.h"
 #include "eveSMDevice.h"
@@ -54,7 +54,7 @@ public:
 	QHash<QString, QString> getChainPlugin(int, QString);
 	QList<QHash<QString, QString>* >* getPositionerPluginList(int, int);
 	QList<eveMathConfig*>* getFilteredMathConfigs(int);
-	QList<eveDevice *>* getMonitorDeviceList();
+	QList<eveDeviceDefinition *>* getMonitorDeviceList();
 
 private:
 	void getMathConfigFromPlot(int, int, QList<eveMathConfig*>*);
@@ -71,11 +71,11 @@ private:
 	QList<eveSMDevice*>* getSMDeviceList(eveScanModule*, int, int, QString);
 	eveEventProperty* getEvent(eveEventProperty::actionTypeT, QDomElement);
     QDomDocument *domDocument;
-	eveDeviceCommand * createDeviceCommand(QDomNode);
+	eveCommandDefinition * createDeviceCommand(QDomNode);
 	eveChannelDefinition * createChannelDefinition(QDomNode, eveDetectorDefinition *);
 	eveAxisDefinition * createAxisDefinition(QDomNode, eveMotorDefinition *);
 	void createOption(QDomNode);
-	eveTransportDef* createTransportDefinition(QDomElement node);
+	eveTransportDefinition* createTransportDefinition(QDomElement node);
 	void getPluginData(QDomElement, QHash<QString, QString>&);
 	eveDeviceList deviceList;
 	eveManager *parent;

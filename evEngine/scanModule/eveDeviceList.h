@@ -9,7 +9,7 @@
 #define EVEDEVICELIST_H_
 
 #include <QHash>
-#include "eveDevice.h"
+#include "eveDeviceDefinitions.h"
 
 class eveDeviceList {
 public:
@@ -17,19 +17,19 @@ public:
 	virtual ~eveDeviceList();
 	void insert(QString ident, eveAxisDefinition* axis){axisDefinitions.insert(ident, axis);};
 	void insert(QString ident, eveChannelDefinition* channel ){channelDefinitions.insert(ident, channel);};
-	void insert(QString ident, eveDevice* device){deviceDefinitions.insert(ident, device);};
-	void insert(QString ident, eveBaseDevice* device){baseDeviceDefinitions.insert(ident, device);};
-	eveDevice* getAnyDef(QString name);
-	eveDevice* getDeviceDef(QString name){return deviceDefinitions.value(name, NULL);};
+	void insert(QString ident, eveDeviceDefinition* device){deviceDefinitions.insert(ident, device);};
+	void insert(QString ident, eveBaseDeviceDefinition* device){baseDeviceDefinitions.insert(ident, device);};
+	eveDeviceDefinition* getAnyDef(QString name);
+	eveDeviceDefinition* getDeviceDef(QString name){return deviceDefinitions.value(name, NULL);};
 	eveChannelDefinition* getChannelDef(QString name){return channelDefinitions.value(name, NULL);};
 	eveAxisDefinition* getAxisDef(QString name){return axisDefinitions.value(name, NULL);};
 	void clearAll();
 
 private:
-	QHash<QString, eveDevice*> deviceDefinitions;
+	QHash<QString, eveDeviceDefinition*> deviceDefinitions;
 	QHash<QString, eveChannelDefinition*> channelDefinitions;
 	QHash<QString, eveAxisDefinition*> axisDefinitions;
-	QHash<QString, eveBaseDevice*> baseDeviceDefinitions;
+	QHash<QString, eveBaseDeviceDefinition*> baseDeviceDefinitions;
 
 };
 

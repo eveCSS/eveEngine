@@ -13,14 +13,14 @@
  */
 #include <QString>
 #include "eveBaseTransport.h"
-#include "eveDevice.h"
+#include "eveDeviceDefinitions.h"
 
 class eveCounter: public eveBaseTransport {
 
 	Q_OBJECT
 
 public:
-	eveCounter(eveSMBaseDevice *, QString, QString, eveTransportDef*);
+	eveCounter(eveSMBaseDevice *, QString, QString, eveTransportDefinition*);
 	virtual ~eveCounter();
 	int readData(bool);
 	int writeData(eveVariant, bool);

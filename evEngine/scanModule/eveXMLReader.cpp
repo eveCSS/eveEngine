@@ -166,8 +166,8 @@ void eveXMLReader::createDetectorDefinition(QDomNode detector){
 
 	QString name;
 	QString id;
-	eveDeviceCommand *trigger=NULL;
-	eveDeviceCommand *unit=NULL;
+	eveCommandDefinition *trigger=NULL;
+	eveCommandDefinition *unit=NULL;
 	eveChannelDefinition* channel;
 
 	if (detector.isNull()){
@@ -191,7 +191,7 @@ void eveXMLReader::createDetectorDefinition(QDomNode detector){
     	}
     	else {
             sendError(DEBUG,0,QString("eveXMLReader::eveDetectorDefinition: found unit with string %1").arg(unitstring.text()));
-    		unit = new eveDeviceCommand(NULL, unitstring.text(), eveStringT);
+    		unit = new eveCommandDefinition(NULL, unitstring.text(), eveStringT);
     	}
     }
     eveDetectorDefinition* detectDef = new eveDetectorDefinition(name, id, trigger, unit);
@@ -215,7 +215,7 @@ void eveXMLReader::createDetectorDefinition(QDomNode detector){
 /** \brief create a Transport from XML
  * \param node the <access> DomNode
  */
-eveTransportDef * eveXMLReader::createTransportDefinition(QDomElement node)
+eveTransportDefinition * eveXMLReader::createTransportDefinition(QDomElement node)
 {
 	QString typeString, transportString, timeoutString;
 	QString methodString;
@@ -269,7 +269,7 @@ eveTransportDef * eveXMLReader::createTransportDefinition(QDomElement node)
 		if (transportString == "local") transport = eveTRANS_LOCAL;
 	}
 	// return default transport
-	return new eveTransportDef(transport, accesstype, accessMethod, timeout, node.text());
+	return new eveTransportDefinition(transport, accesstype, accessMethod, timeout, node.text());
 
 }
 
@@ -283,9 +283,9 @@ eveChannelDefinition * eveXMLReader::createChannelDefinition(QDomNode channel, e
 	// name, id, read, unit, trigger
 	QString name;
 	QString id;
-	eveDeviceCommand *trigger=NULL;
-	eveDeviceCommand *unit=NULL;
-	eveDeviceCommand *read=NULL;
+	eveCommandDefinition *trigger=NULL;
+	eveCommandDefinition *unit=NULL;
+	eveCommandDefinition *read=NULL;
 
 	QDomElement domElement = channel.firstChildElement("id");
     if (!domElement.isNull()) id = domElement.text();
@@ -309,7 +309,7 @@ eveChannelDefinition * eveXMLReader::createChannelDefinition(QDomNode channel, e
     		unit = createDeviceCommand(domElement);
     	}
     	else {
-    		unit = new eveDeviceCommand(NULL, unitstring.text(), eveStringT);
+    		unit = new eveCommandDefinition(NULL, unitstring.text(), eveStringT);
     	}
     }
 
@@ -330,8 +330,8 @@ void eveXMLReader::createMotorDefinition(QDomNode motor){
 
 	QString name;
 	QString id;
-	eveDeviceCommand *trigger=NULL;
-	eveDeviceCommand *unit=NULL;
+	eveCommandDefinition *trigger=NULL;
+	eveCommandDefinition *unit=NULL;
 	eveAxisDefinition* axis;
 
 	if (motor.isNull()){
@@ -354,7 +354,7 @@ void eveXMLReader::createMotorDefinition(QDomNode motor){
     		unit = createDeviceCommand(domElement);
     	}
     	else {
-    		unit = new eveDeviceCommand(NULL, unitstring.text(), eveStringT);
+    		unit = new eveCommandDefinition(NULL, unitstring.text(), eveStringT);
     	}
     }
 
@@ -386,13 +386,13 @@ eveAxisDefinition * eveXMLReader::createAxisDefinition(QDomNode axis, eveMotorDe
 
 	QString name;
 	QString id;
-	eveDeviceCommand *trigger = NULL;
-	eveDeviceCommand *unit = NULL;
-	eveDeviceCommand *stopCommand = NULL;
-	eveDeviceCommand *gotoCommand=NULL;
-	eveDeviceCommand *positionCommand=NULL;
-	eveDeviceCommand *statusCommand=NULL;
-	eveDeviceCommand *deadbandCommand=NULL;
+	eveCommandDefinition *trigger = NULL;
+	eveCommandDefinition *unit = NULL;
+	eveCommandDefinition *stopCommand = NULL;
+	eveCommandDefinition *gotoCommand=NULL;
+	eveCommandDefinition *positionCommand=NULL;
+	eveCommandDefinition *statusCommand=NULL;
+	eveCommandDefinition *deadbandCommand=NULL;
 
 	QDomElement domElement = axis.firstChildElement("id");
     if (!domElement.isNull()) id = domElement.text();
@@ -439,7 +439,7 @@ eveAxisDefinition * eveXMLReader::createAxisDefinition(QDomNode axis, eveMotorDe
     	}
     	else {
             sendError(DEBUG,0,QString("eveXMLReader::createAxis: found unit with string %1").arg(unitstring.text()));
-    		unit = new eveDeviceCommand(NULL, unitstring.text(), eveStringT);
+    		unit = new eveCommandDefinition(NULL, unitstring.text(), eveStringT);
     	}
     }
 
@@ -464,8 +464,8 @@ eveAxisDefinition * eveXMLReader::createAxisDefinition(QDomNode axis, eveMotorDe
  * \return deviceCommand (goto, unit, stop etc.)
  *
  */
-eveDeviceCommand * eveXMLReader::createDeviceCommand(QDomNode node){
-	eveTransportDef *access=NULL;
+eveCommandDefinition * eveXMLReader::createDeviceCommand(QDomNode node){
+	eveTransportDefinition *access=NULL;
 	QString valueString="";
 	eveType valuetype=eveUnknownT;
 
@@ -494,7 +494,7 @@ eveDeviceCommand * eveXMLReader::createDeviceCommand(QDomNode node){
  			sendError(ERROR,0,"eveXMLReader::createCommand: type attribute required for <value> tag in <access>");
      	}
     }
-	return new eveDeviceCommand(access, valueString, valuetype);
+	return new eveCommandDefinition(access, valueString, valuetype);
 }
 
 /** \brief create an option or a device from XML
@@ -504,8 +504,8 @@ void eveXMLReader::createDeviceDefinition(QDomElement device){
 
 	QString name;
 	QString id;
-	eveDeviceCommand *unit=NULL;
-	eveDeviceCommand* valueTrans;
+	eveCommandDefinition *unit=NULL;
+	eveCommandDefinition* valueTrans;
 
 	if (device.isNull()){
 		sendError(INFO,0,"eveXMLReader::createDevice: cannot create Null device/option, check XML-Syntax");
@@ -535,7 +535,7 @@ void eveXMLReader::createDeviceDefinition(QDomElement device){
     		unit = createDeviceCommand(domElement);
     	}
     	else {
-    		unit = new eveDeviceCommand(NULL, unitstring.text(), eveStringT);
+    		unit = new eveCommandDefinition(NULL, unitstring.text(), eveStringT);
     	}
     }
 
@@ -546,7 +546,7 @@ void eveXMLReader::createDeviceDefinition(QDomElement device){
 		sendError(ERROR,0,QString("eveXMLReader::createDevice: need a valid <value> tag for %1").arg(name));
 		return;
 	}
-	deviceList.insert(id, new eveDevice(unit, valueTrans, name, id));
+	deviceList.insert(id, new eveDeviceDefinition(unit, valueTrans, name, id));
 
 }
 
@@ -769,7 +769,7 @@ QList<eveSMDevice*>* eveXMLReader::getSMDeviceList(eveScanModule* scanmodule, in
 		bool ok = false;
 		eveVariant varValue;
 		bool reset = false;
-		eveDevice* devDef=NULL;
+		eveDeviceDefinition* devDef=NULL;
 
 		QDomElement domId = domElement.firstChildElement("id");
 		if (!domId.isNull())
@@ -968,7 +968,7 @@ void eveXMLReader::createDetector(eveScanModule* scanmodule, eveChannelDefinitio
 	eveDetectorDefinition* detectorDef = channelDefinition->getDetectorDefinition();
 	if (detectorDef->getDetector() == NULL) {
 		eveSMDetector* detector =  new eveSMDetector(scanmodule, detectorDef);
-		deviceList.insert(detectorDef->getId(), (eveBaseDevice*) detector);
+		deviceList.insert(detectorDef->getId(), (eveBaseDeviceDefinition*) detector);
 		detectorDef->setDetector(detector);
 	}
 }
@@ -982,7 +982,7 @@ void eveXMLReader::createMotor(eveScanModule* scanmodule, eveAxisDefinition* axi
 	eveMotorDefinition* motorDef = axisDefinition->getMotorDefinition();
 	if (motorDef->getMotor() == NULL) {
 		eveSMMotor* motor = new eveSMMotor(scanmodule, motorDef);
-		deviceList.insert(motorDef->getId(), (eveBaseDevice*) motor);
+		deviceList.insert(motorDef->getId(), (eveBaseDeviceDefinition*) motor);
 		motorDef->setMotor(motor);
 	}
 }
@@ -1121,7 +1121,7 @@ eveEventProperty* eveXMLReader::getEvent(eveEventProperty::actionTypeT action, Q
 			return NULL;
 		}
 		QString devname = regex.capturedTexts().at(2);
-		eveDevice* deviceDef = deviceList.getDeviceDef(devname);
+		eveDeviceDefinition* deviceDef = deviceList.getDeviceDef(devname);
 		if ((deviceDef == NULL) || (deviceDef->getValueCmd() == NULL)){
 			sendError(ERROR, 0, QString("get Detector event: no or invalid device definition found for %1").arg(eventId));
 			return NULL;
@@ -1139,7 +1139,7 @@ eveEventProperty* eveXMLReader::getEvent(eveEventProperty::actionTypeT action, Q
 			return NULL;
 		}
 
-	 	eveDevice* deviceDef = deviceList.getAnyDef(domId.text());
+	 	eveDeviceDefinition* deviceDef = deviceList.getAnyDef(domId.text());
 		if ((deviceDef == NULL) || (deviceDef->getValueCmd() == NULL)){
 			sendError(ERROR, 0, QString("getEvent: no or invalid device definition found for %1").arg(domId.text()));
 			return NULL;
@@ -1185,12 +1185,12 @@ eveEventProperty* eveXMLReader::getEvent(eveEventProperty::actionTypeT action, Q
 	}
 }
 
-QList<eveDevice *>* eveXMLReader::getMonitorDeviceList(){
+QList<eveDeviceDefinition *>* eveXMLReader::getMonitorDeviceList(){
 
-	QList<eveDevice *>* monitors = new QList<eveDevice *>();
+	QList<eveDeviceDefinition *>* monitors = new QList<eveDeviceDefinition *>();
 
 	foreach(QString xmlid, monitorList){
-		eveDevice* deviceDef = deviceList.getAnyDef(xmlid);
+		eveDeviceDefinition* deviceDef = deviceList.getAnyDef(xmlid);
 		if ((deviceDef == NULL) || (deviceDef->getValueCmd() == NULL)){
 			sendError(ERROR, 0, QString("MonitorList: no or invalid device definition found for %1").arg(xmlid));
 		}

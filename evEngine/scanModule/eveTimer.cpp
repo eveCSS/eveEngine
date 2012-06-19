@@ -9,7 +9,7 @@
 #include "eveError.h"
 #include <limits.h>
 
-eveTimer::eveTimer(eveSMBaseDevice *parent, QString xmlid, QString name, eveTransportDef* transdef) : eveBaseTransport(parent, xmlid, name), timer(parent){
+eveTimer::eveTimer(eveSMBaseDevice *parent, QString xmlid, QString name, eveTransportDefinition* transdef) : eveBaseTransport(parent, xmlid, name), timer(parent){
 
 	baseDev = parent;
 	transStatus = eveUNDEFINED;

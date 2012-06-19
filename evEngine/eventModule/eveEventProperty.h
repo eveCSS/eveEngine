@@ -11,7 +11,7 @@
 #include <QObject>
 #include <QString>
 #include "eveVariant.h"
-#include "eveDevice.h"
+#include "eveDeviceDefinitions.h"
 
 enum eventTypeT {eveEventTypeMONITOR=1, eveEventTypeSCHEDULE, eveEventTypeDETECTOR, eveEventTypeGUI} ;
 enum incidentTypeT {eveIncidentNONE, eveIncidentSTART, eveIncidentEND} ;
@@ -27,7 +27,7 @@ class eveEventProperty : public QObject {
 public:
 	enum actionTypeT {NONE, START, PAUSE, HALT, BREAK, STOP, REDO, TRIGGER} ;
 
-	eveEventProperty(QString, QString, eveVariant limit, eventTypeT, incidentTypeT, actionTypeT, eveDeviceCommand*);
+	eveEventProperty(QString, QString, eveVariant limit, eventTypeT, incidentTypeT, actionTypeT, eveCommandDefinition*);
 	eveEventProperty(actionTypeT, int);
 	virtual ~eveEventProperty();
 	void setOn(bool state){onstate = state;};
@@ -50,7 +50,7 @@ public:
 	bool isBothDirections(){return (direction==eveDirectionONOFF);};
 	bool isSwitchOn(){return (onstate && ((direction==eveDirectionONOFF) || (direction==eveDirectionON)));};
 	bool isSwitchOff(){return ((!onstate && (direction==eveDirectionONOFF)) || (onstate && (direction==eveDirectionOFF)));};
-	eveDeviceCommand* getDevCommand(){return devCommand;};
+	eveCommandDefinition* getDevCommand(){return devCommand;};
 	QString getCompareOperator(){return comparison;};
 	QString getName(){return name;};
 	incidentTypeT getIncident(){return incidentType;};
@@ -71,7 +71,7 @@ private:
 	eventTypeT eventType;
 	incidentTypeT incidentType;
 	QString comparison;
-	eveDeviceCommand* devCommand;;
+	eveCommandDefinition* devCommand;;
 	directionTypeT direction;
 };
 

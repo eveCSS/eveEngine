@@ -11,7 +11,7 @@
 #include <QObject>
 #include <QList>
 #include "eveSMBaseDevice.h"
-#include "eveDevice.h"
+#include "eveDeviceDefinitions.h"
 #include "eveVariant.h"
 #include "eveCaTransport.h"
 
@@ -27,7 +27,7 @@ class eveSMDevice : public eveSMBaseDevice {
 	Q_OBJECT
 
 public:
-	eveSMDevice(eveScanModule*, eveDevice*, eveVariant, bool reset=false);
+	eveSMDevice(eveScanModule*, eveDeviceDefinition*, eveVariant, bool reset=false);
 	virtual ~eveSMDevice();
 	void init();
 	void readValue(bool);

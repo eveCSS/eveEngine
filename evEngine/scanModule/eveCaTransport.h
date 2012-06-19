@@ -17,7 +17,7 @@
 
 #include "eveBaseTransport.h"
 #include "eveSMBaseDevice.h"
-#include "eveDevice.h"
+#include "eveDeviceDefinitions.h"
 #include "cadef.h"
 //#include "eveData.h"
 
@@ -28,7 +28,7 @@ class eveCaTransport: public eveBaseTransport {
 	Q_OBJECT
 
 public:
-	eveCaTransport(eveSMBaseDevice *parent, QString, QString, eveTransportDef*);
+	eveCaTransport(eveSMBaseDevice *parent, QString, QString, eveTransportDefinition*);
 	virtual ~eveCaTransport();
 	int readData(bool queue=false);
 	int writeData(eveVariant, bool queue=false);

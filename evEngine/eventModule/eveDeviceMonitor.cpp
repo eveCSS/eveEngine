@@ -22,7 +22,7 @@ eveDeviceMonitor::eveDeviceMonitor(eveEventManager* eventManager, eveEventProper
 		limit = event->getLimit();
 		if ((event->getDevCommand() != NULL) && (event->getDevCommand()->getTrans()!= NULL)){
 			if (event->getDevCommand()->getTrans()->getTransType() == eveTRANS_CA){
-				monitorTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)event->getDevCommand()->getTrans());
+				monitorTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)event->getDevCommand()->getTrans());
 				if (monitorTrans != NULL) {
 					connect(monitorTrans, SIGNAL(valueChanged(eveDataMessage*)), this, SLOT(valueChange(eveDataMessage*)));
 

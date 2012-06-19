@@ -9,19 +9,19 @@
 #define EVEMONITORREGISTERMESSAGE_H_
 
 #include "eveMessage.h"
-#include "eveDevice.h"
+#include "eveDeviceDefinitions.h"
 
 class eveMonitorRegisterMessage: public eveMessage {
 public:
-	eveMonitorRegisterMessage(eveDevice *, int);
+	eveMonitorRegisterMessage(eveDeviceDefinition *, int);
 	virtual ~eveMonitorRegisterMessage();
 	QString getName(){return name;};
 	QString getXMLId(){return xmlid;};
 	int getStorageChannel(){return storageChannel;};
-	eveTransportDef* getTransport(){return transport;};
+	eveTransportDefinition* getTransport(){return transport;};
 
 private:
-	eveTransportDef* transport;
+	eveTransportDefinition* transport;
 	QString xmlid;
 	QString name;
 	int storageChannel;

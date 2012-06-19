@@ -12,7 +12,7 @@
 #include <QList>
 #include <QHash>
 
-#include "eveDevice.h"
+#include "eveDeviceDefinitions.h"
 #include "eveVariant.h"
 #include "eveCaTransport.h"
 #include "eveSMBaseDevice.h"

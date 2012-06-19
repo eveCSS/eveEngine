@@ -57,7 +57,7 @@ eveSMBaseDevice(sm){
 
 
 	if ((motorAxisDef->getGotoCmd() != NULL) && (motorAxisDef->getGotoCmd()->getTrans() != NULL)){
-		eveTransportDef* transdef = (eveTransportDef*)motorAxisDef->getGotoCmd()->getTrans();
+		eveTransportDefinition* transdef = (eveTransportDefinition*)motorAxisDef->getGotoCmd()->getTrans();
 		if (transdef->getTransType() == eveTRANS_CA){
 			gotoTrans = new eveCaTransport(this, xmlId, name, transdef);
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
@@ -81,7 +81,7 @@ eveSMBaseDevice(sm){
 
 	if ((motorAxisDef->getPosCmd() != NULL) && (motorAxisDef->getPosCmd()->getTrans() != NULL)){
 		if (motorAxisDef->getPosCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			posTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)motorAxisDef->getPosCmd()->getTrans());
+			posTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)motorAxisDef->getPosCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}
@@ -93,7 +93,7 @@ eveSMBaseDevice(sm){
 	if ((motorAxisDef->getTrigCmd() != NULL)){
 		if (motorAxisDef->getTrigCmd()->getTrans() != NULL){
 			if (motorAxisDef->getTrigCmd()->getTrans()->getTransType() == eveTRANS_CA){
-				triggerTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)motorAxisDef->getTrigCmd()->getTrans());
+				triggerTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)motorAxisDef->getTrigCmd()->getTrans());
 				triggerValue.setType(motorAxisDef->getTrigCmd()->getValueType());
 				triggerValue.setValue(motorAxisDef->getTrigCmd()->getValueString());
 				if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
@@ -110,7 +110,7 @@ eveSMBaseDevice(sm){
 
 	if ((motorAxisDef->getStopCmd() != NULL) && (motorAxisDef->getStopCmd()->getTrans() != NULL)){
 		if (motorAxisDef->getStopCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			stopTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)motorAxisDef->getStopCmd()->getTrans());
+			stopTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)motorAxisDef->getStopCmd()->getTrans());
 			stopValue.setType(motorAxisDef->getStopCmd()->getValueType());
 			stopValue.setValue(motorAxisDef->getStopCmd()->getValueString());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
@@ -120,7 +120,7 @@ eveSMBaseDevice(sm){
 
 	if ((motorAxisDef->getStatusCmd() != NULL) && (motorAxisDef->getStatusCmd()->getTrans() != NULL)){
 		if (motorAxisDef->getStatusCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			statusTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)motorAxisDef->getStatusCmd()->getTrans());
+			statusTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)motorAxisDef->getStatusCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}
@@ -128,7 +128,7 @@ eveSMBaseDevice(sm){
 
 	if ((motorAxisDef->getDeadbandCmd() != NULL) && (motorAxisDef->getDeadbandCmd()->getTrans() != NULL)){
 		if (motorAxisDef->getDeadbandCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			deadbandTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)motorAxisDef->getDeadbandCmd()->getTrans());
+			deadbandTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)motorAxisDef->getDeadbandCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}
@@ -139,7 +139,7 @@ eveSMBaseDevice(sm){
 			unit = motorAxisDef->getUnitCmd()->getValueString();
 		}
 		else if (motorAxisDef->getUnitCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			unitTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)motorAxisDef->getUnitCmd()->getTrans());
+			unitTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)motorAxisDef->getUnitCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}

@@ -52,9 +52,9 @@ eveSMBaseDevice(scanmodule) {
 	detector = definition->getDetectorDefinition()->getDetector();
 
 	if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
-      eveTransportDef* transdef = (eveTransportDef*)definition->getValueCmd()->getTrans();
+      eveTransportDefinition* transdef = (eveTransportDefinition*)definition->getValueCmd()->getTrans();
       if (transdef->getTransType() == eveTRANS_CA){
-			valueTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getValueCmd()->getTrans());
+			valueTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)definition->getValueCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
       else if (transdef->getTransType() == eveTRANS_LOCAL) {
@@ -75,7 +75,7 @@ eveSMBaseDevice(scanmodule) {
 
 	if ((definition->getStopCmd() != NULL) && (definition->getStopCmd()->getTrans()!= NULL)){
 		if (definition->getStopCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			stopTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getStopCmd()->getTrans());
+			stopTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)definition->getStopCmd()->getTrans());
 			stopValue.setType(definition->getStopCmd()->getValueType());
 			stopValue.setValue(definition->getStopCmd()->getValueString());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
@@ -86,7 +86,7 @@ eveSMBaseDevice(scanmodule) {
 	if (definition->getTrigCmd() != NULL){
 		if (definition->getTrigCmd()->getTrans()!= NULL){
 			if (definition->getTrigCmd()->getTrans()->getTransType() == eveTRANS_CA){
-				triggerTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getTrigCmd()->getTrans());
+				triggerTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)definition->getTrigCmd()->getTrans());
 				triggerValue.setType(definition->getTrigCmd()->getValueType());
 				triggerValue.setValue(definition->getTrigCmd()->getValueString());
 				if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
@@ -106,7 +106,7 @@ eveSMBaseDevice(scanmodule) {
 			unit = definition->getUnitCmd()->getValueString();
 		}
 		else if (definition->getUnitCmd()->getTrans()->getTransType() == eveTRANS_CA){
-			unitTrans = new eveCaTransport(this, xmlId, name, (eveTransportDef*)definition->getUnitCmd()->getTrans());
+			unitTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)definition->getUnitCmd()->getTrans());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
 	}
