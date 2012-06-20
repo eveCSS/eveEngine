@@ -363,36 +363,12 @@ void eveSMChannel::signalReady() {
 	ready = true;
 	sendError(DEBUG, 0, "is done");
 	emit channelDone();
+	if (sendreadyevent) {
+		QString eventId = QString("D-%1-%2-%3").arg(scanModule->getChainId()).arg(scanModule->getSmId()).arg(xmlId);
+		scanModule->sendMessage(new eveMessageText(EVEMESSAGETYPE_DETECTORREADY, eventId));
+		sendError(DEBUG, 0, QString("sending detector ready for %1").arg(eventId));
+	}
 }
-
-/**
- * \brief trigger detector if it has a trigger command
- * @param queue if true queue the request, if false send it immediately
- *
- * if detector has a trigger this method only triggers the detector,
- * read must be called explicitly
- * deviceDone is always signaled
- */
-//void eveSMChannel::trigger(bool queue) {
-//
-//	if (channelOK) {
-//		ready = false;
-//		if (haveTrigger){
-//			channelStatus = eveCHANNELTRIGGER;
-//			if (triggerTrans->writeData(triggerValue, queue)) {
-//				sendError(ERROR,0,"error triggering");
-//				transportReady(1);
-//			}
-//		}
-//		else {
-//			signalReady();
-//		}
-//	}
-//	else {
-//		sendError(ERROR,0,"not operational");
-//		signalReady();
-//	}
-//}
 
 /**
  * \brief combined trigger and read sequence

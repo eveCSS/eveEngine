@@ -185,6 +185,7 @@ void eveMessageHub::newMessage(int messageSource)
 			{
 				eveErrorMessage* emesg = (eveErrorMessage*)message;
 				eveError::log(emesg->getSeverity(), emesg->getErrorText(), emesg->getFacility());
+				// skip messages with severity below loglevel
 				if (loglevel < emesg->getSeverity()) {
 					delete message;
 					message = NULL;
@@ -345,17 +346,6 @@ void eveMessageHub::newMessage(int messageSource)
 					if (sendToStorage(message)) message = NULL;
 				}
 				break;
-//			case EVEMESSAGETYPE_STORAGEACK:
-//				/* send back to corresponding chain */
-//				if (mChanHash.contains(message->getDestination())){
-//					eveMessage *mclone = message->clone();
-//					if (!mChanHash.value(message->getDestination())->queueMessage(mclone)) delete mclone;
-//				}
-//				/* send storageack to manager (we always have one) to keep track of storagemodules*/
-//				if (mChanHash.contains(EVECHANNEL_MANAGER)){
-//					if (mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(message))message = NULL;
-//				}
-//				break;
 			case EVEMESSAGETYPE_DEVINFO:
 				/* send device info to storagemodule if available */
 				if (haveStorage()){
@@ -363,15 +353,9 @@ void eveMessageHub::newMessage(int messageSource)
 				}
 				break;
 			case EVEMESSAGETYPE_EVENTREGISTER:
-				if (mChanHash.contains(EVECHANNEL_EVENT)){
-					if (mChanHash.value(EVECHANNEL_EVENT)->queueMessage(message)) message = NULL;
-				}
 			case EVEMESSAGETYPE_MONITORREGISTER:
-				if (mChanHash.contains(EVECHANNEL_EVENT)){
-					if (mChanHash.value(EVECHANNEL_EVENT)->queueMessage(message)) message = NULL;
-				}
-				break;
 			case EVEMESSAGETYPE_STORAGEDONE:
+			case EVEMESSAGETYPE_DETECTORREADY:
 				if (mChanHash.contains(EVECHANNEL_EVENT)){
 					if (mChanHash.value(EVECHANNEL_EVENT)->queueMessage(message)) message = NULL;
 				}

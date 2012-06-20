@@ -1106,28 +1106,30 @@ eveEventProperty* eveXMLReader::getEvent(eveEventProperty::actionTypeT action, Q
 		}
 
 		QString eventId = domId.text().trimmed();
-		QRegExp regex = QRegExp("^D-\\d+-\\d+-(\\w+)$");
-		if (!(eventId.trimmed().contains(regex) && (regex.numCaptures() > 2))){
-			sendError(ERROR, 0, QString("get Detector Event: invalid detector id").arg(eventId));
+		QRegExp regex = QRegExp("^D-(\\d+)-(\\d+)-([\\w:]+)$");
+		if (!(eventId.contains(regex) && (regex.numCaptures() == 3))){
+			sendError(ERROR, 0, QString("get Detector Event: invalid detector id: %1").arg(eventId));
 			return NULL;
 		}
 
 		int chid=0, smid=0;
 		bool cok, sok;
-		chid = regex.capturedTexts().at(0).toInt(&cok);
-		smid = regex.capturedTexts().at(1).toInt(&sok);
+		sendError(ERROR, 0, QString("get Detector Event: all: %1 chid %2, smid: %3 det: %4").arg(regex.capturedTexts().at(0)).arg(regex.capturedTexts().at(1)).arg(regex.capturedTexts().at(2)).arg(regex.capturedTexts().at(3)));
+		chid = regex.capturedTexts().at(1).toInt(&cok);
+		smid = regex.capturedTexts().at(2).toInt(&sok);
 		if (!cok || !sok){
 			sendError(ERROR, 0, "getEvent: error extracting chainid or smid from detector event id");
 			return NULL;
 		}
-		QString devname = regex.capturedTexts().at(2);
-		eveDeviceDefinition* deviceDef = deviceList.getDeviceDef(devname);
+		QString devname = regex.capturedTexts().at(3);
+		eveDeviceDefinition* deviceDef = deviceList.getAnyDef(devname);
 		if ((deviceDef == NULL) || (deviceDef->getValueCmd() == NULL)){
-			sendError(ERROR, 0, QString("get Detector event: no or invalid device definition found for %1").arg(eventId));
+			sendError(ERROR, 0, QString("get Detector event: no or invalid device definition found for %1").arg(devname));
 			return NULL;
 		}
-
-		sendError(DEBUG, 0, QString("found detector event definition for %1").arg(eventId));
+		// rebuild eventId to remove possible leading zeros
+		eventId = QString("D-%1-%2-%3").arg(chid).arg(smid).arg(devname);
+		sendError(DEBUG, 0, QString("found detector event definition for %1, id:%2, smid: %3, chid: %4").arg(devname).arg(eventId).arg(smid).arg(chid));
 		return new eveEventProperty(eventId, devname, eveVariant(QVariant(eveVariant::getMangled(chid,smid))), eventType, eveIncidentNONE, action, NULL);
 	}
 	else if (domElement.attribute("type") == "monitor"){

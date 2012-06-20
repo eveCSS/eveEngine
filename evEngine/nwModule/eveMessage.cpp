@@ -40,6 +40,7 @@ eveMessage::eveMessage(int mtype, int prio, int dest)
 			(type == EVEMESSAGETYPE_METADATA) ||
 			(type == EVEMESSAGETYPE_REMOVEFROMPLAYLIST) ||
 			(type == EVEMESSAGETYPE_STORAGEDONE) ||
+			(type == EVEMESSAGETYPE_DETECTORREADY) ||
 			(type == EVEMESSAGETYPE_MONITORREGISTER));
 }
 
@@ -73,8 +74,7 @@ void eveMessage::dump()
 eveMessageText::eveMessageText(int mType, QString text, int prio) : eveMessage(mType, prio), messageText(text)
 {
 	type = mType;
-	// check the allowed types; for now EVEMESSAGETYPE_LIVEDESCRIPTION is the only candidate
-	assert(type == EVEMESSAGETYPE_LIVEDESCRIPTION);
+	assert((type == EVEMESSAGETYPE_DETECTORREADY) || (type == EVEMESSAGETYPE_LIVEDESCRIPTION));
 	priority = prio;
 }
 /**

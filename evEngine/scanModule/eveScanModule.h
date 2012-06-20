@@ -49,29 +49,11 @@ public:
 	void sendMessage(eveMessage*);
 	eveSMAxis* findAxis(QString);
 	int getRemainingTime();
+	int getChainId(){return chainId;};
+	int getSmId(){return smId;};
 	//void gotoStart();
 	void readPos();
 	bool newEvent(eveEventProperty*);
-
-/*
- *
-	bool startSM(int);
-	bool stopSM(int);
-	bool breakSM(int);
-	bool pauseSM(int);
-	bool resumeSM(int);
-	bool haltSM(int);
-	bool triggerSM(int, int);
-	bool redoSM(int);
-
-	void startChain();
-	void stopChain();
-	bool breakChain();
-	void pauseChain();
-	bool resumeChain();
-	void haltChain();
-	void redoChain();
- */
 
 public slots:
 	void execStage();

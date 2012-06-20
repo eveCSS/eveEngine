@@ -43,6 +43,16 @@ void eveEventManager::handleMessage(eveMessage *message){
 			if (scheduleHash.contains(eveVariant::getMangled(chainId,smId))) triggerSchedule(chainId, smId, (eveChainStatusMessage*)message);
 			break;
 		}
+		case EVEMESSAGETYPE_DETECTORREADY:
+		{
+			if (detectorHash.contains(((eveMessageText*)message)->getText())) {
+				QString eventId = ((eveMessageText*)message)->getText();
+				eveEventProperty* event = detectorHash.value(eventId);
+				event->fireEvent();
+				sendError(DEBUG, 0, QString("fired a detector event %1").arg(eventId));
+			}
+			break;
+		}
 		case EVEMESSAGETYPE_STORAGEDONE:
 		{
 			int channel = ((eveMessageInt*)message)->getInt();
@@ -132,12 +142,24 @@ void eveEventManager::registerEvent(eveEventRegisterMessage* message){
 
 void eveEventManager::triggerSchedule(int chainid, int smid, eveChainStatusMessage* message){
 
-	eveEventProperty* event = scheduleHash.value(eveVariant::getMangled(chainid,smid));
-	if (((event->getIncident() == eveIncidentEND) && (message->getStatus() == eveChainSmDONE)) ||
-			((event->getIncident() == eveIncidentSTART) && (message->getStatus() == eveChainSmEXECUTING))){
-		event->setValue(event->getLimit());
+	if (scheduleHash.contains(eveVariant::getMangled(chainid,smid))){
+		eveEventProperty* event = scheduleHash.value(eveVariant::getMangled(chainid,smid));
+		if (((event->getIncident() == eveIncidentEND) && (message->getStatus() == eveChainSmDONE)) ||
+				((event->getIncident() == eveIncidentSTART) && (message->getStatus() == eveChainSmEXECUTING))){
+			event->setValue(event->getLimit());
+			event->fireEvent();
+			sendError(DEBUG, 0, QString("fired a schedule event (%1/%2)").arg(chainid).arg(smid));
+		}
+	}
+}
+
+void eveEventManager::triggerDetector(eveMessageText* message){
+
+	if (detectorHash.contains(message->getText())) {
+		eveEventProperty* event = detectorHash.value(message->getText());
+		// event->setValue(event->getLimit());
 		event->fireEvent();
-		sendError(DEBUG, 0, QString("fired a schedule event (%1/%2)").arg(chainid).arg(smid));
+		sendError(DEBUG, 0, QString("fired a detector event %1").arg(message->getText()));
 	}
 }
 
