@@ -62,9 +62,6 @@ private:
 	void createDetectorDefinition(QDomNode);
 	void createMotorDefinition(QDomNode);
 	void createDeviceDefinition(QDomElement);
-	void createDetector(eveScanModule*, eveChannelDefinition*);
-	void createMotor(eveScanModule*, eveAxisDefinition*);
-	//void createEventDefinition(QDomNode);
 	int getIntValueOfTag(int, int, QString);
 	int repeatCount;
 	QList<int> chainIdList;

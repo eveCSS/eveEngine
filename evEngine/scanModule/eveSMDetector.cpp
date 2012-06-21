@@ -35,7 +35,10 @@ eveSMDetector::eveSMDetector(eveScanModule* scanmodule, eveDetectorDefinition* d
 }
 
 eveSMDetector::~eveSMDetector() {
-	// TODO Auto-generated destructor stub
+	// TODO
+	sendError(DEBUG, 0, QString("Deleting Detector %1").arg(name));
+	if (triggerTrans != NULL) delete triggerTrans;
+	if (unitTrans != NULL) delete unitTrans;
 }
 
 /**

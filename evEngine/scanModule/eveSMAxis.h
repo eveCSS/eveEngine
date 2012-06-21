@@ -25,13 +25,14 @@
 enum eveAxisStatusT {eveAXISINIT, eveAXISIDLE, eveAXISWRITEPOS, eveAXISREADPOS, eveAXISREADSTATUS};
 
 class eveScanManager;
+class eveSMMotor;
 
 class eveSMAxis: public eveSMBaseDevice {
 
 	Q_OBJECT
 
 public:
-	eveSMAxis(eveScanModule *, eveAxisDefinition *, evePosCalc *);
+	eveSMAxis(eveScanModule *, eveSMMotor*, eveAxisDefinition *, evePosCalc *);
 	virtual ~eveSMAxis();
 	void gotoStartPos(bool);
 	void gotoNextPos(bool);

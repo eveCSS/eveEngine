@@ -18,8 +18,6 @@ enum eveTransportT {eveTRANS_CA, eveTRANS_LOCAL };
 
 class eveDetectorDefinition;
 class eveMotorDefinition;
-class eveSMDetector;
-class eveSMMotor;
 
 /**
  * \brief Common transport definition
@@ -121,15 +119,12 @@ class eveDetectorDefinition : public eveBaseDeviceDefinition {
 public:
 	eveDetectorDefinition(QString, QString, eveCommandDefinition*, eveCommandDefinition*);
 	virtual ~eveDetectorDefinition();
-	eveSMDetector* getDetector() {return detector;};
-	void setDetector(eveSMDetector* detec){detector = detec;};
 	eveCommandDefinition * getTrigCmd(){return trigger;};
 	eveCommandDefinition * getUnitCmd(){return unit;};
 
 private:
 	eveCommandDefinition* trigger;
 	eveCommandDefinition* unit;
-	eveSMDetector* detector;
 };
 
 /**
@@ -147,6 +142,7 @@ public:
 	eveCommandDefinition * getPosCmd(){return valueCmd;};
 	eveCommandDefinition * getDeadbandCmd(){return deadbandCmd;};
 	eveMotorDefinition* getMotorDefinition(){return motorDefinition;};
+	void setMotorDefinition(eveMotorDefinition* motorDef){motorDefinition = motorDef;};
 
 private:
 	eveCommandDefinition  *deadbandCmd;
@@ -166,15 +162,12 @@ class eveMotorDefinition : public eveBaseDeviceDefinition {
 public:
 	eveMotorDefinition(QString, QString, eveCommandDefinition*, eveCommandDefinition*);
 	virtual ~eveMotorDefinition();
-	eveSMMotor* getMotor() {return motor;};
-	void setMotor(eveSMMotor* smmotor){motor = smmotor;};
 	eveCommandDefinition * getTrigCmd(){return trigger;};
 	eveCommandDefinition * getUnitCmd(){return unit;};
 
 private:
 	eveCommandDefinition* trigger;
 	eveCommandDefinition* unit;
-	eveSMMotor* motor;
 };
 
 

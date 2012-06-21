@@ -147,8 +147,14 @@ eveScanModule::~eveScanModule() {
 		foreach (eveSMDevice *device, *postScanList) delete device;
 		foreach (eveSMAxis *axis, *axisList) delete axis;
 		foreach (eveSMChannel *channel, *channelList) delete channel;
-		foreach (eveSMDetector* detector, detectorList) delete detector;
-		foreach (eveSMMotor* motor, motorList) delete motor;
+		foreach (eveSMDetector* detector, detectorList) {
+			sendError(DEBUG, 0, QString("deleting detector %1").arg(detector->getName()));
+			delete detector;
+		}
+		foreach (eveSMMotor* motor, motorList) {
+			sendError(DEBUG, 0, QString("deleting motor %1").arg(motor->getName()));
+			delete motor;
+		}
 		foreach (eveCalc *positioner, positionerList) delete positioner;
 		delete preScanList;
 		delete postScanList;

@@ -142,7 +142,6 @@ bool eveXMLReader::read(QByteArray xmldata)
     QDomElement domElem = root.firstChildElement("detectors");
 	QDomNodeList detectorNodeList = domElem.childNodes();
 	for (unsigned int i=0; i < detectorNodeList.length(); ++i) createDetectorDefinition(detectorNodeList.item(i));
-	//    sendError(INFO,0,QString("eveXMLReader::read: found %1 detectorChannels").arg(channelDefinitions.size()));
 
 	domElem = root.firstChildElement("motors");
 	QDomNodeList motorNodeList = domElem.childNodes();
@@ -335,7 +334,7 @@ void eveXMLReader::createMotorDefinition(QDomNode motor){
 	eveAxisDefinition* axis;
 
 	if (motor.isNull()){
-		sendError(INFO,0,"eveXMLReader::createMotor: cannot create Null motor, check XML-Syntax");
+		sendError(INFO,0,"eveXMLReader::createMotorDefinition: cannot create Null motor, check XML-Syntax");
 		return;
 	}
 	QDomElement domElement = motor.firstChildElement("id");
@@ -364,7 +363,7 @@ void eveXMLReader::createMotorDefinition(QDomNode motor){
 	while (!domElement.isNull()) {
 		axis = createAxisDefinition(domElement, motorDef);
 		if (axis != NULL) deviceList.insert(axis->getId(),axis);
-	    sendError(INFO,0,QString("eveXMLReader::createMotor: axis-id: %1").arg(axis->getId()));
+	    sendError(INFO,0,QString("eveXMLReader::createMotorDefinition: axis-id: %1").arg(axis->getId()));
 		domElement = domElement.nextSiblingElement("axis");
 	}
 
@@ -373,7 +372,7 @@ void eveXMLReader::createMotorDefinition(QDomNode motor){
 		createDeviceDefinition(domElement);
  		domElement = domElement.nextSiblingElement("option");
 	}
-    sendError(INFO,0,QString("eveXMLReader::createMotor: id: %1, name: %2").arg(id).arg(name));
+    sendError(INFO,0,QString("eveXMLReader::createMotorDefinition: id: %1, name: %2").arg(id).arg(name));
 }
 
 
@@ -823,6 +822,7 @@ QList<eveSMDevice*>* eveXMLReader::getSMDeviceList(eveScanModule* scanmodule, in
 QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chain, int smid){
 
 	QList<eveSMAxis *> *axislist = new QList<eveSMAxis *>;
+	QHash<QString, eveSMMotor *> motorHash;
 
 	try
 	{
@@ -831,13 +831,25 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 	domElement = domElement.firstChildElement("smaxis");
 	while (!domElement.isNull()) {
 		bool prependElement=true;
+		eveAxisDefinition* axisDefinition = NULL;
+		eveSMMotor* motor = NULL;
 		eveVariant startvalue;
 		QString stepfunction = "none";
 		QDomElement domId = domElement.firstChildElement("axisid");
-		eveAxisDefinition* axisDefinition = deviceList.getAxisDef(domId.text());
+
+		axisDefinition = deviceList.getAxisDef(domId.text());
 		if (axisDefinition == NULL){
 			sendError(ERROR,0,QString("no axisdefinition found for %1").arg(domId.text()));
-			return axislist;
+			domElement = domElement.nextSiblingElement("smchannel");
+			continue;
+		}
+		eveMotorDefinition* motorDefinition = axisDefinition->getMotorDefinition();
+		if (motorHash.contains(motorDefinition->getId())){
+			motor = motorHash.value(motorDefinition->getId());
+		}
+		else {
+			motor = new eveSMMotor(scanmodule, motorDefinition);
+			motorHash.insert(motorDefinition->getId(), motor);
 		}
 		eveType axisType=axisDefinition->getAxisType();
 		QDomElement domstepf = domElement.firstChildElement("stepfunction");
@@ -878,13 +890,12 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 		else
 			sendError(ERROR,0,"No values found in XML to calculate motor positions");
 
-		createMotor(scanmodule, axisDefinition);
 		// order is important, since we must make sure all axes with step plugins
 		// which might use reference axes must be called after their reference axes
 		if (prependElement)
-			axislist->prepend(new eveSMAxis(scanmodule, axisDefinition, poscalc));
+			axislist->prepend(new eveSMAxis(scanmodule, motor, axisDefinition, poscalc));
 		else
-			axislist->append(new eveSMAxis(scanmodule, axisDefinition, poscalc));
+			axislist->append(new eveSMAxis(scanmodule, motor, axisDefinition, poscalc));
 
 		domElement = domElement.nextSiblingElement("smaxis");
 	}
@@ -894,6 +905,8 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 		// printf("C++ Exception %s\n",e.what());
 		sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getAxisList").arg(e.what()));
 	}
+	// TODO uncomment
+	// foreach (QString key, motorDefHash.keys()) delete axisDefHash.take(key);
 	return axislist;
 }
 
@@ -906,30 +919,62 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 QList<eveSMChannel*>* eveXMLReader::getChannelList(eveScanModule* scanmodule, int chain, int smid){
 
 	QList<eveSMChannel *> *channellist = new QList<eveSMChannel *>;
+	QHash<QString, eveSMDetector *> detectorHash;
 
 	try
 	{
-		QString normalizeChannel = "";
 		if (!smIdHash.contains(chain)) return channellist;
 		QDomElement domElement = smIdHash.value(chain)->value(smid);
 		domElement = domElement.firstChildElement("smchannel");
 		while (!domElement.isNull()) {
 			QHash<QString, QString> paraHash;
+			eveSMChannel* nmChannel = NULL;
+			eveSMDetector* detector = NULL;
+			eveChannelDefinition* channelDefinition = NULL;
 			QDomElement domId = domElement.firstChildElement("channelid");
-			eveChannelDefinition* channelDefinition = deviceList.getChannelDef(domId.text());
+
+			channelDefinition = deviceList.getChannelDef(domId.text());
 			if (channelDefinition == NULL){
 				sendError(ERROR,0,QString("no channeldefinition found for %1").arg(domId.text()));
-				return channellist;
+				domElement = domElement.nextSiblingElement("smchannel");
+				continue;
 			}
+
+			eveDetectorDefinition* detectorDefinition = channelDefinition->getDetectorDefinition();
+			if (detectorHash.contains(detectorDefinition->getId())){
+				detector = detectorHash.value(detectorDefinition->getId());
+			}
+			else {
+				detector = new eveSMDetector(scanmodule, detectorDefinition);
+				detectorHash.insert(detectorDefinition->getId(), detector);
+			}
+
 			QList<eveEventProperty* > *eventList = new QList<eveEventProperty* >;
 			domId = domElement.firstChildElement();
 			while (!domId.isNull()){
+				eveChannelDefinition* normalizeDefinition = NULL;
+				eveSMDetector* normalizeDetector = NULL;
 				if (domId.nodeName() == "redoevent"){
 					eveEventProperty* event = getEvent(eveEventProperty::REDO, domId);
 					if (event != NULL ) eventList->append(event);
 				}
 				else if (domId.nodeName() == "normalize_id"){
-					normalizeChannel = domId.text();
+					// use a local copy of normalize definition because we modify it for this scanmodule
+					normalizeDefinition = deviceList.getChannelDef(domId.text());
+					if (normalizeDefinition == NULL) {
+						sendError(ERROR,0,QString("no channeldefinition found for normalize channel %1").arg(domId.text()));
+						domId = domId.nextSiblingElement();
+						continue;
+					}
+					eveDetectorDefinition* detectorDefinition = normalizeDefinition->getDetectorDefinition();
+					if (detectorHash.contains(detectorDefinition->getId())){
+						normalizeDetector = detectorHash.value(detectorDefinition->getId());
+					}
+					else {
+						normalizeDetector = new eveSMDetector(scanmodule, detectorDefinition);
+						detectorHash.insert(detectorDefinition->getId(), normalizeDetector);
+					}
+					nmChannel = new eveSMChannel(scanmodule, normalizeDetector, normalizeDefinition, QHash<QString, QString>(), new QList<eveEventProperty* >, NULL);
 				}
 				else {
 					paraHash.insert(domId.nodeName(), domId.text().trimmed());
@@ -937,16 +982,7 @@ QList<eveSMChannel*>* eveXMLReader::getChannelList(eveScanModule* scanmodule, in
 				domId = domId.nextSiblingElement();
 			}
 
-			eveSMChannel* nmChannel = NULL;
-			if (normalizeChannel.length() > 0){
-				eveChannelDefinition* normalizeDefinition = deviceList.getChannelDef(normalizeChannel);
-				if (normalizeDefinition != NULL){
-					createDetector(scanmodule, normalizeDefinition);
-					nmChannel = new eveSMChannel(scanmodule, normalizeDefinition, QHash<QString, QString>(), new QList<eveEventProperty* >, NULL);
-				}
-			}
-			createDetector(scanmodule, channelDefinition);
-			channellist->append(new eveSMChannel(scanmodule, channelDefinition, paraHash, eventList, nmChannel));
+			channellist->append(new eveSMChannel(scanmodule, detector, channelDefinition, paraHash, eventList, nmChannel));
 			domElement = domElement.nextSiblingElement("smchannel");
 		}
 	}
@@ -956,35 +992,9 @@ QList<eveSMChannel*>* eveXMLReader::getChannelList(eveScanModule* scanmodule, in
 		sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getChannelList").arg(e.what()));
 	}
 
+	// TODO Before we can delete this we need a proper copy constructor for channelDefinition
+	// foreach (QString key, channelDefHash.keys()) delete channelDefHash.take(key);
 	return channellist;
-}
-
-/**
- * \brief create an eveSMDetector if this hasn't been done yet
- * @param channelDefinition
- */
-void eveXMLReader::createDetector(eveScanModule* scanmodule, eveChannelDefinition* channelDefinition){
-
-	eveDetectorDefinition* detectorDef = channelDefinition->getDetectorDefinition();
-	if (detectorDef->getDetector() == NULL) {
-		eveSMDetector* detector =  new eveSMDetector(scanmodule, detectorDef);
-		deviceList.insert(detectorDef->getId(), (eveBaseDeviceDefinition*) detector);
-		detectorDef->setDetector(detector);
-	}
-}
-
-/**
- * \brief create an eveSMMotor if this hasn't been done yet
- * @param axisDefinition
- */
-void eveXMLReader::createMotor(eveScanModule* scanmodule, eveAxisDefinition* axisDefinition){
-
-	eveMotorDefinition* motorDef = axisDefinition->getMotorDefinition();
-	if (motorDef->getMotor() == NULL) {
-		eveSMMotor* motor = new eveSMMotor(scanmodule, motorDef);
-		deviceList.insert(motorDef->getId(), (eveBaseDeviceDefinition*) motor);
-		motorDef->setMotor(motor);
-	}
 }
 
 QList<eveEventProperty*>* eveXMLReader::getSMEventList(int chain, int smid){

@@ -36,6 +36,7 @@ eveCaTransport::eveCaTransport(eveSMBaseDevice *parent, QString xmlid, QString n
 	dataPtr = NULL;
 	writeDataPtr = NULL;
 	newData = NULL;
+	caThreadContext = NULL;
 	pvname = transdef->getName();
 	method = transdef->getMethod();
 	dataType = transdef->getDataType();
@@ -60,17 +61,22 @@ eveCaTransport::eveCaTransport(eveSMBaseDevice *parent, QString xmlid, QString n
 
 eveCaTransport::~eveCaTransport(){
 
-	ca_clear_channel(chanChid);
-	caflush();
 	QWriteLocker locker(&contextLock);
 	if (contextCounter.contains(caThreadContext)){
 		int tmp = contextCounter.value(caThreadContext);
 		--tmp;
-		if (tmp > 0){
-			contextCounter.insert(caThreadContext, tmp);
+		contextCounter.insert(caThreadContext, tmp);
+		if (tmp < 0){
+			eveError::log(ERROR, "CA Transport: deleting unused channel ");
+		}
+		else if (tmp > 0) {
+			ca_clear_channel(chanChid);
+			caflush();
 		}
 		else {
-			eveError::log(DEBUG, " all channels done, destroy CA Context");
+			ca_clear_channel(chanChid);
+			caflush();
+			eveError::log(DEBUG, QString("all channels done, destroy CA Context %1").arg((int)caThreadContext));
 			if (caThreadContext == ca_current_context()){
 				ca_context_destroy();
 				contextCounter.remove(caThreadContext);

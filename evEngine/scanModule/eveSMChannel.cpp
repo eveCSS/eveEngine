@@ -20,7 +20,7 @@
  * @param definition corresponding detectorchannel definition
  * @return
  */
-eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveChannelDefinition* definition, QHash<QString, QString> parameter, QList<eveEventProperty* >* eventlist, eveSMChannel* normalizeWith)  :
+eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveSMDetector* smdetector, eveChannelDefinition* definition, QHash<QString, QString> parameter, QList<eveEventProperty* >* eventlist, eveSMChannel* normalizeWith)  :
 eveSMBaseDevice(scanmodule) {
 
 	scanModule = scanmodule;
@@ -49,7 +49,7 @@ eveSMBaseDevice(scanmodule) {
 	normalizeChannel = normalizeWith;
 	isDetectorTrigger = false;
 	isDetectorUnit = false;
-	detector = definition->getDetectorDefinition()->getDetector();
+	detector = smdetector;
 
 	if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
       eveTransportDefinition* transdef = (eveTransportDefinition*)definition->getValueCmd()->getTrans();

@@ -21,6 +21,7 @@
 #include "eveCalc.h"
 
 class eveScanModule;
+class eveSMDetector;
 
 enum eveChannelStatusT {eveCHANNELINIT, eveCHANNELIDLE, eveCHANNELTRIGGER, eveCHANNELTRIGGERREAD, eveCHANNELREAD, eveCHANNELREADUNIT, eveCHANNELSTOP};
 
@@ -33,7 +34,7 @@ class eveSMChannel : public eveSMBaseDevice {
 	Q_OBJECT
 
 public:
-	eveSMChannel(eveScanModule*, eveChannelDefinition*, QHash<QString, QString>, QList<eveEventProperty* >*, eveSMChannel*);
+	eveSMChannel(eveScanModule*, eveSMDetector*, eveChannelDefinition*, QHash<QString, QString>, QList<eveEventProperty* >*, eveSMChannel*);
 	virtual ~eveSMChannel();
 	void init();
 	void triggerRead(bool);

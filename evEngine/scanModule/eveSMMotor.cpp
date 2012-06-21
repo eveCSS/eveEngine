@@ -34,7 +34,10 @@ eveSMMotor::eveSMMotor(eveScanModule* scanmodule, eveMotorDefinition* definition
 }
 
 eveSMMotor::~eveSMMotor() {
-	// TODO Auto-generated destructor stub
+	// TODO
+	sendError(DEBUG, 0, QString("Deleting Motor %1").arg(name));
+	if (triggerTrans != NULL) delete triggerTrans;
+	if (unitTrans != NULL) delete unitTrans;
 }
 
 /**

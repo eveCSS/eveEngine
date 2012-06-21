@@ -77,7 +77,6 @@ eveDetectorDefinition::eveDetectorDefinition(QString dName, QString dId, eveComm
 	eveBaseDeviceDefinition::eveBaseDeviceDefinition(dName, dId)  {
 	trigger = triggerDef;
 	unit = unitDef;
-	detector = NULL;
 }
 
 eveDetectorDefinition::~eveDetectorDefinition() {
@@ -113,7 +112,6 @@ eveMotorDefinition::eveMotorDefinition(QString dName, QString dId, eveCommandDef
 
 	trigger = triggerDef;
 	unit = unitDef;
-	motor = NULL;
 }
 
 eveMotorDefinition::~eveMotorDefinition() {

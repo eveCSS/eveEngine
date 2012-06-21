@@ -19,7 +19,7 @@
 // trigger axis after setting new position if a trigger is available
 // read unit string
 
-eveSMAxis::eveSMAxis(eveScanModule *sm, eveAxisDefinition* motorAxisDef, evePosCalc *poscalc) :
+eveSMAxis::eveSMAxis(eveScanModule *sm, eveSMMotor* smmotor, eveAxisDefinition* motorAxisDef, evePosCalc *poscalc) :
 eveSMBaseDevice(sm){
 
 	posCalc = poscalc;
@@ -53,7 +53,7 @@ eveSMBaseDevice(sm){
 	positioner = NULL;
 	isMotorTrigger = false;
 	isMotorUnit = false;
-	motor = motorAxisDef->getMotorDefinition()->getMotor();
+	motor = smmotor;
 
 
 	if ((motorAxisDef->getGotoCmd() != NULL) && (motorAxisDef->getGotoCmd()->getTrans() != NULL)){
