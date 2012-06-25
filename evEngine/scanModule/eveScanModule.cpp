@@ -94,6 +94,8 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	foreach (eveSMChannel *channel, *channelList){
 	    connect (channel, SIGNAL(channelDone()), this, SLOT(execStage()), Qt::QueuedConnection);
 	    if (!detectorList.contains(channel->getDetector())) detectorList.append(channel->getDetector());
+	    if (channel->getNormalizeChannel() != NULL) if (!detectorList.contains(channel->getNormalizeChannel()->getDetector()))
+	    		detectorList.append(channel->getNormalizeChannel()->getDetector());
 	    if (channel->hasConfirmTrigger()) manDetTrigger = true;
 	}
 
