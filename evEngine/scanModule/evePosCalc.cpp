@@ -397,7 +397,17 @@ void evePosCalc::stepfuncAdd(){
 		else {
 			currentPos = currentPos + stepWidth;
 		}
-		if (((stepWidth >=0) && (currentPos >= endPosAbs)) || ((stepWidth < 0) && (currentPos <= endPosAbs))){
+
+		// special treatment for double
+		if ((currentPos.getType() == eveDOUBLE)){
+			double currentDouble = currentPos.toDouble();
+			if (((stepWidth >=0) && ((currentDouble + fabs(1.0e-12 * currentDouble)) >= endPosAbs.toDouble())) ||
+					((stepWidth < 0) && ((currentDouble - fabs(1.0e-12 * currentDouble)) <= endPosAbs.toDouble()))){
+						currentPos = endPosAbs;
+						isAtEnd = true;
+			}
+		}
+		else if (((stepWidth >=0) && (currentPos >= endPosAbs)) || ((stepWidth < 0) && (currentPos <= endPosAbs))){
 			currentPos = endPosAbs;
 			isAtEnd = true;
 		}
