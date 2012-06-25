@@ -50,6 +50,7 @@ eveSMBaseDevice(scanmodule) {
 	isDetectorTrigger = false;
 	isDetectorUnit = false;
 	detector = smdetector;
+	sendreadyevent = false;
 
 	if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
       eveTransportDefinition* transdef = (eveTransportDefinition*)definition->getValueCmd()->getTrans();
