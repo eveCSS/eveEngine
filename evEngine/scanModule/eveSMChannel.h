@@ -51,6 +51,7 @@ public:
 	void setTimer(QDateTime start);
 	bool readAtInit(){return timeoutShort;};
 	eveSMDetector* getDetector(){return detector;};
+	eveSMChannel* getNormalizeChannel(){return normalizeChannel;};
 
 public slots:
 	void transportReady(int);
