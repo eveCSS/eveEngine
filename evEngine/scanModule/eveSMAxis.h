@@ -38,6 +38,7 @@ public:
 	void gotoNextPos(bool);
 	eveVariant getPos(){return currentPosition;};
 	eveVariant getTargetPos(){return targetPosition;};
+	void readPos(bool queue);
 	// bool isAtNextPos();
 	void stop();
 	bool isAtEndPos(){return posCalc->isAtEndPos();};

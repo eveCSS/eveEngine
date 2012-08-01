@@ -417,7 +417,7 @@ void eveSMAxis::gotoPos(eveVariant newpos, bool queue) {
 		return;
 	}
 
-	if (eveAXISIDLE) {
+	if (axisStatus == eveAXISIDLE) {
 		if (posCalc->motionDisabled()){
 			// skip the move, read only current position
 			if (haveDeadband) {
@@ -437,6 +437,28 @@ void eveSMAxis::gotoPos(eveVariant newpos, bool queue) {
 				sendError(ERROR,0,"error writing goto data");
 				signalReady();
 			}
+		}
+	}
+}
+
+/**
+ * \brief read current position
+ * @param queue		if true, queue the message, don't flush the queue
+ */
+void eveSMAxis::readPos(bool queue) {
+
+	ready = false;
+	if (!axisOK) {
+		sendError(ERROR, 0, "Axis not operational");
+		signalReady();
+		return;
+	}
+
+	if (axisStatus == eveAXISIDLE) {
+		axisStatus = eveAXISREADPOS;
+		if (posTrans->readData(queue)){
+			sendError(ERROR, 0, "error reading position");
+			signalReady();
 		}
 	}
 }

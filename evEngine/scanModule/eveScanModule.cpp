@@ -35,6 +35,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	doRedo=false;
 	triggerRid = 0;
 	triggerDetecRid = 0;
+	perPosCount = 0;
 
 	// convert times to msecs
 	settleDelay = (int)(parser->getSMTagDouble(chainId, smId, "settletime", 0.0)*1000.0);
@@ -87,6 +88,10 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	    connect (axis, SIGNAL(axisDone()), this, SLOT(execStage()), Qt::QueuedConnection);
 		if (axis->getTotalSteps() > totalSteps) totalSteps = axis->getTotalSteps();
 	}
+
+	// get values per position
+	valuesPerPos = parser->getSMTagInteger(chainId, smId, "valuecount", 1);
+	totalSteps *= valuesPerPos;
 	eveError::log(DEBUG, QString("Scan will have approx. %1 steps").arg(totalSteps));
 
 	// get all used detector channels
@@ -518,6 +523,7 @@ void eveScanModule::stgTrigRead() {
 
 	if (currentStageCounter == 0){
 		sendError(DEBUG,0,"stgTrigRead start");
+		++perPosCount;
 		currentStageCounter=1;
 		triggerTime.start();
 		QTimer::singleShot(triggerDelay, this, SLOT(execStage()));
@@ -630,25 +636,37 @@ void eveScanModule::stgNextPos() {
 	if (currentStageCounter == 0){
 		sendError(DEBUG, 0, "stgNextPos");
 		signalCounter = 0;
-		currentStageCounter=1;
 
-		// check if all axes are done
-		bool allDone = true;
-		foreach (eveSMAxis *axis, *axisList) allDone = axis->isAtEndPos();
-
-		if (allDone){
-			sendError(INFO,0,"stgNextPos Done");
-			currentStageReady=true;
+		if (perPosCount < valuesPerPos){
+			// don't move just read position, skip stage 1
+			currentStageCounter=2;
+			foreach (eveSMAxis *axis, *axisList){
+				++signalCounter;
+				sendError(INFO, 0, QString("Read axis position %1").arg(axis->getName()));
+				axis->readPos(false);
+			}
 		}
 		else {
-			if (manualTrigger){
-				triggerRid = manager->sendRequest(smId, "Trigger Positioning");
-				if (myStatus.triggerManualStart(triggerRid)) manager->setStatus(smId, myStatus.getStatus());
-				++signalCounter;
+			currentStageCounter=1;
+
+			// check if all axes are done
+			bool allDone = true;
+			foreach (eveSMAxis *axis, *axisList) allDone = axis->isAtEndPos();
+
+			if (allDone){
+				sendError(INFO,0,"stgNextPos Done");
+				currentStageReady=true;
 			}
-			if (eventTrigger){
-				if (myStatus.triggerEventStart()) manager->setStatus(smId, myStatus.getStatus());
-				++signalCounter;
+			else {
+				if (manualTrigger){
+					triggerRid = manager->sendRequest(smId, "Trigger Positioning");
+					if (myStatus.triggerManualStart(triggerRid)) manager->setStatus(smId, myStatus.getStatus());
+					++signalCounter;
+				}
+				if (eventTrigger){
+					if (myStatus.triggerEventStart()) manager->setStatus(smId, myStatus.getStatus());
+					++signalCounter;
+				}
 			}
 		}
 		emit sigExecStage();
@@ -684,7 +702,7 @@ void eveScanModule::stgNextPos() {
 			foreach (eveSMAxis *axis, *axisList) allDone = axis->isDone();
 			if (allDone){
 				sendNextPos();
-				++ currentPosition;
+				++currentPosition;
 				foreach (eveSMAxis *axis, *axisList){
 					eveDataMessage* posMesg = axis->getPositionMessage();
 					if (posMesg == NULL)
@@ -1379,7 +1397,8 @@ int eveScanModule::getRemainingTime(){
 	int remaining = -1;
 	if ((totalSteps > 0) && (currentPosition > 0)){
 		int elapsed = scanTimer.elapsed()/1000;
-		remaining = elapsed*totalSteps/currentPosition - elapsed;
+		remaining = (elapsed*totalSteps/currentPosition - elapsed)/1000;
+		if (remaining < 0) remaining = 0;
 		sendError(DEBUG, 0, QString("sending remaining time %1").arg(remaining));
 	}
 	return remaining;

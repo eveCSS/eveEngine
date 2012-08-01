@@ -646,6 +646,24 @@ bool eveXMLReader::getSMTagBool(int chain, int smid, QString tagname, bool defau
  * @param chain chain id
  * @param smid scanmodule id
  * @param tagname name of XML-Tag
+ * @return integer value of tagname or defaultVal if conversion fails
+ */
+int eveXMLReader::getSMTagInteger(int chain, int smid, QString tagname, int defaultVal) {
+
+	QString value = getSMTag(chain, smid, tagname);
+	if (!value.isEmpty()){
+		bool ok=false;
+		int ival = value.toInt(&ok);
+		if (ok) return ival;
+	}
+	return defaultVal;
+}
+
+/**
+ *
+ * @param chain chain id
+ * @param smid scanmodule id
+ * @param tagname name of XML-Tag
  * @return double value of tagname or defaultVal if conversion fails
  */
 double eveXMLReader::getSMTagDouble(int chain, int smid, QString tagname, double defaultVal) {
