@@ -292,7 +292,7 @@ void evePosCalc::setPositionList(QString poslist) {
 
 	if (stepmode != LIST) return;
 
-	positionList = poslist.split(";",QString::SkipEmptyParts);
+	positionList = poslist.split(",",QString::SkipEmptyParts);
 	foreach (QString value, positionList){
 		if (axisType == eveINT){
 			bool ok;
