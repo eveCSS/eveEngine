@@ -29,7 +29,7 @@ hdf5DataSet::~hdf5DataSet() {
 
 	close();
 	if (arraySize == 1) {
-		if (memBuffer != NULL) delete []memBuffer;
+		if (memBuffer != NULL) free(memBuffer);
 	}
 	else {
 		if (isInit) targetGroup.close();
@@ -227,7 +227,7 @@ void hdf5DataSet::init(eveDataMessage* data){
 
 			compoundType = createDataType(index, qPrintable(basename), data->getDataType(), arraySize);
 			// Create the memory buffer.
-			memBuffer = new memSpace_t [compoundType.getSize()];
+			memBuffer = (memSpace_t*)malloc(compoundType.getSize());
 
 			// Create the dataset.
 			dset = dataFile->createDataSet(qPrintable(dspath), compoundType, dspace, createProps);
