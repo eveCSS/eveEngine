@@ -255,7 +255,7 @@ bool eveManager::createSMs(QByteArray xmldata, bool isRepeat) {
 		eveScanThread *chainThread = new eveScanThread(scanManager);
 		scanManager->moveToThread(chainThread);
 		scanThreadList.append(chainThread);
-		QThread *mathThread = new eveMathThread(chainId, scmlParser->getFilteredMathConfigs(chainId));
+		QThread *mathThread = new eveMathThread(chainId, storageChannelId, scmlParser->getFilteredMathConfigs(chainId));
 		mathThread->start();
 	}
 	// create monitors

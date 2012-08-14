@@ -7,8 +7,9 @@
 
 #include "eveMathThread.h"
 
-eveMathThread::eveMathThread(int chainId, QList<eveMathConfig*>* mathList) {
+eveMathThread::eveMathThread(int chainId, int schan, QList<eveMathConfig*>* mathList) {
 	chid = chainId;
+	storageChannel = schan;
 	mathConfigList = mathList;
 }
 
@@ -19,7 +20,7 @@ eveMathThread::~eveMathThread() {
 void eveMathThread::run()
 {
 	// create a Manager
-	eveMathManager *manager = new eveMathManager(chid, mathConfigList);
+	eveMathManager *manager = new eveMathManager(chid, storageChannel, mathConfigList);
 	mathConfigList = NULL;
 	exec();
 }

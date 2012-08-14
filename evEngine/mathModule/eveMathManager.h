@@ -21,7 +21,7 @@ class eveMath;
 
 class eveMathManager: public eveMessageChannel {
 public:
-	eveMathManager(int , QList<eveMathConfig*>* );
+	eveMathManager(int , int, QList<eveMathConfig*>* );
 	virtual ~eveMathManager();
 	void sendError(int, int, int, QString);
 	void sendMessage(eveDataMessage* message);
@@ -31,6 +31,7 @@ public:
 private:
 	void handleMessage(eveMessage *);
 	int chid;
+	int storageChannel;
 	QMultiHash<int, eveMath*> mathHash;
 	bool shutdownPending;
 	QList<int> pauseList;

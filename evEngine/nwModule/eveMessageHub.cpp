@@ -243,7 +243,6 @@ void eveMessageHub::newMessage(int messageSource)
 					if (mChanHash.contains(EVECHANNEL_NET)){
 						eveMessage *mclone = message->clone();
 						if (!mChanHash.value(EVECHANNEL_NET)->queueMessage(mclone)) delete mclone;
-
 					}
 					/* send data to storagemodules if available */
 					if (haveStorage()){

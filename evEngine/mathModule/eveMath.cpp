@@ -46,7 +46,7 @@ void eveMath::addValue(QString deviceId, int smid, int pos, eveVariant dataVar){
 
 }
 
-QList<eveDataMessage*> eveMath::getResultMessage(MathAlgorithm algo, int chid, int smid){
+QList<eveDataMessage*> eveMath::getResultMessage(MathAlgorithm algo, int chid, int smid, int storageCh){
 	QList<eveDataMessage*> messageList;
 
 	messageList.clear();
@@ -56,9 +56,11 @@ QList<eveDataMessage*> eveMath::getResultMessage(MathAlgorithm algo, int chid, i
 		data.append(xresult);
 		data.append(yresult);
 		message = new eveDataMessage(detectorId, QString(), eveDataStatus(), toDataMod(algo), epicsTime(), data);
+		message->setAuxString(xAxisId);
 		message->setChainId(chid);
 		message->setSmId(smid);
 		message->setPositionCount(position);
+		message->setDestination(storageCh);
 		messageList.append(message);
 	}
 

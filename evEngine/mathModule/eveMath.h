@@ -21,7 +21,7 @@ public:
 	eveMath(eveMathConfig mathConfig, eveMathManager *);
 	virtual ~eveMath();
 	void addValue(QString, int smid, int pos, eveVariant);
-	QList<eveDataMessage*> getResultMessage(MathAlgorithm, int, int);
+	QList<eveDataMessage*> getResultMessage(MathAlgorithm, int, int, int);
 	QList<int> getAllScanModuleIds(){return smidlist;};
 	bool hasInit(){return initBeforeStart;};
 

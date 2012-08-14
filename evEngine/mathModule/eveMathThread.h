@@ -18,12 +18,13 @@
 class eveMathThread : public QThread
 {
 public:
-	eveMathThread(int, QList<eveMathConfig*>* );
+	eveMathThread(int, int, QList<eveMathConfig*>* );
 	virtual ~eveMathThread();
 	void run();
 
 private:
 	int chid;
+	int storageChannel;
 	QList<eveMathConfig*>* mathConfigList;
 };
 

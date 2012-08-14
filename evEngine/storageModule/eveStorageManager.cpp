@@ -120,7 +120,7 @@ void eveStorageManager::handleMessage(eveMessage *message){
 				QString strval = strlist.takeFirst();
 				if (attribute.isEmpty()) continue;
 				if ((id == 0) || chainIdChannelHash.contains(id)){
-					sendError(DEBUG, 0, QString("sending attribute %1: %2").arg(attribute).arg(strval));
+					sendError(DEBUG, 0, QString("sending attribute %1: %2, id: %3").arg(attribute).arg(strval).arg(id));
 					dc->addMetaData(id, attribute, strval);
 				}
 				else

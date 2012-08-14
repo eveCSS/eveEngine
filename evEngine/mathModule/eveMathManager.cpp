@@ -12,9 +12,10 @@
 #include "eveMessageHub.h"
 #include "eveError.h"
 
-eveMathManager::eveMathManager(int chainId, QList<eveMathConfig*>* mathConfigList) {
+eveMathManager::eveMathManager(int chainId, int schannel, QList<eveMathConfig*>* mathConfigList) {
 	chid = chainId;
 	shutdownPending = false;
+	storageChannel=schannel;
 	// create a hash with math objects delete mathConfigList
 
 	while (!mathConfigList->isEmpty()){
@@ -69,7 +70,8 @@ void eveMathManager::handleMessage(eveMessage *message){
 					int smid = ((eveChainStatusMessage*)message)->getSmId();
 					foreach (eveMath* math, mathHash.values(smid)){
 						foreach (MathAlgorithm algorithm, eveMath::getAlgorithms()){
-							foreach (eveDataMessage* sendmessage, math->getResultMessage(algorithm, chid, smid)){
+							foreach (eveDataMessage* sendmessage, math->getResultMessage(algorithm, chid, smid, storageChannel)){
+								sendError(DEBUG, 0, QString("MathManager sending math data: %1/%2").arg(chid).arg(smid));
 								addMessage(sendmessage);
 							}
 						}
