@@ -139,10 +139,6 @@ eveSMBaseDevice(scanmodule) {
 	if (parameter.contains("minimum"))
 		minimum = parameter.value("minimum").toDouble(&ok);
 	if (!ok) sendError(ERROR, 0, "Unable to evaluate minimum");
-	confirmTrigger = false;
-	if (parameter.contains("confirmtrigger"))
-		confirmTrigger = parameter.value("confirmtrigger").startsWith("true",Qt::CaseInsensitive);
-	if (!ok) sendError(ERROR, 0, "Unable to evaluate confirmtrigger");
 	if (parameter.contains("sendreadyevent"))
 		sendreadyevent = (parameter.value("sendreadyevent").toLower() == "true");
 

@@ -41,7 +41,6 @@ public:
 	void stop(bool);
 	bool isDone(){return ready;};
 	bool isOK(){return channelOK;};
-	bool hasConfirmTrigger(){return confirmTrigger;};
 	QString getUnit(){return unit;};
 	virtual eveDevInfoMessage* getDeviceInfo();
 	eveDataMessage* getValueMessage();
@@ -97,7 +96,6 @@ private:
 	eveVariant stopValue;
 	int averageCount, maxAttempts;
 	double maxDeviation, minimum;
-	bool confirmTrigger;
 	bool isDetectorTrigger;
 	bool isDetectorUnit;
 	eveSMDetector* detector;

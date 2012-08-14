@@ -40,7 +40,8 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	// convert times to msecs
 	settleDelay = (int)(parser->getSMTagDouble(chainId, smId, "settletime", 0.0)*1000.0);
 	triggerDelay = (int)(parser->getSMTagDouble(chainId, smId, "triggerdelay", 0.0)*1000.0);
-    manualTrigger  = parser->getSMTagBool(chainId, smId, "triggerconfirm", false);
+    manualTrigger  = parser->getSMTagBool(chainId, smId, "triggerconfirmaxis", false);
+    manDetTrigger = parser->getSMTagBool(chainId, smId, "triggerconfirmchannel", false);
     QString scanType = parser->getSMTag(chainId, smId, "type");
 	if (scanType != "classic") sendError(ERROR,0,QString("unknown smtype: %1").arg(scanType));
 
@@ -101,7 +102,6 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	    if (!detectorList.contains(channel->getDetector())) detectorList.append(channel->getDetector());
 	    if (channel->getNormalizeChannel() != NULL) if (!detectorList.contains(channel->getNormalizeChannel()->getDetector()))
 	    		detectorList.append(channel->getNormalizeChannel()->getDetector());
-	    if (channel->hasConfirmTrigger()) manDetTrigger = true;
 	}
 
 	eventList = parser->getSMEventList(chainId, smId);
