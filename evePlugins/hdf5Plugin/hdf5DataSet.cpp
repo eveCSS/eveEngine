@@ -22,6 +22,7 @@ hdf5DataSet::hdf5DataSet(QString path, QString colid, QString devicename, QStrin
 	isInit = false;
 	dsetOpen = false;
 	sizeIncrement = 50;
+	isModifiedData = false;
 }
 
 hdf5DataSet::~hdf5DataSet() {
@@ -103,6 +104,29 @@ int hdf5DataSet::addData(eveDataMessage* data){
 			dset.extend( currentDim );
 		}
 	}
+	else if (isModifiedData){
+		DataSpace filespace;
+		try {
+			filespace = dset.getSpace();
+			filespace.selectHyperslab( H5S_SELECT_SET, chunk_dims, currentOffset );
+
+		}
+		catch (...) {
+			errorString += QString("hdf5DataSet:addData: error opening dataset %1").arg(dsname);
+			return ERROR;
+		}
+
+		modBuffer.xval = data->getDoubleArray().at(0);
+		modBuffer.yval = data->getDoubleArray().at(1);
+		modBuffer.positionCount = data->getPositionCount();
+		dset.write( (void*)&modBuffer, compoundType, memspace, filespace );
+
+		++currentOffset[0];
+		if (currentOffset[0] >= currentDim[0]){
+			currentDim[0] += sizeIncrement;
+			dset.extend( currentDim );
+		}
+	}
 	else {
 		if (posCounter < data->getPositionCount()) {
 			if (dsetOpen) {
@@ -167,7 +191,9 @@ void hdf5DataSet::init(eveDataMessage* data){
 
 	arraySize = data->getArraySize();
 	dataType = data->getDataType();
-	if (arraySize == 1){
+	if ((arraySize == 2) && (data->getDataMod() != DMTunmodified)) isModifiedData = true;
+
+	if ((arraySize == 1)||(isModifiedData)){
 		rank = 1;
 		maxdim[0] = H5S_UNLIMITED;   /* Dataspace dimensions file*/
 		currentDim[0] = sizeIncrement;
@@ -207,7 +233,23 @@ void hdf5DataSet::init(eveDataMessage* data){
 			dset = dataFile->createDataSet(qPrintable(dspath), compoundType, dspace, createProps);
 			dsetOpen = true;
 			addAttributes(&dset);
+
+			// add attributes for normalized data
+			if (data->getDataMod() == DMTnormalized)
+				addModifiedDataAttributes(&dset, "axis", data->getAuxString(), "channel", basename);
+
 			dset.extend( currentDim );
+		}
+		else if (isModifiedData){
+			compoundType = createModDataType(QString("PosCounter"), data->getAuxString(), basename);
+			dset = dataFile->createDataSet(qPrintable(dspath), compoundType, dspace, createProps);
+			dsetOpen = true;
+
+			// add attributes
+			addModifiedDataAttributes(&dset, "axis", data->getAuxString(), "channel", basename);
+
+			dset.extend( currentDim );
+
 		}
 		else {
 			// Create the group
@@ -240,6 +282,22 @@ void hdf5DataSet::addAttributes(H5Object *target){
 				attrib.write(st, qPrintable(attribValue));
 			}
 		}
+	}
+}
+
+void hdf5DataSet::addModifiedDataAttributes(H5Object *target, QString name1, QString val1, QString name2, QString val2){
+
+	// add attributes
+	hsize_t stringDim = 1;
+	if ((name1.length() > 0) && (val1.length() > 0)) {
+		StrType st = StrType(PredType::C_S1, val1.toLatin1().length());
+		Attribute attrib = target->createAttribute(qPrintable(name1), st, DataSpace(1, &stringDim));
+		attrib.write(st, qPrintable(val1));
+	}
+	if ((name2.length() > 0) && (val2.length() > 0)) {
+		StrType st = StrType(PredType::C_S1, val2.toLatin1().length());
+		Attribute attrib = target->createAttribute(qPrintable(name2), st, DataSpace(1, &stringDim));
+		attrib.write(st, qPrintable(val2));
 	}
 }
 
@@ -394,6 +452,19 @@ CompType hdf5DataSet::createDataType(QString name1, QString name2, eveType type,
 	CompType comptype( typeA.getSize() + typeB.getSize());
 	comptype.insertMember( qPrintable(name1), 0, typeA);
 	comptype.insertMember( qPrintable(name2), typeA.getSize(), typeB);
+	return comptype;
+}
+
+CompType hdf5DataSet::createModDataType(QString namePC, QString nameX, QString nameY){
+
+	DataType typePC(PredType::NATIVE_INT32);
+	DataType typeX(PredType::NATIVE_DOUBLE);
+	DataType typeY(PredType::NATIVE_DOUBLE);
+
+	CompType comptype( typePC.getSize() + typeX.getSize() + typeY.getSize());
+	comptype.insertMember( qPrintable(namePC), 0, typePC);
+	comptype.insertMember( qPrintable(nameX), typePC.getSize(), typeX);
+	comptype.insertMember( qPrintable(nameY), typePC.getSize()+typeX.getSize(), typeY);
 	return comptype;
 }
 

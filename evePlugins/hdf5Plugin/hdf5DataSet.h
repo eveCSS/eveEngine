@@ -25,6 +25,12 @@ typedef struct {
 	void *aPtr;
 } memSpace_t;
 
+typedef struct {
+	qint32 positionCount;
+	double xval;
+	double yval;
+} modSpace_t;
+
 class hdf5DataSet {
 public:
 	hdf5DataSet(QString, QString, QString, QStringList, H5File*);
@@ -36,13 +42,16 @@ public:
 
 private:
 	static CompType createDataType(QString, QString, eveType, int);
+	static CompType createModDataType(QString namePC, QString nameX, QString nameY);
 	static PredType convertToHdf5Type(eveType);
 	void* getDataBufferAddress(eveDataMessage*);
 	int getMinimumDataBufferLength(eveDataMessage*, int);
 	void init(eveDataMessage*);
 	void addAttributes(H5Object*);
+	void addModifiedDataAttributes(H5Object*, QString, QString, QString, QString);
 	void addLink(QString, QString, QString);
 	bool isInit;
+	bool isModifiedData;
 	int arraySize;
 	int posCounter;
 	int status;
@@ -50,6 +59,7 @@ private:
 	QString errorString;
 	eveType dataType;
 	memSpace_t *memBuffer;
+	modSpace_t modBuffer;
 	QString dspath;			// e.g. /1/XMLID
 	QString name;
 	QString basename;
