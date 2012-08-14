@@ -240,8 +240,7 @@ int hdf5Plugin::addMetaData(int pathId, QString attribute, QString stringVal){
 
 	try {
 		hsize_t stringDim = 1;
-		QString groupname = "/";
-		if (pathId != 0) groupname = QString("/%1/").arg(pathId);
+		QString groupname = getGroupName(pathId);
 
 		Group targetGroup = dataFile->openGroup(qPrintable(createGroup(groupname)));
 		unsigned int index = 0;
@@ -266,7 +265,7 @@ int hdf5Plugin::addMetaData(int pathId, QString attribute, QString stringVal){
 		// UTF8 funktioniert leider nicht (st.setCset(H5T_CSET_UTF8);)
 		Attribute attrib = targetGroup.createAttribute(qPrintable(attribute), st, DataSpace(1, &stringDim));
 		attrib.write(st, newVal.toLatin1().data());
-		errorString += QString("new Attribute: %1 (%2)").arg(attribute).arg(newVal);
+		errorString += QString("new Attribute: %1 (%2) path: %3").arg(attribute).arg(newVal).arg(groupname);
 		targetGroup.close();
 	}
 	catch( Exception error )
@@ -323,12 +322,8 @@ int hdf5Plugin::close()
 
 QString hdf5Plugin::getDSName(int id, QString name, eveDataModType modified, QString other){
 
-	QString groupname = "/";
+	QString groupname = getGroupName(id);
 	QString newname = name;
-
-	if (id != 0) {
-		groupname = QString("/%1/").arg(id);
-	}
 
 	if (modified != DMTunmodified){
 		groupname += QString("%1/").arg(modificationHash.value(modified));
@@ -341,7 +336,8 @@ QString hdf5Plugin::getDSName(int id, QString name, eveDataModType modified, QSt
 QString hdf5Plugin::createGroup( QString name ){
 
 	QString groupname = "/";
-	name.remove(name.lastIndexOf(QChar('/')),100000);
+	int charposition = name.lastIndexOf(QChar('/'));
+	if (charposition >= 0)name.remove(charposition,name.length());
 	if (!groupList.contains(name + "/")){
 		foreach(QString part, name.split(QChar('/'), QString::SkipEmptyParts)){
 			groupname += part + "/";
@@ -358,7 +354,17 @@ QString hdf5Plugin::createGroup( QString name ){
 			}
 		}
 	}
+	else {
+		groupname = name + "/";
+	}
 	return groupname;
+}
+
+QString hdf5Plugin::getGroupName(int pathId){
+	if (pathId == 0)
+		return QString("/");
+	else
+		return QString("/c%1/").arg(pathId);
 }
 
 Q_EXPORT_PLUGIN2(hdf5plugin, hdf5Plugin);

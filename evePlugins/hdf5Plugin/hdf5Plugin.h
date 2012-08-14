@@ -49,8 +49,9 @@ private:
 	int addSingleData(int, eveDataMessage*);
 	int addArrayData(int, eveDataMessage*);
 	QString getDSName(int, QString, eveDataModType, QString);
-	QString createGroup(int pathId);
+	// QString createGroup(int pathId);
 	QString createGroup(QString);
+	QString getGroupName(int pathId);
 	bool isFileOpen;
 	char string_buffer[201];
 	QStringList groupList;
