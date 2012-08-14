@@ -235,9 +235,9 @@ bool eveManager::createSMs(QByteArray xmldata, bool isRepeat) {
 	foreach (int chainId, scmlParser->getChainIdList()){
 		storageChannelId = 0;
 		// we start a storage thread, if we have a savefilename and the name is not already on the list
-		// for now: each filename has its storage thread
+		// each filename has its storage thread
 		QString value = scmlParser->getChainString(chainId, "savefilename");
-		if (!value.isEmpty()){
+		if (!value.isEmpty() && !scmlParser->isNoSave(chainId)){
 			if (!fileNameList.contains(value)){
 				fileNameList.append(value);
 				QMutex mutex;

@@ -56,6 +56,7 @@ public:
 	QList<QHash<QString, QString>* >* getPositionerPluginList(int, int);
 	QList<eveMathConfig*>* getFilteredMathConfigs(int);
 	QList<eveDeviceDefinition *>* getMonitorDeviceList();
+	bool isNoSave(int id){return noSaveCidList.contains(id);};
 
 private:
 	void getMathConfigFromPlot(int, int, QList<eveMathConfig*>*);
@@ -65,6 +66,7 @@ private:
 	void createDeviceDefinition(QDomElement);
 	int getIntValueOfTag(int, int, QString);
 	int repeatCount;
+	QList<int> noSaveCidList;
 	QList<int> chainIdList;
 	QList<eveSMDevice*>* getSMDeviceList(eveScanModule*, int, int, QString);
 	eveEventProperty* getEvent(eveEventProperty::actionTypeT, QDomElement);

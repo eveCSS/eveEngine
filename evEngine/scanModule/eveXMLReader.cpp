@@ -28,6 +28,7 @@ eveXMLReader::eveXMLReader(eveManager *parentObject){
 	parent = parentObject;
 	domDocument = new QDomDocument();
 	repeatCount=0;
+
 	// TODO create Hashes
 //	idHash = new QHash<QString, QString>;
 //	motorHash = new QHash<QString, QDomElement>;
@@ -125,6 +126,20 @@ bool eveXMLReader::read(QByteArray xmldata)
 				}
 				if (!rootSMHash.contains(chainNo))
 					sendError(ERROR,0,QString("no root scanmodule found for chain %1").arg(chainNo));
+
+				// check if we have a save plugin with location parameter nosave
+				QDomElement domSavPlugin = domElem.firstChildElement("saveplugin");
+				if (!domSavPlugin.isNull()) {
+					QDomElement pluginParam = domSavPlugin.firstChildElement("parameter");
+					while (!pluginParam.isNull()) {
+						if (pluginParam.hasAttribute("name")) {
+							if (pluginParam.attribute("name") == "location"){
+								if (pluginParam.text().toLower().trimmed() == "nosave") noSaveCidList.append(chainNo);
+							}
+						}
+						pluginParam = pluginParam.nextSiblingElement("parameter");
+					}
+				}
 			}
 			domElem = domElem.nextSiblingElement("chain");
 		}
