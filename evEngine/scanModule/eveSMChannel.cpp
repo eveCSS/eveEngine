@@ -39,7 +39,7 @@ eveSMBaseDevice(scanmodule) {
 	ready = false;
 	triggerValue = 1;
 	curValue = NULL;
-	normChannelMsg = NULL;
+	normValue = NULL;
 	channelStatus = eveCHANNELINIT;
 	channelType=definition->getChannelType();
 	eventList = eventlist;

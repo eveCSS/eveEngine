@@ -598,22 +598,22 @@ void eveScanModule::stgTrigRead() {
 			if (nestedSM) ready = nestedSM->isDone();
 			if (ready) {
 				foreach (eveSMChannel *channel, *channelList){
-					eveDataMessage* nmesg = channel->getNormValueMessage();
-					eveDataMessage* dmesg = channel->getValueMessage();
-					if (dmesg != NULL) {
-						dmesg->setPositionCount(triggerPosCount);
-						sendMessage(dmsg);
+					eveDataMessage* normMsg = channel->getNormValueMessage();
+					eveDataMessage* dataMsg = channel->getValueMessage();
+					if (dataMsg != NULL) {
+						dataMsg->setPositionCount(triggerPosCount);
+						sendMessage(dataMsg);
 					}
-					if (nmsg != NULL){
-						nmesg->setPositionCount(triggerPosCount);
-						sendMessage(nmesg);
-						dmesg = nmsg;
+					if (normMsg != NULL){
+						normMsg->setPositionCount(triggerPosCount);
+						sendMessage(normMsg);
+						dataMsg = normMsg;
 					}
-					if (dmesg == NULL)
+					if (dataMsg == NULL)
 						sendError(ERROR, 0, QString("%1: no data available").arg(channel->getName()));
 					else {
 						bool ok = false;
-						double dval = dmesg->toVariant().toDouble(&ok);
+						double dval = dataMsg->toVariant().toDouble(&ok);
 						if (ok) sendError(DEBUG, 0, QString("%1: value %2").arg(channel->getName()).arg(dval));
 						channel->loadPositioner(manager->getPositionCount());
 					}
