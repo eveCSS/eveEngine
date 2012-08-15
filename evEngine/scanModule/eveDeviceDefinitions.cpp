@@ -60,23 +60,23 @@ eveDeviceDefinition::~eveDeviceDefinition() {
 	if (valueCmd != NULL) delete valueCmd;
 }
 
-eveChannelDefinition::eveChannelDefinition(eveDetectorDefinition* detectorDef, eveCommandDefinition *trigger, eveCommandDefinition *unit, eveCommandDefinition *valuePv, QString channelname, QString channelid) :
-	eveDeviceDefinition::eveDeviceDefinition(unit, valuePv, channelname, channelid)
+eveChannelDefinition::eveChannelDefinition(eveDetectorDefinition* detectorDef, eveCommandDefinition *triggerdef, eveCommandDefinition *unitdef, eveCommandDefinition *valuedef, eveCommandDefinition *stopdef, QString channelname, QString channelid) :
+	eveDeviceDefinition::eveDeviceDefinition(unitdef, valuedef, channelname, channelid)
 {
 	detectorDefinition = detectorDef;
-	triggerCmd = trigger;
-	// TODO
-	stopCmd = NULL;
+	triggerCmd = triggerdef;
+	stopCmd = stopdef;
 }
 eveChannelDefinition::~eveChannelDefinition() {
 	if (triggerCmd != NULL) delete triggerCmd;
 }
 
 
-eveDetectorDefinition::eveDetectorDefinition(QString dName, QString dId, eveCommandDefinition* triggerDef, eveCommandDefinition* unitDef) :
+eveDetectorDefinition::eveDetectorDefinition(QString dName, QString dId, eveCommandDefinition* triggerDef, eveCommandDefinition* unitDef, eveCommandDefinition* stopDef) :
 	eveBaseDeviceDefinition::eveBaseDeviceDefinition(dName, dId)  {
 	trigger = triggerDef;
 	unit = unitDef;
+	stop = stopDef;
 }
 
 eveDetectorDefinition::~eveDetectorDefinition() {

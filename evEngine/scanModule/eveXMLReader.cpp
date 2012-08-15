@@ -173,59 +173,6 @@ bool eveXMLReader::read(QByteArray xmldata)
 	return true;
 }
 
-/** \brief create an eveDetectorDefinition from XML
- * \param detector the <detector> DomNode
- */
-void eveXMLReader::createDetectorDefinition(QDomNode detector){
-
-	QString name;
-	QString id;
-	eveCommandDefinition *trigger=NULL;
-	eveCommandDefinition *unit=NULL;
-	eveChannelDefinition* channel;
-
-	if (detector.isNull()){
-		sendError(INFO,0,"eveXMLReader::eveDetectorDefinition: cannot create Null detector, check XML-Syntax");
-		return;
-	}
-	QDomElement domElement = detector.firstChildElement("id");
-    if (!domElement.isNull()) id = domElement.text();
-
-    domElement = detector.firstChildElement("name");
-    if (!domElement.isNull()) name = domElement.text();
-
-    domElement = detector.firstChildElement("trigger");
-    if (!domElement.isNull()) trigger = createDeviceCommand(domElement);
-
-    domElement = detector.firstChildElement("unit");
-    if (!domElement.isNull()){
-    	QDomElement unitstring = domElement.firstChildElement("unitstring");
-    	if (unitstring.isNull()){
-    		unit = createDeviceCommand(domElement);
-    	}
-    	else {
-            sendError(DEBUG,0,QString("eveXMLReader::eveDetectorDefinition: found unit with string %1").arg(unitstring.text()));
-    		unit = new eveCommandDefinition(NULL, unitstring.text(), eveStringT);
-    	}
-    }
-    eveDetectorDefinition* detectDef = new eveDetectorDefinition(name, id, trigger, unit);
-
-    domElement = detector.firstChildElement("channel");
-	while (!domElement.isNull()) {
-		channel = createChannelDefinition(domElement, detectDef);
-		if (channel != NULL) deviceList.insert(channel->getId(),channel);
-	    sendError(INFO,0,QString("eveXMLReader::eveDetectorDefinition: channel-id: %1").arg(channel->getId()));
-		domElement = domElement.nextSiblingElement("channel");
-	}
-
-	domElement = detector.firstChildElement("option");
-	while (!domElement.isNull()) {
-		createDeviceDefinition(domElement);
- 		domElement = domElement.nextSiblingElement("option");
-	}
-    sendError(INFO,0,QString("eveXMLReader::eveDetectorDefinition: id: %1, name: %2").arg(id).arg(name));
-}
-
 /** \brief create a Transport from XML
  * \param node the <access> DomNode
  */
@@ -287,6 +234,64 @@ eveTransportDefinition * eveXMLReader::createTransportDefinition(QDomElement nod
 
 }
 
+/** \brief create an eveDetectorDefinition from XML
+ * \param detector the <detector> DomNode
+ */
+void eveXMLReader::createDetectorDefinition(QDomNode detector){
+
+	QString name;
+	QString id;
+	eveCommandDefinition *trigger=NULL;
+	eveCommandDefinition *unit=NULL;
+	eveCommandDefinition *stop=NULL;
+	eveChannelDefinition* channel;
+
+	if (detector.isNull()){
+		sendError(INFO,0,"eveXMLReader::eveDetectorDefinition: cannot create Null detector, check XML-Syntax");
+		return;
+	}
+	QDomElement domElement = detector.firstChildElement("id");
+    if (!domElement.isNull()) id = domElement.text();
+
+    domElement = detector.firstChildElement("name");
+    if (!domElement.isNull()) name = domElement.text();
+
+    domElement = detector.firstChildElement("trigger");
+    if (!domElement.isNull()) trigger = createDeviceCommand(domElement);
+
+    domElement = detector.firstChildElement("stop");
+    if (!domElement.isNull()) stop = createDeviceCommand(domElement);
+
+    domElement = detector.firstChildElement("unit");
+    if (!domElement.isNull()){
+    	QDomElement unitstring = domElement.firstChildElement("unitstring");
+    	if (unitstring.isNull()){
+    		unit = createDeviceCommand(domElement);
+    	}
+    	else {
+            sendError(DEBUG,0,QString("eveXMLReader::eveDetectorDefinition: found unit with string %1").arg(unitstring.text()));
+    		unit = new eveCommandDefinition(NULL, unitstring.text(), eveStringT);
+    	}
+    }
+    eveDetectorDefinition* detectDef = new eveDetectorDefinition(name, id, trigger, unit, stop);
+
+    domElement = detector.firstChildElement("channel");
+	while (!domElement.isNull()) {
+		channel = createChannelDefinition(domElement, detectDef);
+		if (channel != NULL) deviceList.insert(channel->getId(),channel);
+	    sendError(INFO,0,QString("eveXMLReader::eveDetectorDefinition: channel-id: %1").arg(channel->getId()));
+		domElement = domElement.nextSiblingElement("channel");
+	}
+
+	domElement = detector.firstChildElement("option");
+	while (!domElement.isNull()) {
+		createDeviceDefinition(domElement);
+ 		domElement = domElement.nextSiblingElement("option");
+	}
+    sendError(INFO,0,QString("eveXMLReader::eveDetectorDefinition: id: %1, name: %2").arg(id).arg(name));
+}
+
+
 /** \brief create a Detector Channel from XML
  * \param node the <channel> DomNode
  * \param defaultTrigger the default trigger if avail. else NULL
@@ -297,9 +302,10 @@ eveChannelDefinition * eveXMLReader::createChannelDefinition(QDomNode channel, e
 	// name, id, read, unit, trigger
 	QString name;
 	QString id;
-	eveCommandDefinition *trigger=NULL;
-	eveCommandDefinition *unit=NULL;
-	eveCommandDefinition *read=NULL;
+	eveCommandDefinition *trigger = NULL;
+	eveCommandDefinition *unit = NULL;
+	eveCommandDefinition *read = NULL;
+	eveCommandDefinition *stop = NULL;
 
 	QDomElement domElement = channel.firstChildElement("id");
     if (!domElement.isNull()) id = domElement.text();
@@ -316,6 +322,9 @@ eveChannelDefinition * eveXMLReader::createChannelDefinition(QDomNode channel, e
     domElement = channel.firstChildElement("trigger");
     if (!domElement.isNull()) trigger = createDeviceCommand(domElement);
 
+    domElement = channel.firstChildElement("stop");
+    if (!domElement.isNull()) stop = createDeviceCommand(domElement);
+
     domElement = channel.firstChildElement("unit");
     if (!domElement.isNull()){
     	QDomElement unitstring = domElement.firstChildElement("unitstring");
@@ -327,7 +336,7 @@ eveChannelDefinition * eveXMLReader::createChannelDefinition(QDomNode channel, e
     	}
     }
 
-	return new eveChannelDefinition(detectorDef, trigger, unit, read, name, id);
+	return new eveChannelDefinition(detectorDef, trigger, unit, read, stop, name, id);
 
 }
 

@@ -39,6 +39,7 @@ eveSMBaseDevice(scanmodule) {
 	ready = false;
 	triggerValue = 1;
 	curValue = NULL;
+	normChannelMsg = NULL;
 	channelStatus = eveCHANNELINIT;
 	channelType=definition->getChannelType();
 	eventList = eventlist;
@@ -81,6 +82,10 @@ eveSMBaseDevice(scanmodule) {
 			stopValue.setValue(definition->getStopCmd()->getValueString());
 			if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
 		}
+	}
+	else{
+		stopTrans = detector->getStopTrans();
+		stopValue = detector->getStopValue();
 	}
 	if (stopTrans != NULL) haveStop = true;
 
@@ -429,15 +434,14 @@ void eveSMChannel::read(bool queue) {
 
 /**
  * \brief stop a running measurement
- * @param queue if true queue the request, if false send it immediately
  *
  * deviceDone is always signaled
  */
-void eveSMChannel::stop(bool queue) {
+void eveSMChannel::stop() {
 
 	if (channelOK && haveStop && (channelStatus != eveCHANNELIDLE)){
 		channelStatus = eveCHANNELSTOP;
-		if (stopTrans->writeData(stopValue, queue)){
+		if (stopTrans->writeData(stopValue, false)){
 			sendError(ERROR,0,"error stopping channel");
 			transportReady(1);
 		}
@@ -446,11 +450,21 @@ void eveSMChannel::stop(bool queue) {
 
 /**
  *
- * @return current detector value
+ * @return current channel value
  */
 eveDataMessage* eveSMChannel::getValueMessage(){
 	eveDataMessage* return_data = curValue;
 	curValue = NULL;
+	return return_data;
+}
+
+/**
+ *
+ * @return value of normalize channel
+ */
+eveDataMessage* eveSMChannel::getNormValueMessage(){
+	eveDataMessage* return_data = normValue;
+	normValue = NULL;
 	return return_data;
 }
 
@@ -468,18 +482,19 @@ bool eveSMChannel::retrieveData(){
 
 	if (normalizeChannel){
 		bool status = true;
-		eveDataMessage* normChannelMesg = normalizeChannel->getValueMessage();
-		if (normChannelMesg == NULL){
+		if (normValue != NULL) delete normValue;
+		eveDataMessage* normChannelMsg = normalizeChannel->getValueMessage();
+		if (normChannelMsg == NULL){
 			sendError(ERROR,0,"unable to retrieve value of normalized Channel");
 			return true;
 		}
-		else if ((normChannelMesg->getDataType() != curValue->getDataType()) ||
-				!(normChannelMesg->isFloat() || normChannelMesg->isInteger())){
+		else if ((normChannelMsg->getDataType() != curValue->getDataType()) ||
+				!(normChannelMsg->isFloat() || normChannelMsg->isInteger())){
 			sendError(ERROR,0,"unable to do normalization with current datatype");
 		}
-		else if (normChannelMesg->getArraySize() == curValue->getArraySize()){
+		else if (normChannelMsg->getArraySize() == curValue->getArraySize()){
 			QVector<double> current = curValue->getDoubleArray();
-			QVector<double> normalized = normChannelMesg->getDoubleArray();
+			QVector<double> normalized = normChannelMsg->getDoubleArray();
 			QVector<double> result(curValue->getArraySize());
 			for(int i=0; i<curValue->getArraySize(); ++i){
 				if (normalized[i] != 0.0){
@@ -492,13 +507,11 @@ bool eveSMChannel::retrieveData(){
 				}
 			}
 			if (status){
-				eveDataMessage* normalizedValue = new eveDataMessage(curValue->getXmlId(), curValue->getName(), curValue->getDataStatus(), DMTnormalized, curValue->getDataTimeStamp(), result);
-				normalizedValue->setAuxString(normalizeChannel->getXmlId());
-				delete curValue;
-				curValue = normalizedValue;
+				eveDataMessage* normValue = new eveDataMessage(curValue->getXmlId(), curValue->getName(), curValue->getDataStatus(), DMTnormalized, curValue->getDataTimeStamp(), result);
+				normValue->setAuxString(normalizeChannel->getXmlId());
 			}
 		}
-		delete normChannelMesg;
+		delete normChannelMsg;
 	}
 	return true;
 }

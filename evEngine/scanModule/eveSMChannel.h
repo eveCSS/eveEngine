@@ -38,12 +38,13 @@ public:
 	virtual ~eveSMChannel();
 	void init();
 	void triggerRead(bool);
-	void stop(bool);
+	void stop();
 	bool isDone(){return ready;};
 	bool isOK(){return channelOK;};
 	QString getUnit(){return unit;};
 	virtual eveDevInfoMessage* getDeviceInfo();
 	eveDataMessage* getValueMessage();
+	eveDataMessage* getNormValueMessage();
 	void sendError(int, int, int, QString);
 	void addPositioner(eveCalc* pos){positionerList.append(pos);};
 	void loadPositioner(int pc);
@@ -92,6 +93,7 @@ private:
 	eveBaseTransport* triggerTrans;
 	eveBaseTransport* unitTrans;
 	eveDataMessage *curValue;
+	eveDataMessage* normValue;
 	eveVariant triggerValue;
 	eveVariant stopValue;
 	int averageCount, maxAttempts;

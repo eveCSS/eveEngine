@@ -598,7 +598,17 @@ void eveScanModule::stgTrigRead() {
 			if (nestedSM) ready = nestedSM->isDone();
 			if (ready) {
 				foreach (eveSMChannel *channel, *channelList){
+					eveDataMessage* nmesg = channel->getNormValueMessage();
 					eveDataMessage* dmesg = channel->getValueMessage();
+					if (dmesg != NULL) {
+						dmesg->setPositionCount(triggerPosCount);
+						sendMessage(dmsg);
+					}
+					if (nmsg != NULL){
+						nmesg->setPositionCount(triggerPosCount);
+						sendMessage(nmesg);
+						dmesg = nmsg;
+					}
 					if (dmesg == NULL)
 						sendError(ERROR, 0, QString("%1: no data available").arg(channel->getName()));
 					else {
@@ -606,8 +616,6 @@ void eveScanModule::stgTrigRead() {
 						double dval = dmesg->toVariant().toDouble(&ok);
 						if (ok) sendError(DEBUG, 0, QString("%1: value %2").arg(channel->getName()).arg(dval));
 						channel->loadPositioner(manager->getPositionCount());
-						dmesg->setPositionCount(triggerPosCount);
-						sendMessage(dmesg);
 					}
 				}
 				sendError(DEBUG, 0, "stgTrigRead Done");
@@ -914,6 +922,10 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
 			foreach (eveSMAxis *axis, *axisList){
 				sendError(DEBUG, 0, QString("Stopping axis %1").arg(axis->getName()));
 				axis->stop();
+			}
+			foreach (eveSMChannel *channel, *channelList){
+				sendError(DEBUG, 0, QString("Stopping channel %1").arg(channel->getName()));
+				channel->stop();
 			}
 		case eveEventProperty::STOP:
 			if (nestedSM) nestedSM->newEvent(evprop);

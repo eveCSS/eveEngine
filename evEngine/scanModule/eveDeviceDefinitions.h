@@ -97,7 +97,7 @@ protected:
  */
 class eveChannelDefinition : public eveDeviceDefinition {
 public:
-	eveChannelDefinition(eveDetectorDefinition*, eveCommandDefinition *, eveCommandDefinition *, eveCommandDefinition *, QString, QString);
+	eveChannelDefinition(eveDetectorDefinition*, eveCommandDefinition *, eveCommandDefinition *, eveCommandDefinition *, eveCommandDefinition *, QString, QString);
 	virtual ~eveChannelDefinition();
 	eveType getChannelType(){return getValueCmd()->getTrans()->getDataType();};
 	eveCommandDefinition * getTrigCmd(){return triggerCmd;};
@@ -117,14 +117,16 @@ protected:
  */
 class eveDetectorDefinition : public eveBaseDeviceDefinition {
 public:
-	eveDetectorDefinition(QString, QString, eveCommandDefinition*, eveCommandDefinition*);
+	eveDetectorDefinition(QString, QString, eveCommandDefinition*, eveCommandDefinition*, eveCommandDefinition*);
 	virtual ~eveDetectorDefinition();
 	eveCommandDefinition * getTrigCmd(){return trigger;};
 	eveCommandDefinition * getUnitCmd(){return unit;};
+	eveCommandDefinition * getStopCmd(){return stop;};
 
 private:
 	eveCommandDefinition* trigger;
 	eveCommandDefinition* unit;
+	eveCommandDefinition* stop;
 };
 
 /**

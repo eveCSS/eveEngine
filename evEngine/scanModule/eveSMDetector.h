@@ -19,8 +19,10 @@ public:
 	eveSMDetector(eveScanModule*, eveDetectorDefinition*);
 	virtual ~eveSMDetector();
 	eveBaseTransport* getTrigTrans(){return triggerTrans;};
+	eveBaseTransport* getStopTrans(){return stopTrans;};
 	eveBaseTransport* getUnitTrans(){return unitTrans;};
 	eveVariant getTrigValue(){return triggerValue;};
+	eveVariant getStopValue(){return stopValue;};
 	QString getUnitString(){return unitString;};
 	void sendError(int, int, int, QString);
 
@@ -29,8 +31,10 @@ private:
 	eveScanModule* scanModule;
 	eveBaseTransport* triggerTrans;
 	eveBaseTransport* unitTrans;
+	eveBaseTransport* stopTrans;
 	QString unitString;
 	eveVariant triggerValue;
+	eveVariant stopValue;
 };
 
 #endif /* EVESMDETECTOR_H_ */

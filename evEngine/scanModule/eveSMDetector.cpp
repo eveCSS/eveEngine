@@ -12,6 +12,7 @@ eveSMDetector::eveSMDetector(eveScanModule* scanmodule, eveDetectorDefinition* d
 
 	triggerTrans = NULL;
 	unitTrans = NULL;
+	stopTrans = NULL;
 	name = definition->getName();
 	scanModule = scanmodule;
 
@@ -20,6 +21,15 @@ eveSMDetector::eveSMDetector(eveScanModule* scanmodule, eveDetectorDefinition* d
 			triggerTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)definition->getTrigCmd()->getTrans());
 			triggerValue.setType(definition->getTrigCmd()->getValueType());
 			triggerValue.setValue(definition->getTrigCmd()->getValueString());
+		}
+//		if (definition->getTrigCmd()->getTrans()->getTimeout() > 10.0) timeoutShort = false;
+	}
+
+	if ((definition->getStopCmd() != NULL) && (definition->getStopCmd()->getTrans()!= NULL)){
+		if (definition->getStopCmd()->getTrans()->getTransType() == eveTRANS_CA){
+			stopTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)definition->getStopCmd()->getTrans());
+			stopValue.setType(definition->getStopCmd()->getValueType());
+			stopValue.setValue(definition->getStopCmd()->getValueString());
 		}
 //		if (definition->getTrigCmd()->getTrans()->getTimeout() > 10.0) timeoutShort = false;
 	}
