@@ -482,7 +482,6 @@ bool eveSMChannel::retrieveData(){
 
 	if (normalizeChannel){
 		bool status = true;
-		if (normValue != NULL) delete normValue;
 		eveDataMessage* normChannelMsg = normalizeChannel->getValueMessage();
 		if (normChannelMsg == NULL){
 			sendError(ERROR,0,"unable to retrieve value of normalized Channel");
@@ -507,7 +506,8 @@ bool eveSMChannel::retrieveData(){
 				}
 			}
 			if (status){
-				eveDataMessage* normValue = new eveDataMessage(curValue->getXmlId(), curValue->getName(), curValue->getDataStatus(), DMTnormalized, curValue->getDataTimeStamp(), result);
+				if (normValue != NULL) delete normValue;
+				normValue = new eveDataMessage(curValue->getXmlId(), curValue->getName(), curValue->getDataStatus(), DMTnormalized, curValue->getDataTimeStamp(), result);
 				normValue->setAuxString(normalizeChannel->getXmlId());
 			}
 		}

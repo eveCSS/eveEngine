@@ -31,6 +31,7 @@ hdf5Plugin::hdf5Plugin() {
 	modificationHash.insert(DMTsum,"sum");
 	modificationHash.insert(DMTpeak,"peak");
 	modificationHash.insert(DMTdeviceData,"device");
+	modificationHash.insert(DMTmetaData,"meta");
 	modificationHash.insert(DMTunknown,"unknown");
 }
 

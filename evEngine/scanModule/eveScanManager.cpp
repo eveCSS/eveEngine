@@ -9,6 +9,7 @@
 #include <QTime>
 #include <QDate>
 #include "eveScanThread.h"
+#include "eveStartTime.h"
 #include "eveScanManager.h"
 #include "eveScanModule.h"
 #include "eveMessageHub.h"
@@ -353,12 +354,13 @@ void eveScanManager::addToHash(QHash<QString, QString>& hash, QString key, eveXM
  * between two calls to nextPos
  */
 void eveScanManager::nextPos(){
-	// send nextPos message
-//	if (sentData){
-//		sentData = false;
-//		++posCounter;
-//	}
 	++posCounter;
+
+	eveDataMessage* message = new eveDataMessage("PositionCount", "", eveDataStatus(), DMTmetaData, eveTime::getCurrent(), QVector<int>(1, eveStartTime::getMSecsSinceStart()));
+	message->setDestination(storageChannel);
+	message->setPositionCount(posCounter);
+	message->setChainId(chainId);
+	addMessage(message);
 }
 
 /**
