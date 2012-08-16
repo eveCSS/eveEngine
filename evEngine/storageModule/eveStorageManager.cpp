@@ -64,10 +64,10 @@ void eveStorageManager::handleMessage(eveMessage *message){
 			}
 			break;
 		case EVEMESSAGETYPE_CHAINSTATUS:
-			if (((eveChainStatusMessage*)message)->getStatus() == eveChainDONE){
+			if (((eveChainStatusMessage*)message)->getStatus() == eveChainMATHDONE){
 				int id = ((eveChainStatusMessage*)message)->getChainId();
 				if (chainIdChannelHash.remove(id) == 0){
-					sendError(ERROR,0,QString("handleMessage: unable to remove not existing chainId %1 from chainList").arg(id));
+					sendError(DEBUG,0,QString("handleMessage: unable to remove not existing chainId %1 from chainList").arg(id));
 				}
 				else {
 					// init  shutdown if no chains left

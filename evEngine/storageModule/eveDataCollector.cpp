@@ -127,16 +127,21 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QStri
 	else {
 
 #if defined(Q_OS_WIN)
-		pluginName.append(".dll");
+		QString osLibExt = ".dll";
+		QString osLibPrep = "";
 #elif defined(Q_OS_MAC)
 		// TODO what is the MacOS extension?
-		pluginName = "lib" + pluginName + ".so";
+		QString osLibExt = ".so";
+		QString osLibPrep = "lib";
 #else
-		if (!pluginName.endsWith(".so"))
-				pluginName += ".so";
-		if (!pluginName.startsWith("lib"))
-			pluginName = "lib" + pluginName;
+		QString osLibExt = ".so";
+		QString osLibPrep = "lib";
 #endif
+
+		if (!pluginName.endsWith(osLibExt))
+				pluginName += osLibExt;
+		if (!pluginName.startsWith(osLibPrep))
+			pluginName = osLibPrep + pluginName;
 
 		QString fullname;
 		QString libname = pluginPath;;
@@ -152,7 +157,13 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QStri
 		}
 		QFileInfo info(libname);
 		if (info.isAbsolute()){
-		    if (info.exists())
+			// try a plugin with version number first
+			QString pluginVersion = libname.left(libname.lastIndexOf(osLibExt)) + "." +
+							eveParameter::getParameter("version") + osLibExt;
+			QFileInfo infoVersion(pluginVersion);
+			if (infoVersion.exists())
+				fullname = infoVersion.absoluteFilePath();
+			else if (info.exists())
 		    	fullname = info.absoluteFilePath();
 		}
 		else {
