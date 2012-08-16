@@ -101,12 +101,20 @@ void eveScanManager::init() {
 
 	if (!rootSM) {
 		sendError(ERROR,0,"init: no root scanmodule found");
+		shutdown();
 		return;
 	}
 	// init StorageModule if we have a Datafilename
 	if (useStorage) {
 		sendMessage(new eveStorageMessage(chainId, channelId, savePluginHash, 0, storageChannel));
 	}
+
+	// init PosCountTimer
+	eveDevInfoMessage* message = new eveDevInfoMessage("PosCountTimer", "", new QStringList("unit:msecs"), DMTmetaData, "");
+	message->setChainId(chainId);
+	sendMessage(message);
+	sendError(DEBUG,0,"sent PosCountTimer message");
+
 	rootSM->initialize();
 	// init events
 	bool haveRedoEvent = false;
@@ -231,10 +239,11 @@ void eveScanManager::smPause() {
  */
 void eveScanManager::smDone() {
 
-	if (rootSM && rootSM->isInitializing()){
-		rootSM->initialize();
-	}
-	else if (rootSM && rootSM->isDone()){
+//	if (rootSM && rootSM->isInitializing()){
+//		rootSM->initialize();
+//	}
+//	else
+	if (rootSM && rootSM->isDone()){
 		// TODO
 		currentStatus.setChainStatus(eveChainDONE);
 		sendStatus(0, 0);
@@ -355,8 +364,7 @@ void eveScanManager::addToHash(QHash<QString, QString>& hash, QString key, eveXM
  */
 void eveScanManager::nextPos(){
 	++posCounter;
-
-	eveDataMessage* message = new eveDataMessage("PositionCount", "", eveDataStatus(), DMTmetaData, eveTime::getCurrent(), QVector<int>(1, eveStartTime::getMSecsSinceStart()));
+	eveDataMessage* message = new eveDataMessage("PosCountTimer", "", eveDataStatus(), DMTmetaData, eveTime::getCurrent(), QVector<int>(1, eveStartTime::getMSecsSinceStart()));
 	message->setDestination(storageChannel);
 	message->setPositionCount(posCounter);
 	message->setChainId(chainId);

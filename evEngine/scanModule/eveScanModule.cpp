@@ -47,6 +47,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 
 	stageHash.insert(eveStgINIT, &eveScanModule::stgInit);
 	stageHash.insert(eveStgREADPOS, &eveScanModule::stgReadPos);
+	stageHash.insert(eveStgGOTOSTARTINIT, &eveScanModule::stgGotoStartInit);
 	stageHash.insert(eveStgGOTOSTART, &eveScanModule::stgGotoStart);
 	stageHash.insert(eveStgPRESCAN, &eveScanModule::stgPrescan);
 	stageHash.insert(eveStgSETTLETIME, &eveScanModule::stgSettleTime);
@@ -177,9 +178,8 @@ eveScanModule::~eveScanModule() {
 }
 
 /**
- * \brief initialization, will be called frim manager several times
+ * \brief initialization, will be called from manager for rootSM only
  *
- * initialization will be called for rootSM only
  */
 void eveScanModule::initialize() {
 	sendError(DEBUG, 0, "initialize");
@@ -259,8 +259,8 @@ void eveScanModule::stgInit() {
 			if (allInitDone) foreach (eveSMDevice *device, *postScanList) if (!device->isDone()) allInitDone = false;
 			if (allInitDone) foreach (eveSMAxis *axis, *axisList) if (!axis->isDone()) allInitDone = false;
 			if (allInitDone) foreach (eveSMChannel *channel, *channelList) if (!channel->isDone()) allInitDone = false;
-			if ((nestedSM != NULL) && (!nestedSM->initDone())) allInitDone = false;
-			if ((appendedSM != NULL) && (!appendedSM->initDone())) allInitDone = false;
+			if ((nestedSM != NULL) && (!nestedSM->isStageDone())) allInitDone = false;
+			if ((appendedSM != NULL) && (!appendedSM->isStageDone())) allInitDone = false;
 			if (allInitDone){
 				currentStageReady=true;
 				emit sigExecStage();
@@ -271,12 +271,11 @@ void eveScanModule::stgInit() {
 }
 
 /**
- *  will be called for nested/appended SMs only
+ *  will be called from root SM for nested/appended SMs only
  *
  */
 void eveScanModule::readPos() {
 	sendError(DEBUG, 0, "calling stgReadPos");
-	// make sure only the root SM will increment positionCounter
 	currentStage = eveStgREADPOS;
 	currentStageCounter = 0;
 	currentStageReady = false;
@@ -335,6 +334,8 @@ void eveScanModule::stgReadPos() {
 					sendError(INFO, 0, QString("stgReadPos: channel %1 not ready").arg(channel->getName()));
 				}
 			}
+			if ((nestedSM != NULL) && (!nestedSM->isStageDone())) ready = false;
+			if ((appendedSM != NULL) && (!appendedSM->isStageDone())) ready = false;
 			if (ready) {
 				currentStageReady=true;
 				emit sigExecStage();
@@ -347,14 +348,58 @@ void eveScanModule::stgReadPos() {
 /**
  *  will be called for nested/appended SMs only
  *
- void eveScanModule::gotoStart() {
-	currentStage = eveStgGOTOSTART;
+*/
+ void eveScanModule::gotoStartInit() {
+	currentStage = eveStgGOTOSTARTINIT;
 	currentStageCounter = 0;
 	currentStageReady = false;
 	emit sigExecStage();
 }
-*/
 
+
+/**
+ * \brief Goto Start Position during Init
+ *
+ * move motors  to start position,
+ * - read motor positions
+ * - send motor positions
+ *
+ */
+void eveScanModule::stgGotoStartInit() {
+
+	if (currentStageCounter == 0){
+		if (myStatus.isExecuting()){
+			// skip this stage, proceed with gotoStart
+			currentStageReady = true;
+		}
+		else {
+			sendError(DEBUG, 0, "stgGotoStartInit");
+			currentStageCounter = 1;
+			signalCounter = 0;
+			foreach (eveSMAxis *axis, *axisList){
+				sendError(DEBUG, 0, QString("Moving axis %1").arg(axis->getName()));
+				axis->gotoStartPos(false);
+				++signalCounter;
+			}
+		}
+		emit sigExecStage();
+	}
+	else {
+		if (signalCounter > 0){
+			--signalCounter;
+		}
+		else {
+			// check if all axes are done
+			bool allDone = true;
+			foreach (eveSMAxis *axis, *axisList) allDone = axis->isDone();
+			if (allDone){
+				sendError(DEBUG, 0, "stgGotoStartInit done");
+				currentStageReady=true;
+				emit sigExecStage();
+			}
+		}
+	}
+}
 
 /**
  * \brief Goto Start Position
@@ -603,18 +648,21 @@ void eveScanModule::stgTrigRead() {
 					if (dataMsg != NULL) {
 						dataMsg->setPositionCount(triggerPosCount);
 						sendMessage(dataMsg);
+						bool ok = false;
+						double dval = dataMsg->toVariant().toDouble(&ok);
+						if (ok) sendError(DEBUG, 0, QString("%1: raw value %2").arg(channel->getName()).arg(dval));
 					}
 					if (normMsg != NULL){
 						normMsg->setPositionCount(triggerPosCount);
 						sendMessage(normMsg);
 						dataMsg = normMsg;
+						bool ok = false;
+						double dval = dataMsg->toVariant().toDouble(&ok);
+						if (ok) sendError(DEBUG, 0, QString("%1: normalized value %2").arg(channel->getName()).arg(dval));
 					}
 					if (dataMsg == NULL)
 						sendError(ERROR, 0, QString("%1: no data available").arg(channel->getName()));
 					else {
-						bool ok = false;
-						double dval = dataMsg->toVariant().toDouble(&ok);
-						if (ok) sendError(DEBUG, 0, QString("%1: value %2").arg(channel->getName()).arg(dval));
 						channel->loadPositioner(manager->getPositionCount());
 					}
 				}
@@ -656,7 +704,7 @@ void eveScanModule::stgNextPos() {
 		}
 		else {
 			currentStageCounter=1;
-
+			perPosCount = 0;
 			// check if all axes are done
 			bool allDone = true;
 			foreach (eveSMAxis *axis, *axisList) allDone = axis->isAtEndPos();
@@ -847,14 +895,17 @@ void eveScanModule::stgFinish() {
  */
 void eveScanModule::execStage() {
 
-	if ((currentStage == eveStgFINISH) && currentStageReady){
-		if (myStatus.setStatus(eveSmDONE)) manager->setStatus(smId, myStatus.getStatus());
-		emit SMready();
-		return;
+	if (currentStage == eveStgFINISH) {
+		if (currentStageReady){
+			if (myStatus.setStatus(eveSmDONE)) manager->setStatus(smId, myStatus.getStatus());
+			emit SMready();
+			return;
+		}
+		else
+			(this->*stageHash.value(currentStage))();
 	}
-
 	// if executing, proceed with next stage, if stage is ready
-	if (myStatus.isExecuting()) {
+	else if (myStatus.isExecuting()) {
 		if (currentStageReady){
 			currentStage = (stageT)(((int) currentStage)+1);
 			currentStageReady = false;
@@ -862,17 +913,28 @@ void eveScanModule::execStage() {
 		}
 		if (!myStatus.isPaused())(this->*stageHash.value(currentStage))();
 	}
-	else if ((currentStage == eveStgINIT) || (currentStage == eveStgREADPOS) ||
-			(currentStage == eveStgGOTOSTART) || (currentStage == eveStgFINISH)){
-		// the stages which usually do not proceed if they are ready and may have been called from parent
+	else if ((currentStage == eveStgINIT) || (currentStage == eveStgREADPOS)) {
+		// if not executing these stages need to be called from their parent,
+		// execute only for root sm
 		if (currentStageReady){
-			currentStage = (stageT)(((int) currentStage)+1);
-			currentStageReady = false;
-			currentStageCounter = 0;
-			emit SMready();
+			if (smType == eveSmTypeROOT) {
+				currentStage = (stageT)(((int) currentStage)+1);
+				currentStageReady = false;
+				currentStageCounter = 0;
+				(this->*stageHash.value(currentStage))();
+			}
+			else{
+				emit SMready();
+			}
 		}
 		else
 			(this->*stageHash.value(currentStage))();
+	}
+	else if (currentStage == eveStgGOTOSTARTINIT){
+		// if not executing stop after gotoStart
+		// reset manager status from "initialization" to "idle"
+		manager->setStatus(smId, myStatus.getStatus());
+		if (! currentStageReady) (this->*stageHash.value(currentStage))();
 	}
 
 	return;
@@ -889,6 +951,11 @@ void eveScanModule::startExec() {
 		// always send status executing first
 		manager->setStatus(smId, eveSmEXECUTING);
 		if (myStatus.setStatus(eveSmEXECUTING)) manager->setStatus(smId, myStatus.getStatus());
+		// if stage gotoStart is done already, we need to repeat it, to reset the startTime
+		if ((currentStage == eveStgGOTOSTART) && (currentStageReady == true)){
+	        currentStageReady = false;
+	        currentStageCounter = 0;
+		}
 		emit sigExecStage();
 	}
     else if (myStatus.getStatus() == eveSmDONE){

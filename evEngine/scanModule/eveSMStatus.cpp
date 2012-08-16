@@ -28,6 +28,8 @@ eveSMStatus::~eveSMStatus() {
  *
  * @param newStatus status of a SM
  * @return true if status changed else false
+ *
+ * eveSmINITIALIZING is not used for status!
  */
 bool eveSMStatus::setStatus(smStatusT newStatus ) {
 
