@@ -93,6 +93,7 @@ void eveMathManager::handleMessage(eveMessage *message){
 					}
 				}
 				else if (((eveChainStatusMessage*)message)->getStatus()== eveChainDONE){
+					addMessage(new eveChainStatusMessage(eveChainMATHDONE, chid, 0, 0, eveTime::getCurrent(), 0, 0, storageChannel));
 					shutdown();
 				}
 			}

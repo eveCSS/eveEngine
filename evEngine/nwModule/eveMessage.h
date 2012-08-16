@@ -277,7 +277,7 @@ private:
 /**
  *\brief status of chain or scanmodule
  */
-enum chainStatusT {eveChainSmIDLE=1, eveChainSmINITIALIZING, eveChainSmEXECUTING, eveChainSmPAUSED, eveChainSmTRIGGERWAIT, eveChainSmDONE, eveChainDONE, eveChainSTORAGEDONE};
+enum chainStatusT {eveChainSmIDLE=1, eveChainSmINITIALIZING, eveChainSmEXECUTING, eveChainSmPAUSED, eveChainSmTRIGGERWAIT, eveChainSmDONE, eveChainDONE, eveChainSTORAGEDONE, eveChainMATHDONE};
 enum smStatusT {eveSmNOTSTARTED, eveSmINITIALIZING, eveSmEXECUTING, eveSmPAUSED, eveSmTRIGGERWAIT, eveSmAPPEND, eveSmDONE} ;
 
 /**
