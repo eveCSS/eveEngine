@@ -398,7 +398,7 @@ void eveSMAxis::gotoNextPos(bool queue) {
 
 	ready = false;
 	if (posCalc->isAtEndPos())
-		signalReady();
+		readPos(queue);
 	else
 		gotoPos(posCalc->getNextPos(), queue);
 }
