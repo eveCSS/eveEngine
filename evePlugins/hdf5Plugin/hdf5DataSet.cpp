@@ -22,7 +22,7 @@ hdf5DataSet::hdf5DataSet(QString path, QString colid, QString devicename, QStrin
 	isInit = false;
 	dsetOpen = false;
 	sizeIncrement = 50;
-	isModifiedData = false;
+	isCalcResult = false;
 }
 
 hdf5DataSet::~hdf5DataSet() {
@@ -104,7 +104,7 @@ int hdf5DataSet::addData(eveDataMessage* data){
 			dset.extend( currentDim );
 		}
 	}
-	else if (isModifiedData){
+	else if (isCalcResult){
 		DataSpace filespace;
 		try {
 			filespace = dset.getSpace();
@@ -191,9 +191,9 @@ void hdf5DataSet::init(eveDataMessage* data){
 
 	arraySize = data->getArraySize();
 	dataType = data->getDataType();
-	if ((arraySize == 2) && (data->getDataMod() != DMTunmodified)) isModifiedData = true;
+	if ((arraySize == 2) && (data->getDataMod() != DMTunmodified)) isCalcResult = true;
 
-	if ((arraySize == 1)||(isModifiedData)){
+	if ((arraySize == 1)||(isCalcResult)){
 		rank = 1;
 		maxdim[0] = H5S_UNLIMITED;   /* Dataspace dimensions file*/
 		currentDim[0] = sizeIncrement;
@@ -232,21 +232,24 @@ void hdf5DataSet::init(eveDataMessage* data){
 			// Create the dataset.
 			dset = dataFile->createDataSet(qPrintable(dspath), compoundType, dspace, createProps);
 			dsetOpen = true;
-			addAttributes(&dset);
+			addParamAttributes(&dset);
 
 			// add attributes for normalized data
-			if (data->getDataMod() == DMTnormalized)
-				addModifiedDataAttributes(&dset, "axis", data->getAuxString(), "channel", basename);
-
+			if (data->getDataMod() == DMTnormalized){
+				addDataAttribute(&dset, "normalizeId", data->getNormalizeId());
+				addDataAttribute(&dset, "channel", basename);
+			}
 			dset.extend( currentDim );
 		}
-		else if (isModifiedData){
+		else if (isCalcResult){
 			compoundType = createModDataType(QString("PosCounter"), data->getAuxString(), basename);
 			dset = dataFile->createDataSet(qPrintable(dspath), compoundType, dspace, createProps);
 			dsetOpen = true;
 
 			// add attributes
-			addModifiedDataAttributes(&dset, "axis", data->getAuxString(), "channel", basename);
+			addDataAttribute(&dset, "axis", data->getAuxString());
+			addDataAttribute(&dset, "channel", basename);
+			if (!data->getNormalizeId().isEmpty()) addDataAttribute(&dset, "normalizeId", data->getNormalizeId());
 
 			dset.extend( currentDim );
 
@@ -254,7 +257,7 @@ void hdf5DataSet::init(eveDataMessage* data){
 		else {
 			// Create the group
 			targetGroup = dataFile->createGroup(qPrintable(dspath));
-			addAttributes(&targetGroup);
+			addParamAttributes(&targetGroup);
 		}
 	}
 	catch( Exception error )
@@ -267,25 +270,17 @@ void hdf5DataSet::init(eveDataMessage* data){
 
 }
 
-void hdf5DataSet::addAttributes(H5Object *target){
+void hdf5DataSet::addParamAttributes(H5Object *target){
 
-	// add attributes
-	hsize_t stringDim = 1;
 	while (!params.isEmpty()){
 		QStringList infoSplit = params.takeFirst().split(":");
 		if (infoSplit.count() > 1){
-			QString attribName = infoSplit.takeFirst();
-			QString attribValue = infoSplit.join(":");
-			if ((attribName.length() > 0) && (attribValue.length() > 0)) {
-				StrType st = StrType(PredType::C_S1, attribValue.toLatin1().length());
-				Attribute attrib = target->createAttribute(qPrintable(attribName), st, DataSpace(1, &stringDim));
-				attrib.write(st, qPrintable(attribValue));
-			}
+			addDataAttribute(target, infoSplit.takeFirst(), infoSplit.join(":"));
 		}
 	}
 }
 
-void hdf5DataSet::addModifiedDataAttributes(H5Object *target, QString name1, QString val1, QString name2, QString val2){
+void hdf5DataSet::addDataAttribute(H5Object *target, QString name1, QString val1){
 
 	// add attributes
 	hsize_t stringDim = 1;
@@ -293,11 +288,6 @@ void hdf5DataSet::addModifiedDataAttributes(H5Object *target, QString name1, QSt
 		StrType st = StrType(PredType::C_S1, val1.toLatin1().length());
 		Attribute attrib = target->createAttribute(qPrintable(name1), st, DataSpace(1, &stringDim));
 		attrib.write(st, qPrintable(val1));
-	}
-	if ((name2.length() > 0) && (val2.length() > 0)) {
-		StrType st = StrType(PredType::C_S1, val2.toLatin1().length());
-		Attribute attrib = target->createAttribute(qPrintable(name2), st, DataSpace(1, &stringDim));
-		attrib.write(st, qPrintable(val2));
 	}
 }
 

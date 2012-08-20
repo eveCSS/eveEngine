@@ -47,11 +47,11 @@ private:
 	void* getDataBufferAddress(eveDataMessage*);
 	int getMinimumDataBufferLength(eveDataMessage*, int);
 	void init(eveDataMessage*);
-	void addAttributes(H5Object*);
-	void addModifiedDataAttributes(H5Object*, QString, QString, QString, QString);
+	void addParamAttributes(H5Object*);
+	void addDataAttribute(H5Object*, QString, QString);
 	void addLink(QString, QString, QString);
 	bool isInit;
-	bool isModifiedData;
+	bool isCalcResult;
 	int arraySize;
 	int posCounter;
 	int status;
