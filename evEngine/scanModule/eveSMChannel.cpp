@@ -508,7 +508,7 @@ bool eveSMChannel::retrieveData(){
 			if (status){
 				if (normValue != NULL) delete normValue;
 				normValue = new eveDataMessage(curValue->getXmlId(), curValue->getName(), curValue->getDataStatus(), DMTnormalized, curValue->getDataTimeStamp(), result);
-				normValue->setAuxString(normalizeChannel->getXmlId());
+				normValue->setNormalizeId(normalizeChannel->getXmlId());
 			}
 		}
 		delete normChannelMsg;
