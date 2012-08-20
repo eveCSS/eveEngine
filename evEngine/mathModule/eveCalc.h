@@ -39,6 +39,7 @@ protected:
 	eveDataModType toDataMod(MathAlgorithm);
 	QString xAxisId;
 	QString detectorId;
+	QString normalizeId;
 	int xpos, ypos, zpos, count;
 	int position;
 	double ydata;
@@ -52,7 +53,6 @@ private:
 	bool checkValue(double value);
 	MathAlgorithm toMathAlgorithm(QString);
 	MathAlgorithm algorithm;
-	QString normalizeId;
 	bool arrayModified;
 	bool doNormalize;
 	bool saveValues;

@@ -731,6 +731,7 @@ eveDataMessage* eveDataMessage::clone(){
 	message->setName(name);
 	message->setPositionCount(posCount);
 	message->setAuxString(auxInfo);
+	message->setNormalizeId(normalizeId);
 	message->setMSecsSinceStart(mSecsSinceStart);
 	return message;
 }
@@ -822,7 +823,10 @@ eveDevInfoMessage::~eveDevInfoMessage() {
 }
 
 eveDevInfoMessage* eveDevInfoMessage::clone() {
-	return new eveDevInfoMessage(chainId, smId, xmlId, name, dataType, isarray, dataModifier, auxInfo, infoList, priority, destination);
+	eveDevInfoMessage* message = new eveDevInfoMessage(chainId, smId, xmlId, name, dataType, isarray, dataModifier, auxInfo, infoList, priority, destination);
+	message->setAuxString(auxInfo);
+	message->setNormalizeId(normalizeId);
+	return message;
 }
 
 /**

@@ -428,6 +428,8 @@ public:
 	void setName(QString id){name = id;};
 	void setAuxString(QString aux){auxInfo = aux;};
 	QString getAuxString(){return auxInfo;};
+	void setNormalizeId(QString nId){normalizeId = nId;};
+	QString getNormalizeId(){return normalizeId;};
 	eveDataModType getDataMod(){return dataModifier;};
 	void setDataMod(eveDataModType mod){dataModifier=mod;};
 	int getMSecsSinceStart(){return mSecsSinceStart;};
@@ -440,6 +442,7 @@ protected:
 	QString name;
 	QString xmlId;
 	QString auxInfo;
+	QString normalizeId;
 	int mSecsSinceStart;
 };
 

@@ -57,6 +57,7 @@ QList<eveDataMessage*> eveMath::getResultMessage(MathAlgorithm algo, int chid, i
 		data.append(yresult);
 		message = new eveDataMessage(detectorId, QString(), eveDataStatus(), toDataMod(algo), epicsTime(), data);
 		message->setAuxString(xAxisId);
+		if (!normalizeId.isEmpty())message->setNormalizeId(normalizeId);
 		message->setChainId(chid);
 		message->setSmId(smid);
 		message->setPositionCount(position);
