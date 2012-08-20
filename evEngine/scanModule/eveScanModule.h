@@ -27,7 +27,7 @@ class eveScanManager;
  * \brief process a ScanModule
  */
 
-enum stageT {eveStgINIT, eveStgREADPOS, eveStgGOTOSTART, eveStgPRESCAN,
+enum stageT {eveStgINIT, eveStgREADPOS, eveStgGOTOSTARTINIT, eveStgGOTOSTART, eveStgPRESCAN,
 			eveStgSETTLETIME, eveStgTRIGREAD, eveStgNEXTPOS,
 			eveStgPOSTSCAN, eveStgENDPOS, eveStgFINISH};
 
@@ -40,8 +40,8 @@ public:
 	eveScanModule(eveScanManager *, eveXMLReader *, int, int, smTypeT);
 	virtual ~eveScanModule();
 	bool isDone(){return myStatus.isDone();};
-	bool initDone(){return (currentStage==eveStgREADPOS)?true:false;};
-	bool isInitializing(){return ((currentStage == eveStgINIT) || (currentStage == eveStgREADPOS) || (currentStage == eveStgGOTOSTART));};
+	bool isStageDone(){return currentStageReady;};
+//	bool isInitializing(){return ((currentStage == eveStgINIT) || (currentStage == eveStgREADPOS) || (currentStage == eveStgGOTOSTART));};
 	//void setEventTrigger(bool val){eventTrigger = val;};
 	bool isExecuting(){return myStatus.isExecuting();};
 	void initialize();
@@ -51,7 +51,7 @@ public:
 	int getRemainingTime();
 	int getChainId(){return chainId;};
 	int getSmId(){return smId;};
-	//void gotoStart();
+	void gotoStartInit();
 	void readPos();
 	bool newEvent(eveEventProperty*);
 
@@ -65,6 +65,7 @@ signals:
 private:
 	void startExec();
 	void stgInit();
+	void stgGotoStartInit();
 	void stgGotoStart();
 	void stgReadPos();
 	void stgPrescan();
