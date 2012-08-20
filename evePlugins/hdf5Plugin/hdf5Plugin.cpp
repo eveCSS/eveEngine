@@ -169,7 +169,7 @@ int hdf5Plugin::setXMLData(QByteArray* xmldata){
 
 int hdf5Plugin::addColumn(eveDevInfoMessage* message){
 
-	QString dsname = getDSName(message->getChainId(),message->getXmlId(), message->getDataMod(), message->getAuxString());
+	QString dsname = getDSName(message->getChainId(),message->getXmlId(), message->getDataMod(), message->getAuxString(), message->getNormalizeId());
 
 	if (!isFileOpen) {
 		errorString = QString("HDF5Plugin:setCols: data file has not been opened");
@@ -211,7 +211,7 @@ int hdf5Plugin::addData(int pathId, eveDataMessage* data)
 		return ERROR;
 	}
 
-	QString dsname = getDSName(pathId, data->getXmlId(), data->getDataMod(), data->getAuxString());
+	QString dsname = getDSName(pathId, data->getXmlId(), data->getDataMod(), data->getAuxString(), data->getNormalizeId());
 	errorString = QString("HDF5Plugin: add Data to %1").arg(dsname);
 
 	if (dsNameHash.contains(dsname)) {
@@ -321,15 +321,17 @@ int hdf5Plugin::close()
     return status;
 }
 
-QString hdf5Plugin::getDSName(int id, QString name, eveDataModType modified, QString other){
+QString hdf5Plugin::getDSName(int id, QString name, eveDataModType modified, QString other, QString normalizeId){
 
 	QString groupname = getGroupName(id);
 	QString newname = name;
 
 	if (modified != DMTunmodified){
 		groupname += QString("%1/").arg(modificationHash.value(modified));
-		if (other.length() > 0)
-			newname = QString("%1__%2").arg(name).arg(other);
+		if (!normalizeId.isEmpty())
+			newname = QString("%1__%2").arg(newname).arg(normalizeId);
+		if (!other.isEmpty())
+			newname = QString("%1__%2").arg(newname).arg(other);
 	}
 	return groupname+newname;
 }

@@ -48,7 +48,7 @@ private:
 	static void compareNames(H5Object&, std::string, void*);
 	int addSingleData(int, eveDataMessage*);
 	int addArrayData(int, eveDataMessage*);
-	QString getDSName(int, QString, eveDataModType, QString);
+	QString getDSName(int, QString, eveDataModType, QString, QString);
 	// QString createGroup(int pathId);
 	QString createGroup(QString);
 	QString getGroupName(int pathId);
