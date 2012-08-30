@@ -104,6 +104,7 @@ eveSMBaseDevice(scanmodule) {
 		triggerTrans = detector->getTrigTrans();
 		triggerValue = detector->getTrigValue();
 		isDetectorTrigger = true;
+		if (detector->getTriggerTimeout() > 10.0) timeoutShort = false;
 	}
 	if (triggerTrans != NULL) haveTrigger = true;
 

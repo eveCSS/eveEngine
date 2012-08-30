@@ -15,6 +15,7 @@ eveSMDetector::eveSMDetector(eveScanModule* scanmodule, eveDetectorDefinition* d
 	stopTrans = NULL;
 	name = definition->getName();
 	scanModule = scanmodule;
+	triggerTimeout = 0.0;
 
 	if ((definition->getTrigCmd() != NULL) && (definition->getTrigCmd()->getTrans()!= NULL)){
 		if (definition->getTrigCmd()->getTrans()->getTransType() == eveTRANS_CA){
@@ -22,7 +23,7 @@ eveSMDetector::eveSMDetector(eveScanModule* scanmodule, eveDetectorDefinition* d
 			triggerValue.setType(definition->getTrigCmd()->getValueType());
 			triggerValue.setValue(definition->getTrigCmd()->getValueString());
 		}
-//		if (definition->getTrigCmd()->getTrans()->getTimeout() > 10.0) timeoutShort = false;
+		triggerTimeout = definition->getTrigCmd()->getTrans()->getTimeout();
 	}
 
 	if ((definition->getStopCmd() != NULL) && (definition->getStopCmd()->getTrans()!= NULL)){
@@ -31,7 +32,6 @@ eveSMDetector::eveSMDetector(eveScanModule* scanmodule, eveDetectorDefinition* d
 			stopValue.setType(definition->getStopCmd()->getValueType());
 			stopValue.setValue(definition->getStopCmd()->getValueString());
 		}
-//		if (definition->getTrigCmd()->getTrans()->getTimeout() > 10.0) timeoutShort = false;
 	}
 
 	if (definition->getUnitCmd() != NULL){

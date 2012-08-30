@@ -21,6 +21,7 @@ public:
 	eveBaseTransport* getTrigTrans(){return triggerTrans;};
 	eveBaseTransport* getStopTrans(){return stopTrans;};
 	eveBaseTransport* getUnitTrans(){return unitTrans;};
+	double getTriggerTimeout() {return triggerTimeout;};
 	eveVariant getTrigValue(){return triggerValue;};
 	eveVariant getStopValue(){return stopValue;};
 	QString getUnitString(){return unitString;};
@@ -35,6 +36,7 @@ private:
 	QString unitString;
 	eveVariant triggerValue;
 	eveVariant stopValue;
+	double triggerTimeout;
 };
 
 #endif /* EVESMDETECTOR_H_ */
