@@ -376,8 +376,10 @@ void eveScanModule::stgGotoStartInit() {
 			sendError(DEBUG, 0, "stgGotoStartInit");
 			currentStageCounter = 1;
 			signalCounter = 0;
+			QDateTime startTime = QDateTime::currentDateTime();
 			foreach (eveSMAxis *axis, *axisList){
 				sendError(DEBUG, 0, QString("Moving axis %1").arg(axis->getName()));
+				axis->setTimer(startTime);
 				axis->gotoStartPos(false);
 				++signalCounter;
 			}
@@ -951,11 +953,6 @@ void eveScanModule::startExec() {
 		// always send status executing first
 		manager->setStatus(smId, eveSmEXECUTING);
 		if (myStatus.setStatus(eveSmEXECUTING)) manager->setStatus(smId, myStatus.getStatus());
-		// if stage gotoStart is done already, we need to repeat it, to reset the startTime
-		if ((currentStage == eveStgGOTOSTART) && (currentStageReady == true)){
-	        currentStageReady = false;
-	        currentStageCounter = 0;
-		}
 		emit sigExecStage();
 	}
     else if (myStatus.getStatus() == eveSmDONE){
