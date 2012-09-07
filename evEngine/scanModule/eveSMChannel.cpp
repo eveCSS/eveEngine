@@ -298,10 +298,6 @@ void eveSMChannel::transportReady(int status) {
 		channelStatus = eveCHANNELIDLE;
 		signalReady();
 	}
-//	else if (channelStatus == eveCHANNELTRIGGER){
-//		// trigger is ready, we do nothing
-//		signalReady();
-//	}
 	else if (channelStatus == eveCHANNELTRIGGERREAD){
 		--signalCounter;
 		if (signalCounter <= 0) {
