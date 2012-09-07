@@ -33,6 +33,7 @@ eveSMBaseDevice(sm){
 	havePos = false;
 	inDeadband = true;
 	isTimer=false;
+	queueTrigger = false;
 	gotoTrans = NULL;
 	posTrans = NULL;
 	stopTrans = NULL;
@@ -297,6 +298,16 @@ void eveSMAxis::transportReady(int status) {
 		}
 	}
 	else if (axisStatus == eveAXISWRITEPOS){
+		axisStatus = eveAXISTRIGGER;
+		if (haveTrigger){
+			triggerTrans->writeData(triggerValue, queueTrigger);
+		}
+		else {
+			// call this again immediately
+			transportReady(status);
+		}
+	}
+	else if (axisStatus == eveAXISTRIGGER){
 		// motor stopped moving, read current position
 		axisStatus = eveAXISREADPOS;
 		signalCounter = 0;
@@ -418,6 +429,7 @@ void eveSMAxis::gotoPos(eveVariant newpos, bool queue) {
 	}
 
 	if (axisStatus == eveAXISIDLE) {
+		queueTrigger = queue;
 		if (posCalc->motionDisabled()){
 			// skip the move, read only current position
 			if (haveDeadband) {
@@ -433,7 +445,9 @@ void eveSMAxis::gotoPos(eveVariant newpos, bool queue) {
 		else {
 			targetPosition = newpos;
 			axisStatus = eveAXISWRITEPOS;
-			if (gotoTrans->writeData(targetPosition, queue)) {
+			bool queueWrite = queue
+			if (haveTrigger) queueWrite = false;
+			if (gotoTrans->writeData(targetPosition, queueWrite)) {
 				sendError(ERROR,0,"error writing goto data");
 				signalReady();
 			}

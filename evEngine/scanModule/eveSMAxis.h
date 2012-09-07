@@ -22,7 +22,7 @@
  *
  */
 
-enum eveAxisStatusT {eveAXISINIT, eveAXISIDLE, eveAXISWRITEPOS, eveAXISREADPOS, eveAXISREADSTATUS};
+enum eveAxisStatusT {eveAXISINIT, eveAXISIDLE, eveAXISWRITEPOS, eveAXISTRIGGER, eveAXISREADPOS, eveAXISREADSTATUS};
 
 class eveScanManager;
 class eveSMMotor;
@@ -75,6 +75,7 @@ private:
 	bool ready;
 	bool inDeadband;
 	bool axisStop;
+	bool queueTrigger;
 	QString unit;
 	eveVariant currentPosition;
 	eveVariant targetPosition;
