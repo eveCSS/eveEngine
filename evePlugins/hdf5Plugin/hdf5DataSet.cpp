@@ -154,7 +154,7 @@ int hdf5DataSet::addData(eveDataMessage* data){
 			try {
 				currentDim[0] = arraySize;		// not constant
 				currentDim[1] = 1; 				// default array sizeIncrement
-				currentOffset[0] = 0;
+				currentOffset[0] = arraySize;
 				currentOffset[1] = 0;
 				dset = dataFile->createDataSet(qPrintable(dsname), convertToHdf5Type(dataType), dspace, createProps);
 				dset.extend( currentDim );
@@ -275,7 +275,8 @@ void hdf5DataSet::addParamAttributes(H5Object *target){
 	while (!params.isEmpty()){
 		QStringList infoSplit = params.takeFirst().split(":");
 		if (infoSplit.count() > 1){
-			addDataAttribute(target, infoSplit.takeFirst(), infoSplit.join(":"));
+			QString attribName = infoSplit.takeFirst();
+			addDataAttribute(target, attribName, infoSplit.join(":"));
 		}
 	}
 }
