@@ -45,6 +45,89 @@ void hdf5DataSet::close() {
 	}
 }
 
+void hdf5DataSet::init(eveDataMessage* data){
+
+	arraySize = data->getArraySize();
+	dataType = data->getDataType();
+	if ((arraySize == 2) && (data->getDataMod() != DMTunmodified)) isCalcResult = true;
+
+	if ((arraySize == 1)||(isCalcResult)){
+		rank = 1;
+		maxdim[0] = H5S_UNLIMITED;   /* Dataspace dimensions file*/
+		currentDim[0] = sizeIncrement;
+		chunk_dims[0] = 1;
+	}
+	else {
+		sizeIncrement = 1;
+		rank = 2;
+		maxdim[0] = arraySize;
+		maxdim[1] = H5S_UNLIMITED;
+		currentDim[0] = arraySize;		// not constant
+		currentDim[1] = sizeIncrement; 	// default array sizeIncrement
+		chunk_dims[0] = arraySize;		// constant
+		chunk_dims[1] = sizeIncrement;
+	}
+
+	try {
+		Exception::dontPrint();
+
+		memspace = DataSpace( rank, chunk_dims );		/* Dataspace dimensions memory*/
+		dspace = DataSpace( rank, currentDim, maxdim );
+		currentOffset[0] = 0;
+		currentOffset[1] = 0;
+
+		//Modify dataset creation properties, i.e. enable chunking.
+		createProps.setChunk( rank, chunk_dims );
+
+		if (arraySize == 1){
+			QString index = "PosCounter";
+			if (data->getChainId() == 0) index = "mSecsSinceStart";
+
+			compoundType = createDataType(index, qPrintable(basename), data->getDataType(), arraySize);
+			// Create the memory buffer.
+			memBuffer = (memSpace_t*)malloc(compoundType.getSize());
+
+			// Create the dataset.
+			dset = dataFile->createDataSet(qPrintable(dspath), compoundType, dspace, createProps);
+			dsetOpen = true;
+			addParamAttributes(&dset);
+
+			// add attributes for normalized data
+			if (data->getDataMod() == DMTnormalized){
+				addDataAttribute(&dset, "normalizeId", data->getNormalizeId());
+				addDataAttribute(&dset, "channel", basename);
+			}
+			dset.extend( currentDim );
+		}
+		else if (isCalcResult){
+			compoundType = createModDataType(QString("PosCounter"), data->getAuxString(), basename);
+			dset = dataFile->createDataSet(qPrintable(dspath), compoundType, dspace, createProps);
+			dsetOpen = true;
+
+			// add attributes
+			addDataAttribute(&dset, "axis", data->getAuxString());
+			addDataAttribute(&dset, "channel", basename);
+			if (!data->getNormalizeId().isEmpty()) addDataAttribute(&dset, "normalizeId", data->getNormalizeId());
+
+			dset.extend( currentDim );
+
+		}
+		else {
+			// Create the group
+			targetGroup = dataFile->createGroup(qPrintable(dspath));
+			addParamAttributes(&targetGroup);
+		}
+	}
+	catch( Exception error )
+	{
+		errorString += QString("hdf5DataSet::init: Exception: %1").arg(error.getCDetailMsg());
+		status = ERROR;
+	}
+	addLink(dspath, basename, name);
+	isInit = true;
+
+}
+
 int hdf5DataSet::addData(eveDataMessage* data){
 
 	status = DEBUG;
@@ -154,7 +237,7 @@ int hdf5DataSet::addData(eveDataMessage* data){
 			try {
 				currentDim[0] = arraySize;		// not constant
 				currentDim[1] = 1; 				// default array sizeIncrement
-				currentOffset[0] = arraySize;
+				currentOffset[0] = 0;
 				currentOffset[1] = 0;
 				dset = dataFile->createDataSet(qPrintable(dsname), convertToHdf5Type(dataType), dspace, createProps);
 				dset.extend( currentDim );
@@ -178,96 +261,14 @@ int hdf5DataSet::addData(eveDataMessage* data){
 			}
 			dset.write( getDataBufferAddress(data), convertToHdf5Type(dataType), memspace, filespace );
 		}
-		catch (...) {
-			errorString += QString("hdf5DataSet:addData: error writing to dataset %1").arg(dsname);
+		catch( Exception error )
+		{
+			errorString += QString(" hdf5DataSet:addData: Exception: %1").arg(error.getCDetailMsg());
 			return ERROR;
 		}
 		errorString += QString("successfully wrote dataset %1").arg(dsname);
 	}
 	return status;
-}
-
-void hdf5DataSet::init(eveDataMessage* data){
-
-	arraySize = data->getArraySize();
-	dataType = data->getDataType();
-	if ((arraySize == 2) && (data->getDataMod() != DMTunmodified)) isCalcResult = true;
-
-	if ((arraySize == 1)||(isCalcResult)){
-		rank = 1;
-		maxdim[0] = H5S_UNLIMITED;   /* Dataspace dimensions file*/
-		currentDim[0] = sizeIncrement;
-		chunk_dims[0] = 1;
-	}
-	else {
-		sizeIncrement = 1;
-		rank = 2;
-		maxdim[0] = arraySize;
-		maxdim[1] = H5S_UNLIMITED;
-		currentDim[0] = arraySize;		// not constant
-		currentDim[1] = sizeIncrement; 	// default array sizeIncrement
-		chunk_dims[0] = arraySize;		// constant
-		chunk_dims[1] = sizeIncrement;
-	}
-
-	try {
-		Exception::dontPrint();
-
-		memspace = DataSpace( rank, chunk_dims );		/* Dataspace dimensions memory*/
-		dspace = DataSpace( rank, currentDim, maxdim );
-		currentOffset[0] = 0;
-		currentOffset[1] = 0;
-
-		//Modify dataset creation properties, i.e. enable chunking.
-		createProps.setChunk( rank, chunk_dims );
-
-		if (arraySize == 1){
-			QString index = "PosCounter";
-			if (data->getChainId() == 0) index = "mSecsSinceStart";
-
-			compoundType = createDataType(index, qPrintable(basename), data->getDataType(), arraySize);
-			// Create the memory buffer.
-			memBuffer = (memSpace_t*)malloc(compoundType.getSize());
-
-			// Create the dataset.
-			dset = dataFile->createDataSet(qPrintable(dspath), compoundType, dspace, createProps);
-			dsetOpen = true;
-			addParamAttributes(&dset);
-
-			// add attributes for normalized data
-			if (data->getDataMod() == DMTnormalized){
-				addDataAttribute(&dset, "normalizeId", data->getNormalizeId());
-				addDataAttribute(&dset, "channel", basename);
-			}
-			dset.extend( currentDim );
-		}
-		else if (isCalcResult){
-			compoundType = createModDataType(QString("PosCounter"), data->getAuxString(), basename);
-			dset = dataFile->createDataSet(qPrintable(dspath), compoundType, dspace, createProps);
-			dsetOpen = true;
-
-			// add attributes
-			addDataAttribute(&dset, "axis", data->getAuxString());
-			addDataAttribute(&dset, "channel", basename);
-			if (!data->getNormalizeId().isEmpty()) addDataAttribute(&dset, "normalizeId", data->getNormalizeId());
-
-			dset.extend( currentDim );
-
-		}
-		else {
-			// Create the group
-			targetGroup = dataFile->createGroup(qPrintable(dspath));
-			addParamAttributes(&targetGroup);
-		}
-	}
-	catch( Exception error )
-	{
-		errorString += QString("hdf5DataSet::init: Exception: %1").arg(error.getCDetailMsg());
-		status = ERROR;
-	}
-	addLink(dspath, basename, name);
-	isInit = true;
-
 }
 
 void hdf5DataSet::addParamAttributes(H5Object *target){
