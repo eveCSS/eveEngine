@@ -33,6 +33,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 	manualTrigger = false;
 	manDetTrigger = false;
 	doRedo=false;
+	doBreak=false;
 	triggerRid = 0;
 	triggerDetecRid = 0;
 	perPosCount = 0;
@@ -649,10 +650,19 @@ void eveScanModule::stgTrigRead() {
 					eveDataMessage* dataMsg = channel->getValueMessage();
 					if (dataMsg != NULL) {
 						dataMsg->setPositionCount(triggerPosCount);
-						sendMessage(dataMsg);
 						bool ok = false;
 						double dval = dataMsg->toVariant().toDouble(&ok);
 						if (ok) sendError(DEBUG, 0, QString("%1: raw value %2").arg(channel->getName()).arg(dval));
+						if (dataMsg->getDataType() == eveInt32T) {
+							sendError(DEBUG, 0, QString("Severity: %1, Alarm: %2").arg(dataMsg->getDataStatus().getSeverityString()).arg(dataMsg->getDataStatus().getAlarmString()));
+							sendError(DEBUG, 0, QString("arraySize: %1, ptr: %2").arg(dataMsg->getArraySize()).arg((unsigned int)dataMsg->getIntArray().constData()));
+							int *iarray= (int*) dataMsg->getIntArray().constData();
+							for (int i=0; i< dataMsg->getArraySize(); ++i) {
+								if ((iarray[i] < 0) || (iarray[i] > 10000))
+									sendError(DEBUG,0,QString("%1: %2").arg(i).arg(iarray[i]));
+							}
+						}
+						sendMessage(dataMsg);
 					}
 					if (normMsg != NULL){
 						normMsg->setPositionCount(triggerPosCount);
@@ -897,6 +907,10 @@ void eveScanModule::stgFinish() {
  */
 void eveScanModule::execStage() {
 
+	if (currentStageReady && doBreak){
+		currentStage = eveStgNEXTPOS;
+		doBreak = false;
+	}
 	if (currentStage == eveStgFINISH) {
 		if (currentStageReady){
 			if (myStatus.setStatus(eveSmDONE)) manager->setStatus(smId, myStatus.getStatus());
@@ -1037,8 +1051,7 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
 				else {
 					sendError(DEBUG, 0, QString("Skip the rest of this Scan Module"));
 					myStatus.setEvent(evprop);
-					currentStage = eveStgNEXTPOS;
-					currentStageReady = true;
+					doBreak = true;
 					emit sigExecStage();
 				}
 			}
@@ -1091,8 +1104,7 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
 			case eveEventProperty::BREAK:
 				if (myStatus.isExecuting()){
 					myStatus.setEvent(evprop);
-					currentStage = eveStgNEXTPOS;
-					currentStageReady = true;
+					doBreak = true;
 					emit sigExecStage();
 				}
 				break;

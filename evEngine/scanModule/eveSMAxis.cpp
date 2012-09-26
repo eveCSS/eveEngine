@@ -300,7 +300,10 @@ void eveSMAxis::transportReady(int status) {
 	else if (axisStatus == eveAXISWRITEPOS){
 		axisStatus = eveAXISTRIGGER;
 		if (haveTrigger){
-			triggerTrans->writeData(triggerValue, queueTrigger);
+			if (triggerTrans->writeData(triggerValue, queueTrigger)) {
+				sendError(ERROR, 0, "error writing trigger command");
+				transportReady(status);
+			}
 		}
 		else {
 			// call this again immediately
@@ -445,7 +448,7 @@ void eveSMAxis::gotoPos(eveVariant newpos, bool queue) {
 		else {
 			targetPosition = newpos;
 			axisStatus = eveAXISWRITEPOS;
-			bool queueWrite = queue
+			bool queueWrite = queue;
 			if (haveTrigger) queueWrite = false;
 			if (gotoTrans->writeData(targetPosition, queueWrite)) {
 				sendError(ERROR,0,"error writing goto data");

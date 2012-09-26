@@ -95,6 +95,7 @@ private:
 	bool manualTrigger;
 	bool manDetTrigger;
 	bool doRedo;
+	bool doBreak;
 	int valuesPerPos;
 	int perPosCount;
 //	bool catchedTrigger;
