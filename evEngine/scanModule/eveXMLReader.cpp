@@ -335,6 +335,11 @@ eveChannelDefinition * eveXMLReader::createChannelDefinition(QDomNode channel, e
     		unit = new eveCommandDefinition(NULL, unitstring.text(), eveStringT);
     	}
     }
+    domElement = channel.firstChildElement("option");
+	while (!domElement.isNull()) {
+		createDeviceDefinition(domElement);
+ 		domElement = domElement.nextSiblingElement("option");
+	}
 
 	return new eveChannelDefinition(detectorDef, trigger, unit, read, stop, name, id);
 
