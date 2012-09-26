@@ -172,11 +172,11 @@ int hdf5DataSet::addData(eveDataMessage* data){
 			filespace.selectHyperslab( H5S_SELECT_SET, chunk_dims, currentOffset );
 
 			++currentOffset[1];
-			dset.write( getDataBufferAddress(data), convertToHdf5Type(dataType), memspace, filespace );
-			if (currentOffset[1] >= currentDim[1]){
+			while (currentOffset[1] > currentDim[1]){
 				currentDim[1] += sizeIncrement;
 				dset.extend( currentDim );
 			}
+			dset.write( getDataBufferAddress(data), convertToHdf5Type(dataType), memspace, filespace );
 		}
 		catch (...) {
 			errorString += QString("hdf5DataSet:addData: error writing to dataset %1").arg(dsname);
