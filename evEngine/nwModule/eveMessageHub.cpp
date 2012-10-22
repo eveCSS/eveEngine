@@ -236,6 +236,8 @@ void eveMessageHub::newMessage(int messageSource)
 							message = NULL;
 						else {
 							addError(MINOR, 0, QString("unable to deliver DataMessage to channel %1").arg(channel));
+							message = NULL;
+							delete message;
 						}
 						break;
 					}
@@ -249,7 +251,8 @@ void eveMessageHub::newMessage(int messageSource)
 						eveMessage *mclone = message->clone();
 						if (!sendToStorage(mclone)) delete mclone;
 					}
-					if (sendToMath(message)) message = NULL;
+					if (!sendToMath(message)) delete message;
+					message = NULL;
 				}
 				break;
 			case EVEMESSAGETYPE_AUTOPLAY:
@@ -344,11 +347,19 @@ void eveMessageHub::newMessage(int messageSource)
 					}
 					if (sendToStorage(message)) message = NULL;
 				}
+				else {
+					delete message;
+					message = NULL;
+				}
 				break;
 			case EVEMESSAGETYPE_DEVINFO:
 				/* send device info to storagemodule if available */
 				if (haveStorage()){
 					if (sendToStorage(message)) message = NULL;
+				}
+				else {
+					delete message;
+					message = NULL;
 				}
 				break;
 			case EVEMESSAGETYPE_EVENTREGISTER:
