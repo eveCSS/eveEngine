@@ -40,14 +40,17 @@ public:
 	eveVariant& getNextPos();
 	eveVariant& getStartPos(){return startPosAbs;};
 	eveVariant& getCurrentPos(){return currentPos;};
+	eveType getType(){return axisType;};
 	bool isAtEndPos(){return isAtEnd;};
+	bool isAbs(){return absolute;};
 	bool setOffset(eveVariant);
 	bool motionDisabled(){return doNotMove;};
 	int getTotalSteps(){return totalSteps;};
 
 private:
-	enum {NONE, STARTSTOP, FILE, PLUGIN, LIST} stepmode;
+	enum {NONE, STARTSTOP, MULTIPLY, FILE, PLUGIN, LIST} stepmode;
 	void stepfuncAdd();
+	void stepfuncMultiply();
 	void stepfuncList();
 	void ReferenceMultiply();
 	void MotionDisabled();
@@ -66,7 +69,7 @@ private:
 	QList<int> posIntList;
 	QList<double> posDoubleList;
 	eveScanModule* scanModule;
-	double RefMultiplyFactor;
+	double multiplyFactor;
 	eveSMAxis* RefMultiplyAxis;
 	bool absolute;
 	bool isAtEnd;
