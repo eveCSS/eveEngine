@@ -28,7 +28,7 @@ class eveScanManager;
  */
 
 enum stageT {eveStgINIT, eveStgREADPOS, eveStgGOTOSTARTINIT, eveStgGOTOSTART, eveStgPRESCAN,
-			eveStgSETTLETIME, eveStgTRIGREAD, eveStgNEXTPOS,
+			eveStgSETTLETIME, eveStgTRIGWAIT, eveStgTRIGREAD, eveStgNEXTPOS,
 			eveStgPOSTSCAN, eveStgENDPOS, eveStgFINISH};
 
 class eveScanModule: public QObject
@@ -71,6 +71,7 @@ private:
 	void stgPrescan();
 	void stgSettleTime();
 	void stgTrigRead();
+	void stgTrigWait();
 	void stgNextPos();
 	void stgPostscan();
 	void stgEndPos();
@@ -96,6 +97,7 @@ private:
 	bool manDetTrigger;
 	bool doRedo;
 	bool doBreak;
+	bool setAxisOffset;
 	int valuesPerPos;
 	int perPosCount;
 //	bool catchedTrigger;
