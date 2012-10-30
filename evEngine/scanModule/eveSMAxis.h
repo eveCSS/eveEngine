@@ -34,7 +34,7 @@ class eveSMAxis: public eveSMBaseDevice {
 public:
 	eveSMAxis(eveScanModule *, eveSMMotor*, eveAxisDefinition *, evePosCalc *);
 	virtual ~eveSMAxis();
-	void gotoStartPos(bool);
+	void gotoStartPos(bool, bool=true);
 	void gotoNextPos(bool);
 	eveVariant getPos(){return currentPosition;};
 	eveVariant getTargetPos(){return targetPosition;};
@@ -76,6 +76,8 @@ private:
 	bool inDeadband;
 	bool axisStop;
 	bool queueTrigger;
+	bool isSetOffset;
+	bool isSetStartTime;
 	QString unit;
 	eveVariant currentPosition;
 	eveVariant targetPosition;

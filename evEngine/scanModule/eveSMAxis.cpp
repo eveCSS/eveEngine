@@ -34,6 +34,7 @@ eveSMBaseDevice(sm){
 	inDeadband = true;
 	isTimer=false;
 	queueTrigger = false;
+	isSetOffset = false;
 	gotoTrans = NULL;
 	posTrans = NULL;
 	stopTrans = NULL;
@@ -55,7 +56,7 @@ eveSMBaseDevice(sm){
 	isMotorTrigger = false;
 	isMotorUnit = false;
 	motor = smmotor;
-
+	isSetStartTime = false;
 
 	if ((motorAxisDef->getGotoCmd() != NULL) && (motorAxisDef->getGotoCmd()->getTrans() != NULL)){
 		eveTransportDefinition* transdef = (eveTransportDefinition*)motorAxisDef->getGotoCmd()->getTrans();
@@ -386,21 +387,24 @@ void eveSMAxis::signalReady() {
 /**
  * \brief get start position and go there, reset internal counter
  * @param queue if true don't send the command, instead put it in the send queue
+ * @param overrideOffset is needed to keep an already set offset
+ *        if calling this method twice during init
  */
-void eveSMAxis::gotoStartPos(bool queue) {
+void eveSMAxis::gotoStartPos(bool queue, bool overrideOffset) {
 
 	ready = false;
-	// currentPosition does not change for motors, but must be fetched
-	// for timer
-	if (isTimer){
-		// TODO improve this: here we set current position to 0 when not DateTime
-		if (!currentPosition.setValue(((eveTimer*)gotoTrans)->getStartTime()))
-			if (!currentPosition.setValue((int)0))
-				sendError(ERROR, 0, QString("SMAxis: Unable to set Start Pos to current DateTime or 0"));
+	// do not set offset for timers
+	if (!isTimer && (!isSetOffset || overrideOffset)){
+		posCalc->setOffset(currentPosition);
+		isSetOffset = true;
 	}
-	posCalc->setOffset(currentPosition);
 	posCalc->reset();
-	gotoPos(posCalc->getStartPos(), queue);
+	if (isTimer){
+		signalReady();
+	}
+	else {
+		gotoPos(posCalc->getStartPos(), queue);
+	}
 	sendError(INFO, 0, QString("SMAxis to Start Pos at %1").arg(QTime::currentTime().toString()));
 }
 
@@ -573,7 +577,19 @@ void eveSMAxis::sendError(int severity, int facility, int errorType, QString mes
 }
 
 void eveSMAxis::setTimer(QDateTime start) {
-	if (isTimer){
+
+	if (!isTimer)  return;
+
+	if (posCalc->isAbs() && (posCalc->getType() == eveINT)){
+		// for absolute msec timer reset start time to current time
 		((eveTimer*)gotoTrans)->setStartTime(start);
+		sendError(DEBUG, 0, QString("setTimer set StartTime for absolute int timers to %1").arg(start.toString()));
 	}
+	else if (!posCalc->isAbs() && !isSetStartTime){
+		// for all relative timers set start time only once
+		isSetStartTime = true;
+		((eveTimer*)gotoTrans)->setStartTime(start);
+		sendError(DEBUG, 0, QString("setTimer set StartTime for relative timers to %1").arg(start.toString()));
+	}
+	return;
 }
