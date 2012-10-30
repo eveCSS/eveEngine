@@ -115,11 +115,13 @@ bool eveXMLReader::read(QByteArray xmldata)
 				while (!domSM.isNull()) {
 					if (domSM.hasAttribute("id")) {
 						unsigned int smNo = QString(domSM.attribute("id")).toUInt();
-						(smIdHash.value(chainNo))->insert(smNo, domSM);
 						QDomElement domParent = domSM.firstChildElement("parent");
 						if (!domParent.isNull()) {
-							if (domParent.text().toInt(&ok) == 0)
-								if (ok) rootSMHash.insert(chainNo,smNo);
+							int parentNumber = domParent.text().toInt(&ok);
+							// if parent == 0 insert in root-list
+							if (ok && (parentNumber == 0)) rootSMHash.insert(chainNo,smNo);
+							// ignore all SMs with parent < 0
+							if (ok && (parentNumber >= 0)) (smIdHash.value(chainNo))->insert(smNo, domSM);
 						}
 					}
 					domSM = domSM.nextSiblingElement("scanmodule");
