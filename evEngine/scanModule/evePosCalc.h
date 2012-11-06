@@ -41,7 +41,7 @@ public:
 	eveVariant& getStartPos(){return startPosAbs;};
 	eveVariant& getCurrentPos(){return currentPos;};
 	eveType getType(){return axisType;};
-	bool isAtEndPos(){return isAtEnd;};
+	bool isAtEndPos(){return (this->*doneFunction)();};
 	bool isAbs(){return absolute;};
 	bool setOffset(eveVariant);
 	bool motionDisabled(){return doNotMove;};
@@ -52,9 +52,14 @@ private:
 	void stepfuncAdd();
 	void stepfuncMultiply();
 	void stepfuncList();
-	void ReferenceMultiply();
-	void MotionDisabled();
 	void stepfuncDummy();
+	void stepfuncReferenceMultiply();
+	void stepfuncMotionDisabled();
+	bool donefuncAdd();
+	bool donefuncMultiply();
+	bool donefuncList();
+	bool donefuncDummy();
+	bool donefuncAlwaysTrue(){return true;};
 	void sendError(int, QString);
 	void checkValues();
 	void setPos(QString, eveVariant*);
@@ -62,6 +67,7 @@ private:
 	int posCounter;
 	int totalSteps;
 	void (evePosCalc::*stepFunction)();
+	bool (evePosCalc::*doneFunction)();
 	eveVariant startPosAbs, endPosAbs, startPos, endPos, currentPos, stepWidth, offSet, nullVal;
 	eveType axisType;
 	QString stepPlugin;
@@ -72,7 +78,6 @@ private:
 	double multiplyFactor;
 	eveSMAxis* RefMultiplyAxis;
 	bool absolute;
-	bool isAtEnd;
 	bool readyToGo;
 	bool doNotMove;
 };
