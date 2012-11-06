@@ -1165,7 +1165,7 @@ eveEventProperty* eveXMLReader::getEvent(eveEventProperty::actionTypeT action, Q
 		}
 
 		QString eventId = domId.text().trimmed();
-		QRegExp regex = QRegExp("^D-(\\d+)-(\\d+)-([\\w:]+)$");
+		QRegExp regex = QRegExp("^D-(\\d+)-(\\d+)-([a-zA-Z0-9_:.;%-]+)$");
 		if (!(eventId.contains(regex) && (regex.numCaptures() == 3))){
 			sendError(ERROR, 0, QString("get Detector Event: invalid detector id: %1").arg(eventId));
 			return NULL;
