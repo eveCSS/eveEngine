@@ -12,6 +12,7 @@
 #include "eveScanThread.h"
 #include "eveDeviceList.h"
 #include "eveEventProperty.h"
+#include "eveStartTime.h"
 
 
 eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int chainid, int smid, smTypeT stype) :
@@ -295,7 +296,7 @@ void eveScanModule::stgReadPos() {
 		sendError(DEBUG, 0, "stgReadPos starting");
 		currentStageCounter = 1;
 		signalCounter = 0;
-		QDateTime startTime = QDateTime::currentDateTime();
+		QDateTime startTime = eveStartTime::getStartTime();
 		foreach (eveSMAxis *axis, *axisList){
 			axis->setTimer(startTime);
 			sendMessage(axis->getDeviceInfo());
@@ -303,6 +304,7 @@ void eveScanModule::stgReadPos() {
 			sendError(DEBUG, 0, QString("%1 position is %2").arg(axis->getName()).arg(dummy.toDouble()));
 		}
 		foreach (eveSMChannel *channel, *channelList){
+			channel->setTimer(startTime);
 			sendMessage(channel->getDeviceInfo());
 			//read channel value to check if it is working, skip channels with long integration time;
 			if (channel->readAtInit()){
@@ -436,9 +438,9 @@ void eveScanModule::stgGotoStart() {
 			positioner->reset();
 		}
 		QDateTime startTime = QDateTime::currentDateTime();
-		foreach (eveSMChannel *channel, *channelList){
-			channel->setTimer(startTime);
-		}
+//		foreach (eveSMChannel *channel, *channelList){
+//			channel->setTimer(startTime);
+//		}
 		foreach (eveSMAxis *axis, *axisList){
 			sendError(DEBUG, 0, QString("Moving axis %1").arg(axis->getName()));
 			axis->setTimer(startTime);
@@ -712,7 +714,7 @@ void eveScanModule::stgTrigRead() {
 /**
  * \brief check if we are done and move to the next position (if any)
  *
- * - calculate the next position
+ * - check if we need another measurement at this position (perPosCount < valuesPerPos)
  * - decide, if we do another step or if we are done
  * - if necessary, wait for position-event
  * - goto next position

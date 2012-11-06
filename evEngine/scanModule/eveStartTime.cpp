@@ -7,7 +7,7 @@
 
 #include "eveStartTime.h"
 
-QDateTime eveStartTime::starttime=QDateTime(QDate(0,0,0), QTime(0,0,0,0));
+QDateTime eveStartTime::starttime=QDateTime::currentDateTime();
 QReadWriteLock eveStartTime::lock;
 
 eveStartTime::eveStartTime() {

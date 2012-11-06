@@ -393,18 +393,18 @@ void eveSMAxis::signalReady() {
 void eveSMAxis::gotoStartPos(bool queue, bool overrideOffset) {
 
 	ready = false;
-	// do not set offset for timers
+	// offset for timers is done in setTimer()
 	if (!isTimer && (!isSetOffset || overrideOffset)){
 		posCalc->setOffset(currentPosition);
 		isSetOffset = true;
 	}
 	posCalc->reset();
-	if (isTimer){
-		signalReady();
-	}
-	else {
+//	if (isTimer){
+//		signalReady();
+//	}
+//	else {
 		gotoPos(posCalc->getStartPos(), queue);
-	}
+//	}
 	sendError(INFO, 0, QString("SMAxis to Start Pos at %1").arg(QTime::currentTime().toString()));
 }
 
@@ -587,8 +587,10 @@ void eveSMAxis::setTimer(QDateTime start) {
 	}
 	else if (!posCalc->isAbs() && !isSetStartTime){
 		// for all relative timers set start time only once
+		// time is relative to loadTime
 		isSetStartTime = true;
 		((eveTimer*)gotoTrans)->setStartTime(start);
+		posCalc->setOffset(eveVariant(start));
 		sendError(DEBUG, 0, QString("setTimer set StartTime for relative timers to %1").arg(start.toString()));
 	}
 	return;
