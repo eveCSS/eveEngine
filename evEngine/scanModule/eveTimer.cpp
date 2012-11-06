@@ -115,9 +115,8 @@ int eveTimer::writeData(eveVariant writedata, bool queue){
 			waitDone();
 		}
 		else {
-			int msecsOffset = 0 ;
-			msecsOffset = currentDT.secsTo(writeDT) * 1000;
-			msecsOffset += writeDT.time().msec() - currentDT.time().msec();
+			int msecsOffset = currentDT.date().daysTo(writeDT.date()) * 24 * 3600 * 1000;
+			msecsOffset += currentDT.time().msecsTo(writeDT.time());
 			sendError(DEBUG, 0, QString("eveTimer: load timer with %1 msecs").arg(msecsOffset));
 			QTimer::singleShot (msecsOffset, this, SLOT (waitDone()));
 		}
