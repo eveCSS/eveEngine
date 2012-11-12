@@ -65,6 +65,7 @@ private:
 	virtual void signalReady();
 	void sendError(int, int, QString);
 	bool ready;
+	bool delayedTrigger;
 	void initAll();
 	void read(bool);
 	bool retrieveData();

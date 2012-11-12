@@ -52,6 +52,8 @@ eveSMBaseDevice(scanmodule) {
 	isDetectorUnit = false;
 	detector = smdetector;
 	sendreadyevent = false;
+	delayedTrigger = false;
+	redo = false;
 
 	if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
       eveTransportDefinition* transdef = (eveTransportDefinition*)definition->getValueCmd()->getTrans();
@@ -320,7 +322,7 @@ void eveSMChannel::transportReady(int status) {
 			if (redo){
 				// for now we repeat from start
 				// if needed we could just repeat the last detector value
-				valueCalc->reset();
+				if (averageCount > 1) valueCalc->reset();
 				triggerRead(false);
 			}
 			else if (curValue == NULL){
@@ -328,7 +330,7 @@ void eveSMChannel::transportReady(int status) {
 				sendError(ERROR, 0, "unable to read current value");
 				signalReady();
 			}
-			else if (valueCalc){
+			else if (averageCount > 1){
 				// we need to do average measurements
 				valueCalc->addValue(curValue->toVariant());
 				sendError(DEBUG, 0, QString("Channel %1, Raw Value %2").arg(curValue->getXmlId()).arg(curValue->toVariant().toDouble()));
@@ -382,21 +384,25 @@ void eveSMChannel::triggerRead(bool queue) {
 
 	ready = false;
 	if (channelOK && (channelStatus == eveCHANNELIDLE)) {
-		redo = false;
-		signalCounter = 1;
-		if (normalizeChannel) {
-			++signalCounter;
-			normalizeChannel->triggerRead(queue);
-		}
-		if (haveTrigger){
-			channelStatus = eveCHANNELTRIGGERREAD;
-			if (triggerTrans->writeData(triggerValue, queue)) {
-				sendError(ERROR,0,"error triggering");
-				transportReady(1);
-			}
+		if (redo){
+			delayedTrigger = true;
 		}
 		else {
-			read(queue);
+			signalCounter = 1;
+			if (normalizeChannel) {
+				++signalCounter;
+				normalizeChannel->triggerRead(queue);
+			}
+			if (haveTrigger){
+				channelStatus = eveCHANNELTRIGGERREAD;
+				if (triggerTrans->writeData(triggerValue, queue)) {
+					sendError(ERROR,0,"error triggering");
+					transportReady(1);
+				}
+			}
+			else {
+				read(queue);
+			}
 		}
 	}
 	else {
@@ -565,8 +571,18 @@ void eveSMChannel::newEvent(eveEventProperty* evprop) {
 	}
 
 	if (evprop->getActionType() == eveEventProperty::REDO){
-		sendError(DEBUG, 0, "received redo event");
-		redo = true;
+		if (evprop->getOn()){
+			sendError(DEBUG, 0, "received redo start event");
+			redo = true;
+		}
+		else {
+			sendError(DEBUG, 0, "received redo done event");
+			redo = false;
+			if (delayedTrigger){
+				delayedTrigger = false;
+				triggerRead(false);
+			}
+		}
 	}
 }
 
