@@ -187,7 +187,7 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 			evePlayListEntry plEntry;
 
 			inStream >> plcount;
-			eveError::log(ERROR,QString("eveMessageFactory::getNewMessage: EVEMESSAGETYPE_PLAYLIST plcount: %1").arg(plcount));
+                        eveError::log(DEBUG, QString("eveMessageFactory::getNewMessage: EVEMESSAGETYPE_PLAYLIST plcount: %1").arg(plcount));
 			sum += 4;
 			for (int i=0; i < plcount; ++i ){
 				if (length < sum +12) {

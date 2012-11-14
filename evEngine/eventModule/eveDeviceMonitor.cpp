@@ -87,7 +87,7 @@ void eveDeviceMonitor::valueChange(eveDataMessage* newdata) {
 	if (newValue->canConvert(QVariant::String)){
 		QString result = "false";
 		if (newState) result = "true";
-		manager->sendError(DEBUG, 0, QString("valueChange event, newValue: %1, limit: %2, result: %3, action: %4").arg(newValue->toString()).arg(limit.toString()).arg(result).arg((int)event->getDevCommand()));
+                manager->sendError(DEBUG, 0, QString("valueChange event, newValue: %1, limit: %2, result: %3").arg(newValue->toString()).arg(limit.toString()).arg(result));
 	}
 
 	try {
