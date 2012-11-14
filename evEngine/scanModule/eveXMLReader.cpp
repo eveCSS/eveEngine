@@ -889,7 +889,7 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 		axisDefinition = deviceList.getAxisDef(domId.text());
 		if (axisDefinition == NULL){
 			sendError(ERROR,0,QString("no axisdefinition found for %1").arg(domId.text()));
-			domElement = domElement.nextSiblingElement("smchannel");
+                        domElement = domElement.nextSiblingElement("smaxis");
 			continue;
 		}
 		eveMotorDefinition* motorDefinition = axisDefinition->getMotorDefinition();

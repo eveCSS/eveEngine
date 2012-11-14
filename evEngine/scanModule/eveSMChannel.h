@@ -41,7 +41,8 @@ public:
 	void stop();
 	bool isDone(){return ready;};
 	bool isOK(){return channelOK;};
-	QString getUnit(){return unit;};
+        bool isDeferred(){return deferredTrigger;};
+        QString getUnit(){return unit;};
 	virtual eveDevInfoMessage* getDeviceInfo();
 	eveDataMessage* getValueMessage();
 	eveDataMessage* getNormValueMessage();
@@ -78,6 +79,7 @@ private:
 	bool haveTrigger;
 	bool haveUnit;
 	bool channelOK;
+        bool deferredTrigger;
 	int signalCounter;
 	QList<eveCalc *> positionerList;
 	QList<eveTransportT> transportList;

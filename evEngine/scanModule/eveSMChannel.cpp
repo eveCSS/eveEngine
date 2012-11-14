@@ -29,6 +29,7 @@ eveSMBaseDevice(scanmodule) {
 	haveStop = false;
 	haveTrigger = false;
 	haveUnit = false;
+        deferredTrigger = false;
 	name = definition->getName();
 	xmlId = definition->getId();
 	valueTrans = NULL;
@@ -149,6 +150,8 @@ eveSMBaseDevice(scanmodule) {
 	if (!ok) sendError(ERROR, 0, "Unable to evaluate minimum");
 	if (parameter.contains("sendreadyevent"))
 		sendreadyevent = (parameter.value("sendreadyevent").toLower() == "true");
+        if (parameter.contains("deferredtrigger"))
+                deferredTrigger = (parameter.value("deferredtrigger").toLower() == "true");
 
 	// we do average calculations if averageCount > 0
 	valueCalc = NULL;
