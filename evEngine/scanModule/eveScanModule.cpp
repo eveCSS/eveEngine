@@ -667,7 +667,7 @@ void eveScanModule::stgTrigRead() {
         }
         else {
             bool ready = true;
-            foreach (eveSMChannel *channel, *channelList) if (!channel->isDone()) ready = false;
+            foreach (eveSMChannel *channel, *channelList) if (!channel->isDeferred() && !channel->isDone()) ready = false;
             if (ready) {
                 currentStageCounter=2;
                 signalCounter = 0;
