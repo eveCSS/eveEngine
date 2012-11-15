@@ -45,7 +45,7 @@ public:
 	bool isAbs(){return absolute;};
 	bool setOffset(eveVariant);
 	bool motionDisabled(){return doNotMove;};
-	int getTotalSteps(){return totalSteps;};
+        int getExpectedPositions(){return expectedPositions;};
 
 private:
 	enum {NONE, STARTSTOP, MULTIPLY, FILE, PLUGIN, LIST} stepmode;
@@ -65,7 +65,7 @@ private:
 	void setPos(QString, eveVariant*);
 
 	int posCounter;
-	int totalSteps;
+        int expectedPositions;
 	void (evePosCalc::*stepFunction)();
 	bool (evePosCalc::*doneFunction)();
 	eveVariant startPosAbs, endPosAbs, startPos, endPos, currentPos, stepWidth, offSet, nullVal;

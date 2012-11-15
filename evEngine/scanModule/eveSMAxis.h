@@ -34,7 +34,7 @@ class eveSMAxis: public eveSMBaseDevice {
 public:
 	eveSMAxis(eveScanModule *, eveSMMotor*, eveAxisDefinition *, evePosCalc *);
 	virtual ~eveSMAxis();
-	void gotoStartPos(bool, bool=true);
+        void gotoStartPos(bool, bool, bool);
 	void gotoNextPos(bool);
 	eveVariant getPos(){return currentPosition;};
 	eveVariant getTargetPos(){return targetPosition;};
@@ -51,7 +51,7 @@ public:
 	eveDevInfoMessage* getDeviceInfo();
 	eveDataMessage* getPositionMessage();
 	void sendError(int, int, int, QString);
-	int getTotalSteps(){return posCalc->getTotalSteps();};
+        int getExpectedPositions(){return posCalc->getExpectedPositions();};
 	void addPositioner(eveCalc* pos){positioner = pos;};
 	void loadPositioner(int pc){if(positioner)positioner->addValue(xmlId, pc, currentPosition);};
 	bool havePositioner(){if(positioner)return true; return false;};

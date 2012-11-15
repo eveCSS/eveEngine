@@ -28,7 +28,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     smId = smid;
     chainId = chainid;
 //	delayedStart = false;
-    totalSteps = -1;
+    expectedPositions = 1;
     currentPosition = 0;
     eventTrigger = false;
     manualTrigger = false;
@@ -92,13 +92,13 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     foreach (eveSMAxis *axis, *axisList){
         if (!motorList.contains(axis->getMotor())) motorList.append(axis->getMotor());
         connect (axis, SIGNAL(axisDone()), this, SLOT(execStage()), Qt::QueuedConnection);
-            if (axis->getTotalSteps() > totalSteps) totalSteps = axis->getTotalSteps();
+        if (axis->getExpectedPositions() > expectedPositions) expectedPositions = axis->getExpectedPositions();
     }
 
     // get values per position
     valuesPerPos = parser->getSMTagInteger(chainId, smId, "valuecount", 1);
-    totalSteps *= valuesPerPos;
-    eveError::log(DEBUG, QString("Scan will have approx. %1 steps").arg(totalSteps));
+    expectedPositions *= valuesPerPos;
+    eveError::log(DEBUG, QString("Scan will have approx. %1 steps").arg(expectedPositions));
 
     // get all used detector channels
     channelList = parser->getChannelList(this, chainId, smId);
@@ -383,7 +383,8 @@ void eveScanModule::stgGotoStartInit() {
             signalCounter = 0;
             foreach (eveSMAxis *axis, *axisList){
                 sendError(DEBUG, 0, QString("Moving axis %1").arg(axis->getName()));
-                axis->gotoStartPos(false);
+                // gotoStartPos but do not queue, set offset, ignore timer
+                axis->gotoStartPos(false, true, true);
                 ++signalCounter;
             }
             if (nestedSM != NULL) {
@@ -442,7 +443,8 @@ void eveScanModule::stgGotoStart() {
         foreach (eveSMAxis *axis, *axisList){
             sendError(DEBUG, 0, QString("Moving axis %1").arg(axis->getName()));
             axis->setTimer(startTime);
-            axis->gotoStartPos(false, setAxisOffset);
+            // gotoStartPos but do not queue, don't set offset the first time, don't ignore timer
+            axis->gotoStartPos(false, setAxisOffset, false);
             setAxisOffset = true;
             ++signalCounter;
         }
@@ -558,7 +560,6 @@ void eveScanModule::stgSettleTime() {
             //sendError(DEBUG,0,"stgsettleDelay Done");
             currentStageReady=true;
             emit sigExecStage();
-            scanTimer.start();
         }
     }
 }
@@ -1217,16 +1218,12 @@ eveSMAxis* eveScanModule::findAxis(QString axisid){
 	return NULL;
 }
 
-int eveScanModule::getRemainingTime(){
+int eveScanModule::getTotalSteps(){
 
-	int remaining = -1;
-	if ((totalSteps > 0) && (currentPosition > 0)){
-		int elapsed = scanTimer.elapsed()/1000;
-		remaining = (elapsed*totalSteps/currentPosition - elapsed)/1000;
-		if (remaining < 0) remaining = 0;
-		sendError(DEBUG, 0, QString("sending remaining time %1").arg(remaining));
-	}
-	return remaining;
+        int totalSteps = expectedPositions;
+        if (nestedSM) totalSteps *= nestedSM->getTotalSteps();
+        if (appendedSM) totalSteps += appendedSM->getTotalSteps();
+        return totalSteps;
 }
 
 void eveScanModule::sendError(int severity, int errorType,  QString message){

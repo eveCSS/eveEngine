@@ -48,8 +48,8 @@ public:
 	void sendError(int, int, int, QString);
 	void sendMessage(eveMessage*);
 	eveSMAxis* findAxis(QString);
-	int getRemainingTime();
-	int getChainId(){return chainId;};
+        int getTotalSteps();
+        int getChainId(){return chainId;};
 	int getSmId(){return smId;};
 	void gotoStartInit();
 	void readPos();
@@ -81,7 +81,7 @@ private:
 	smTypeT smType;
 	int chainId;
 	int smId;
-	int totalSteps;
+        int expectedPositions;
 	int currentPosition;
 	eveSMStatus myStatus;
 	stageT currentStage;
@@ -119,7 +119,6 @@ private:
 	QList<eveEventProperty*>* eventList;
 	QList<eveSMDetector *> detectorList;
 	QList<eveSMMotor *> motorList;
-	QTime scanTimer;
 	QTime triggerTime;
 	QTime settleTime;
 };

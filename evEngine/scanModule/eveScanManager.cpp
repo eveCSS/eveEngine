@@ -32,11 +32,12 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 	chainId = chainid;
 	storageChannel = storageChan;
 	posCounter = 0;
+        totalPositions = 1;
 	useStorage = false;
 	sentData = false;
 	manager = parent;
 	shutdownPending = false;
-	neverStarted = true;;
+        isStarted = false;
 	nextEventId = chainId*100;
 	// TODO register global events
 
@@ -79,7 +80,9 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 
 	sendStatusTimer = new QTimer(this);
 	sendStatusTimer->setInterval(5000);
-	sendStatusTimer->setSingleShot(false);
+        sendStatusTimer->setSingleShot(false);
+        if (rootSM) totalPositions = rootSM->getTotalSteps();
+        sendError(EVEMESSAGESEVERITY_SYSTEM, EVEERRORMESSAGETYPE_TOTALCOUNT, QString("%1").arg(totalPositions));
 	connect(sendStatusTimer, SIGNAL(timeout()), this, SLOT(sendRemainingTime()));
 	sendStatusTimer->start(3000);
 
@@ -172,9 +175,9 @@ void eveScanManager::shutdown(){
  */
 void eveScanManager::smStart() {
 	sendError(INFO,0,"eveScanManager::smStart: starting root");
-	if (neverStarted){
+        if (!isStarted){
 		sendStartTime();
-		neverStarted = false;
+                isStarted = true;
 	}
 	eveEventProperty evprop(eveEventProperty::START, 0);
 	if (rootSM) rootSM->newEvent(&evprop);
@@ -267,10 +270,15 @@ void eveScanManager::sendMessage(eveMessage *message){
 
 void eveScanManager::sendRemainingTime(){
 
-	if (currentStatus.getStatus() == eveChainSmEXECUTING){
-		int remainTime = rootSM->getRemainingTime();
-		if (remainTime > -1) sendStatus(0, remainTime);
-	}
+        if (isStarted){
+            if ((totalPositions > 2) && (posCounter > 1)){
+                if (totalPositions < posCounter) totalPositions = posCounter;
+                int elapsed = startTime.secsTo(QDateTime::currentDateTime());
+                int remaining = elapsed * totalPositions / posCounter - elapsed;
+                sendError(DEBUG, 0, QString("remaining %4, elapsed %1, totalPositions %2, posCounter %3").arg(elapsed).arg(totalPositions).arg(posCounter).arg(remaining));
+                sendStatus(0, remaining);
+            }
+        }
 }
 
 /**
@@ -316,16 +324,17 @@ void eveScanManager::sendError(int severity, int errorType,  QString errorString
  * @param errorString String describing the error
  */
 void eveScanManager::sendError(int severity, int facility, int errorType,  QString errorString){
-	addMessage(new eveErrorMessage(severity, facility, errorType, errorString));
+    addMessage(new eveErrorMessage(severity, facility, errorType, errorString));
 }
 
 void eveScanManager::sendStartTime() {
-	eveMessageTextList* mtl = new eveMessageTextList(EVEMESSAGETYPE_METADATA, (QStringList() << "StartTime" << QTime::currentTime().toString("hh:mm:ss")));
-	mtl->setChainId(chainId);
-	addMessage(mtl);
-	mtl = new eveMessageTextList(EVEMESSAGETYPE_METADATA, (QStringList() << "StartDate" << QDate::currentDate().toString("dd.MM.yyyy")));
-	mtl->setChainId(chainId);
-	addMessage(mtl);
+    startTime = QDateTime::currentDateTime();
+    eveMessageTextList* mtl = new eveMessageTextList(EVEMESSAGETYPE_METADATA, (QStringList() << "StartTime" << startTime.time().toString("hh:mm:ss")));
+    mtl->setChainId(chainId);
+    addMessage(mtl);
+    mtl = new eveMessageTextList(EVEMESSAGETYPE_METADATA, (QStringList() << "StartDate" << startTime.date().toString("dd.MM.yyyy")));
+    mtl->setChainId(chainId);
+    addMessage(mtl);
 }
 
 /**
@@ -364,7 +373,7 @@ void eveScanManager::addToHash(QHash<QString, QString>& hash, QString key, eveXM
  */
 void eveScanManager::nextPos(){
 	++posCounter;
-	eveDataMessage* message = new eveDataMessage("PosCountTimer", "", eveDataStatus(), DMTmetaData, eveTime::getCurrent(), QVector<int>(1, eveStartTime::getMSecsSinceStart()));
+        eveDataMessage* message = new eveDataMessage("PosCountTimer", "", eveDataStatus(), DMTmetaData, eveTime::getCurrent(), QVector<int>(1, eveStartTime::getMSecsSinceStart()));
 	message->setDestination(storageChannel);
 	message->setPositionCount(posCounter);
 	message->setChainId(chainId);

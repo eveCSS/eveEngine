@@ -11,6 +11,7 @@
 #include <QList>
 #include <QHash>
 #include <QTimer>
+#include <QDateTime>
 #include <QDomElement>
 #include "eveMessageChannel.h"
 #include "eveManager.h"
@@ -78,10 +79,12 @@ private:
 	eveScanModule * rootSM;
 	eveManager *manager;
 	int posCounter;
+        int totalPositions;
 	bool doBreak;
-	bool neverStarted;
+        bool isStarted;
 	bool shutdownPending;
 	QTimer *sendStatusTimer;
+        QDateTime startTime;
 	QList<eveEventProperty*>* eventList;
 };
 

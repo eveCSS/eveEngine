@@ -301,7 +301,8 @@ eveChainStatusMessage::eveChainStatusMessage(chainStatusT status, int cid, int s
 	chainId = cid;
 	smId = sid;
 	posCounter = pc;
-	timestamp = eveTime::getCurrent();
+        timestamp = eveTime::getCurrent();
+        remainingTime = 0;
 }
 /**
  * \param status status of currently executing chain

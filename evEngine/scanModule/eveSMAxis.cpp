@@ -390,7 +390,7 @@ void eveSMAxis::signalReady() {
  * @param overrideOffset is needed to keep an already set offset
  *        if calling this method twice during init
  */
-void eveSMAxis::gotoStartPos(bool queue, bool overrideOffset) {
+void eveSMAxis::gotoStartPos(bool queue, bool overrideOffset, bool ignoreTimer) {
 
 	ready = false;
 	// offset for timers is done in setTimer()
@@ -399,12 +399,12 @@ void eveSMAxis::gotoStartPos(bool queue, bool overrideOffset) {
 		isSetOffset = true;
 	}
 	posCalc->reset();
-//	if (isTimer){
-//		signalReady();
-//	}
-//	else {
-		gotoPos(posCalc->getStartPos(), queue);
-//	}
+        if (ignoreTimer && isTimer){
+                signalReady();
+        }
+        else {
+                gotoPos(posCalc->getStartPos(), queue);
+        }
 	sendError(INFO, 0, QString("SMAxis to Start Pos at %1").arg(QTime::currentTime().toString()));
 }
 
