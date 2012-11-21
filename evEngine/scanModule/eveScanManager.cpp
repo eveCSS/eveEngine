@@ -249,7 +249,7 @@ void eveScanManager::smDone() {
 	if (rootSM && rootSM->isDone()){
 		// TODO
 		currentStatus.setChainStatus(eveChainDONE);
-		sendStatus(0, 0);
+                sendStatus(0, -1);
 		shutdown();
 	}
 }

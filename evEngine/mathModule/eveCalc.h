@@ -9,6 +9,7 @@
 #define EVECALC_H_
 
 #include <QVector>
+#include <QPointF>
 #include "eveTypes.h"
 #include "eveVariant.h"
 #include "eveMessage.h"
@@ -26,45 +27,60 @@ public:
 	virtual ~eveCalc();
 	void reset();
 	bool addValue(QString, int pos, eveVariant);
-	bool isModified(){return arrayModified;};
 	bool calculate(){return calculate(algorithm);};
 	bool calculate(MathAlgorithm);
 	QString getAxisId(){return xAxisId;};
 	QString getChannelId(){return detectorId;};
 	QString getNormalizeId(){return normalizeId;};
-	eveVariant getXResult(){return eveVariant(xresult);};
-	eveVariant getYResult(){return eveVariant(yresult);};
+        eveVariant getXResult(){return eveVariant(getResult(algorithm).rx());};
+        QPointF getResult(MathAlgorithm);
+        static MathAlgorithm toMathAlgorithm(QString);
 
 protected:
-	eveDataModType toDataMod(MathAlgorithm);
+        eveDataModType toDataMod(MathAlgorithm);
 	QString xAxisId;
 	QString detectorId;
 	QString normalizeId;
-	int xpos, ypos, zpos, count;
+        int ypos;
 	int position;
 	double ydata;
-	double zdata;
-	double xresult;
-	double yresult;
 
 private:
-	void execValues();
+        class Calcresult {
+        public:
+            Calcresult(QPointF, QPointF, QPointF, int, double, double);
+            QPointF minimum;
+            QPointF maximum;
+            QPointF peak;
+            int peakIndex;
+            double fwhm;
+            double center;
+        };
+        int xpos, zpos, count;
+        double zdata;
+        double xdata;
+        QPointF getEdge(const QVector<QPointF>& curve);
+        void acceptPoint(double, double);
+        bool calculatePeakCenterFWHM();
+        QVector<QPointF> getDerivative(const QVector<QPointF>& curve);
+        Calcresult getPeak(const QVector<QPointF>& curve);
+        Calcresult getCenter(Calcresult, const QVector<QPointF>& curve);
+        QVector<QPointF> points;
+        QVector<QPointF> getGradients(QVector<QPointF>);
+        void execValues();
 	bool setResult(MathAlgorithm);
 	bool checkValue(double value);
-	MathAlgorithm toMathAlgorithm(QString);
+        bool newValues;
+        bool centerOK;
 	MathAlgorithm algorithm;
-	bool arrayModified;
 	bool doNormalize;
 	bool saveValues;
 	eveMessageChannel* manager;
-	QVector<double> xdataArray;
-	QVector<double> ydataArray;
-	int minIndex, maxIndex;
-	double fwhm;
-	double xdata;
-	double ymin, xmin, xmax;
-	double ymax;
-	double sum;
+//        int minIndex, maxIndex, peakIndex;
+//        double xresult;
+//        double yresult;
+        QPointF curveMin, curveMax, curvePeak, curveCenter, curveEdge;
+        QPointF curveStdDev, curveFwhm, curveMean, curveSum;
 };
 
 #endif /* EVECALC_H_ */

@@ -53,8 +53,9 @@ QList<eveDataMessage*> eveMath::getResultMessage(MathAlgorithm algo, int chid, i
 	QVector<double> data;
 	if (calculate(algo)) {
 		eveDataMessage *message;
-		data.append(xresult);
-		data.append(yresult);
+                QPointF result = getResult(algo);
+                data.append(result.rx());
+                data.append(result.ry());
 		message = new eveDataMessage(detectorId, QString(), eveDataStatus(), toDataMod(algo), epicsTime(), data);
 		message->setAuxString(xAxisId);
 		if (!normalizeId.isEmpty())message->setNormalizeId(normalizeId);
