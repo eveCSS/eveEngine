@@ -1062,7 +1062,8 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
 		// BREAK wird nur an das innerste laufende geschickt
 		// manueller Trigger ist auch ein chainEvent
 		case eveEventProperty::HALT:
-			foreach (eveSMAxis *axis, *axisList){
+                        sendError(INFO, 0, QString("Chain Halt Event: %1").arg(evprop->getName()));
+                        foreach (eveSMAxis *axis, *axisList){
 				sendError(DEBUG, 0, QString("Stopping axis %1").arg(axis->getName()));
 				axis->stop();
 			}
@@ -1071,10 +1072,10 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
 				channel->stop();
 			}
 		case eveEventProperty::STOP:
-			if (nestedSM) nestedSM->newEvent(evprop);
+                        if (nestedSM) nestedSM->newEvent(evprop);
 			if ((myStatus.isExecuting()) || (myStatus.getStatus() == eveSmNOTSTARTED)){
 				if(myStatus.forceExecuting()) manager->setStatus(smId, myStatus.getStatus());
-				sendError(DEBUG, 0, QString("Stop Scan Module"));
+                                sendError(INFO, 0, QString("Chain Stop/Halt Event: %1; Scan will end now").arg(evprop->getName()));
 				currentStage = eveStgFINISH;
 				currentStageReady = false;
 				currentStageCounter = 1;
@@ -1087,7 +1088,7 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
 		case eveEventProperty::PAUSE:
 			if (nestedSM) nestedSM->newEvent(evprop);
 			if (myStatus.setEvent(evprop)) {
-				sendError(DEBUG, 0, QString("Pause Scan Module"));
+                                sendError(INFO, 0, QString("Chain Pause/Redo Event: %1; Pause Scan").arg(evprop->getName()));
 				manager->setStatus(smId, myStatus.getStatus());
 				emit sigExecStage();
 			}
@@ -1100,8 +1101,10 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
 			}
 			else if (myStatus.isExecuting()){
 				if (nestedSM) nestedSM->newEvent(evprop);
-				if (myStatus.setEvent(evprop)) manager->setStatus(smId, myStatus.getStatus());
-				sendError(DEBUG, 0, QString("Resuming Scan Module"));
+                                if (myStatus.setEvent(evprop)) {
+                                    manager->setStatus(smId, myStatus.getStatus());
+                                    sendError(INFO, 0, QString("Chain Start Event: %1; Resuming Scan").arg(evprop->getName()));
+                                }
 				emit sigExecStage();
 			}
 			else if ((appendedSM) && (myStatus.getStatus() == eveSmAPPEND)){
@@ -1111,10 +1114,10 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
 		case eveEventProperty::BREAK:
 			if (myStatus.isExecuting()){
 				if (nestedSM && nestedSM->isExecuting()){
-					nestedSM->newEvent(evprop);
+                                        nestedSM->newEvent(evprop);
 				}
 				else {
-					sendError(DEBUG, 0, QString("Skip the rest of this Scan Module"));
+                                        sendError(INFO, 0, QString("Chain Break Event: %1; Skip rest of ScanModule").arg(evprop->getName()));
 					myStatus.setEvent(evprop);
 					doBreak = true;
 					emit sigExecStage();
@@ -1122,7 +1125,7 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
 			}
 			else if ((appendedSM) && (myStatus.getStatus() == eveSmAPPEND)){
 				if (appendedSM) appendedSM->newEvent(evprop);
-			}
+                        }
 			break;
 		case eveEventProperty::TRIGGER:
 			if (myStatus.isExecuting()){
@@ -1151,35 +1154,37 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
 			// START wird an alle ROOT-SMs geschickt, wenn root läuft
 			// BREAK wird nur an das innerste laufende geschickt
 			case eveEventProperty::REDO:
-				myStatus.setEvent(evprop);
-				emit sigExecStage();
-				break;
+                            myStatus.setEvent(evprop);
+                            emit sigExecStage();
+                            break;
 			case eveEventProperty::PAUSE:
-				if (myStatus.setEvent(evprop)) {
-					manager->setStatus(smId, myStatus.getStatus());
-					emit sigExecStage();
-				}
-				break;
+                            if (myStatus.setEvent(evprop)) {
+                                sendError(INFO, 0, QString("Pause Event: %1; Pause Scan").arg(evprop->getName()));
+                                manager->setStatus(smId, myStatus.getStatus());
+                                emit sigExecStage();
+                            }
+                            break;
 			case eveEventProperty::START:
-				if (myStatus.setEvent(evprop)) {
-					manager->setStatus(smId, myStatus.getStatus());
-					emit sigExecStage();
-				}
-				break;
+                            if (myStatus.setEvent(evprop)) {
+                                manager->setStatus(smId, myStatus.getStatus());
+                                emit sigExecStage();
+                            }
+                            break;
 			case eveEventProperty::BREAK:
-				if (myStatus.isExecuting()){
-					myStatus.setEvent(evprop);
-					doBreak = true;
-					emit sigExecStage();
-				}
-				break;
+                            if (myStatus.isExecuting()){
+                                sendError(INFO, 0, QString("Break Event: %1; Skip rest of ScanModule").arg(evprop->getName()));
+                                myStatus.setEvent(evprop);
+                                doBreak = true;
+                                emit sigExecStage();
+                            }
+                            break;
 			case eveEventProperty::TRIGGER:
-				if (myStatus.setEvent(evprop)) {
-					manager->setStatus(smId, myStatus.getStatus());
-					emit sigExecStage();
-				}
-				break;
-			default:
+                            if (myStatus.setEvent(evprop)) {
+                                manager->setStatus(smId, myStatus.getStatus());
+                                emit sigExecStage();
+                            }
+                            break;
+                        default:
 				break;
 			}
 		}
