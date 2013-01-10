@@ -344,7 +344,8 @@ void eveSMChannel::transportReady(int status) {
 					valueCalc->reset();
 					curValue->setXmlId(xmlId);
 					curValue->setName(name);
-					signalReady();
+                                        currentValue = curValue->toVariant();
+                                        signalReady();
 					sendError(DEBUG, 0, QString("Channel %1, Average Value %2").arg(curValue->getXmlId()).arg(curValue->toVariant().toDouble()));
 				}
 				else
