@@ -1088,9 +1088,12 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
 		case eveEventProperty::PAUSE:
 			if (nestedSM) nestedSM->newEvent(evprop);
 			if (myStatus.setEvent(evprop)) {
+                            if (evprop->isSwitchOn())
                                 sendError(INFO, 0, QString("Chain Pause/Redo Event: %1; Pause Scan").arg(evprop->getName()));
-				manager->setStatus(smId, myStatus.getStatus());
-				emit sigExecStage();
+                            if (evprop->isSwitchOff())
+                                sendError(INFO, 0, QString("Chain Pause/Redo Event: %1; Resume Scan").arg(evprop->getName()));
+                            manager->setStatus(smId, myStatus.getStatus());
+                            emit sigExecStage();
 			}
 			if (appendedSM) appendedSM->newEvent(evprop);
 			break;
@@ -1099,17 +1102,17 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
 				sendError(DEBUG, 0, QString("Starting Scan Module"));
 				startExec();
 			}
-			else if (myStatus.isExecuting()){
-				if (nestedSM) nestedSM->newEvent(evprop);
-                                if (myStatus.setEvent(evprop)) {
-                                    manager->setStatus(smId, myStatus.getStatus());
-                                    sendError(INFO, 0, QString("Chain Start Event: %1; Resuming Scan").arg(evprop->getName()));
-                                }
-				emit sigExecStage();
-			}
-			else if ((appendedSM) && (myStatus.getStatus() == eveSmAPPEND)){
-				if (appendedSM) appendedSM->newEvent(evprop);
-			}
+//			else if (myStatus.isExecuting()){
+//				if (nestedSM) nestedSM->newEvent(evprop);
+//                                if (myStatus.setEvent(evprop)) {
+//                                    manager->setStatus(smId, myStatus.getStatus());
+//                                    sendError(INFO, 0, QString("Chain Start Event: %1; Resuming Scan").arg(evprop->getName()));
+//                                }
+//				emit sigExecStage();
+//			}
+//			else if ((appendedSM) && (myStatus.getStatus() == eveSmAPPEND)){
+//				if (appendedSM) appendedSM->newEvent(evprop);
+//			}
 			break;
 		case eveEventProperty::BREAK:
 			if (myStatus.isExecuting()){

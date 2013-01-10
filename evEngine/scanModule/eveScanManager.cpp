@@ -172,15 +172,22 @@ void eveScanManager::shutdown(){
  * \brief  start SM (or continue if previously paused)
  *
  * usually called by a signal from manager thread
+ * only the first Start event starts the chain, all others resume from pause
  */
 void eveScanManager::smStart() {
 	sendError(INFO,0,"eveScanManager::smStart: starting root");
-        if (!isStarted){
-		sendStartTime();
-                isStarted = true;
-	}
-	eveEventProperty evprop(eveEventProperty::START, 0);
-	if (rootSM) rootSM->newEvent(&evprop);
+        if (!isStarted) {
+            sendStartTime();
+            isStarted = true;
+            eveEventProperty evprop(eveEventProperty::START, 0);
+            if (rootSM) rootSM->newEvent(&evprop);
+        }
+        else {
+            eveEventProperty evprop(eveEventProperty::PAUSE, 0);
+            evprop.setOn(false);
+            evprop.setDirection(eveDirectionONOFF);
+            if (rootSM) rootSM->newEvent(&evprop);
+        }
 //	if (rootSM) rootSM->startChain();
 }
 
@@ -427,12 +434,15 @@ void eveScanManager::newEvent(eveEventProperty* evprop) {
 		sendError(DEBUG, 0, QString("eveScanManager: received new monitor event"));
 
 	if (evprop->isChainAction()){
-		if (currentStatus.setEvent(evprop) && rootSM) rootSM->newEvent(evprop);
+                if ((evprop->getActionType() == eveEventProperty::START) && (!isStarted)){
+                    sendStartTime();
+                    isStarted = true;
+                }
+                if (currentStatus.setEvent(evprop) && rootSM) rootSM->newEvent(evprop);
 	}
 	else {
 		if (rootSM) rootSM->newEvent(evprop);
 	}
-
 /*
 	switch (evprop->getActionType()){
 	case eveEventProperty::START:
