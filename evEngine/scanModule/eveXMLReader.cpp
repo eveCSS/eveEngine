@@ -22,18 +22,13 @@
 #include "eveSMMotor.h"
 
 #define EVE_XML_VERSION        2
-#define EVE_XML_REVISION       0
+#define EVE_XML_REVISION       2
 
 eveXMLReader::eveXMLReader(eveManager *parentObject){
 	parent = parentObject;
 	domDocument = new QDomDocument();
 	repeatCount=0;
 
-	// TODO create Hashes
-//	idHash = new QHash<QString, QString>;
-//	motorHash = new QHash<QString, QDomElement>;
-//	detectorHash = new QHash<QString, QDomElement>;
-//	deviceHash = new QHash<QString, QDomElement>;
 }
 
 eveXMLReader::~eveXMLReader() {
@@ -915,10 +910,11 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 		}
 		evePosCalc *poscalc = new evePosCalc(scanmodule, stepfunction, absolute, axisType);
 
-		if (!domElement.firstChildElement("start").isNull()) {
-			poscalc->setStartPos(domElement.firstChildElement("start").text());
-			poscalc->setEndPos(domElement.firstChildElement("stop").text());
-			poscalc->setStepWidth(domElement.firstChildElement("stepwidth").text());
+                if (!domElement.firstChildElement("startstopstep").isNull()) {
+                    QDomElement domststst = domElement.firstChildElement("startstopstep");
+                        poscalc->setStartPos(domststst.firstChildElement("start").text());
+                        poscalc->setEndPos(domststst.firstChildElement("stop").text());
+                        poscalc->setStepWidth(domststst.firstChildElement("stepwidth").text());
 		}
 		else if (!domElement.firstChildElement("stepfilename").isNull()) {
 			poscalc->setStepFile(domElement.firstChildElement("stepfilename").text());
