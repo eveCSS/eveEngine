@@ -1085,13 +1085,24 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
 				appendedSM->newEvent(evprop);
 			break;
 		case eveEventProperty::REDO:
-		case eveEventProperty::PAUSE:
+                    if (nestedSM) nestedSM->newEvent(evprop);
+                    if (myStatus.setEvent(evprop)) {
+                        if (evprop->getOn())
+                            sendError(INFO, 0, QString("Chain Redo Event: %1; Pause Scan").arg(evprop->getName()));
+                        else
+                            sendError(INFO, 0, QString("Chain Redo Event: %1; Resume Scan").arg(evprop->getName()));
+                        manager->setStatus(smId, myStatus.getStatus());
+                        emit sigExecStage();
+                    }
+                    if (appendedSM) appendedSM->newEvent(evprop);
+                    break;
+                case eveEventProperty::PAUSE:
 			if (nestedSM) nestedSM->newEvent(evprop);
 			if (myStatus.setEvent(evprop)) {
                             if (evprop->isSwitchOn())
-                                sendError(INFO, 0, QString("Chain Pause/Redo Event: %1; Pause Scan").arg(evprop->getName()));
+                                sendError(INFO, 0, QString("Chain Pause Event: %1; Pause Scan").arg(evprop->getName()));
                             if (evprop->isSwitchOff())
-                                sendError(INFO, 0, QString("Chain Pause/Redo Event: %1; Resume Scan").arg(evprop->getName()));
+                                sendError(INFO, 0, QString("Chain Pause Event: %1; Resume Scan").arg(evprop->getName()));
                             manager->setStatus(smId, myStatus.getStatus());
                             emit sigExecStage();
 			}

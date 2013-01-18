@@ -22,23 +22,13 @@ public:
 	eveDataMessage* getResultMessage();
 
 private:
-	eveVariant getResult();
-	void checkDeviation(double value);
-	bool checkLimit(double value);
-	double last_value;
-	bool lastTimeLevelReached;
-	bool calcDone;
 	bool allDone;
-	bool useLimit;
-	bool useDeviation;
-	int deviationCount;
 	int averageCount;
 	int maxAttempt;
-	int attempt;
+        int attempt;
 	double lowLimit;
 	double deviation;
-	QVector<double> dataArray;
-	double sum;
+	QVector<double> dataArray;	
 };
 
 #endif /* EVEAVERAGE_H_ */
