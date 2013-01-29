@@ -329,7 +329,16 @@ QString eveDataCollector::macroExpand(QString eString){
 
 	QDateTime now=QDateTime::currentDateTime();
 
-	if (eString.contains("${WEEK}")){
+        if (eString.contains("${YEAR}")){
+                eString.replace(QString("${YEAR}"), QString("%1").arg(now.date().year()));
+        }
+        if (eString.contains("${MONTH}")){
+                eString.replace(QString("${MONTH}"), QString("%1").arg(now.toString("MM")));
+        }
+        if (eString.contains("${DAY}")){
+                eString.replace(QString("${DAY}"), QString("%1").arg(now.toString("dd")));
+        }
+        if (eString.contains("${WEEK}")){
 		eString.replace(QString("${WEEK}"), QString("%1").arg(now.date().weekNumber()));
 	}
 	if (eString.contains("${DATE}")){
