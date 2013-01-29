@@ -5,15 +5,70 @@
  *      Author: eden
  */
 
+#include <QProcess>
+#include <QUuid>
+#include <QList>
+#include <QFileInfoList>
+#include <QFileInfo>
+#include <QFile>
+#include <QTextStream>
 #include "evePlayListManager.h"
 #include "eveError.h"
 
 evePlayListManager::evePlayListManager() {
-	lastId = 0;
+    lastId = 0;
+    modified = false;
+    haveCurrent = false;
+    playlistPath = QDir(getTempPath());
+    dirFileName = playlistPath.absoluteFilePath("eveCacheDir.db");
+    if (!playlistPath.exists()){
+        eveError::log(DEBUG, QString("evePlayListManager: create cache dir %1").arg(playlistPath.absolutePath()));
+        if (!playlistPath.mkpath(playlistPath.absolutePath()))
+            eveError::log(ERROR, QString("evePlayListManager: unable to make temp path: %1").arg(playlistPath.absolutePath()));
+    }
+    else {
+        // read a cache file if left over from last run
+        QFile file(dirFileName);
+        if (file.exists() && file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream in(&file);
+            while (!in.atEnd()) {
+                ++lastId;
+                evePlayListEntry ple;
+                QString line = in.readLine();
+                line.chop(1);
+                ple.name = line.mid(1).section("\";\"",0,0);
+                ple.author = line.section("\";\"",1,1);
+                ple.pid = lastId;
+                QString scmlfilename = line.section("\";\"",2,2);
+                if (QFileInfo(scmlfilename).exists()){
+                    evePlayListData* pld = new evePlayListData();
+                    pld->name = ple.name;
+                    pld->author = ple.author;
+                    pld->isLoaded = false;
+                    pld->filename = scmlfilename;
+                    datahash.insert(lastId, pld);
+                    playlist.append(ple);
+                    modified = true;
+                    eveError::log(DEBUG, QString("evePlayListManager: add name %1, author %2, filename >%3<").arg(pld->name).arg(pld->author).arg(pld->filename));
+                }
+            }
+            file.close();
+        }
+    }
 }
 
 evePlayListManager::~evePlayListManager() {
-	// Auto-generated destructor stub
+
+    if (haveCurrent){
+        QFile file(currentFilename);
+        if (file.exists()) file.remove();
+    }
+    foreach(evePlayListData* pld, datahash){
+        QFile file(pld->filename);
+        if (file.exists()) file.remove();
+    }
+    playlist.clear();
+    flushPlaylist();
 }
 
 /**
@@ -25,15 +80,16 @@ evePlayListManager::~evePlayListManager() {
  */
 void evePlayListManager::addEntry(QString name, QString author, QByteArray data) {
 
-	evePlayListEntry entry;
-	eveDataEntry * dataentry;
+        evePlayListEntry ple;
+        evePlayListData* pld = new evePlayListData;
+        bool saved = false;
 
 	if (playlist.count() > PLAYLISTMAXENTRIES) {
 		eveError::log(ERROR, "evePlayListManager::addEntry: Too many playlist entries");
 		return;
 	}
-	if (lastId > 2000000000)
-		lastId=0;
+        if (lastId > 2000000000)
+                lastId=1;
 	else
 		++lastId;
 
@@ -42,25 +98,38 @@ void evePlayListManager::addEntry(QString name, QString author, QByteArray data)
 		return;
 	}
 
-	entry.pid = lastId;
-	entry.name = QString(name);
-	entry.author = QString(author);
-	if (entry.name.length() < 1) entry.name = "none";
-	if (entry.author.length() < 1) entry.author = "none";
+        ple.pid = lastId;
+        ple.name = name;
+        ple.author = author;
+        if (ple.name.length() < 1) ple.name = "none";
+        if (ple.author.length() < 1) ple.author = "none";
 
-	dataentry = new eveDataEntry;
+        // always save to temporary file
+        QString filename = QUuid::createUuid().toString();
+        filename = playlistPath.absolutePath() + "/" + filename.mid(1, filename.length()-2);
+        QFile file(filename);
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text)){
+            QTextStream out(&file);
+            out << data;
+            file.close();
+            saved = true;
+        }
+        else {
+            eveError::log(ERROR, QString("evePlayListManager: unable to open temporary file: %1").arg(filename));
+        }
 
-	if (playlist.count() > MAX_XML_LOADED) {
-		//store xml to a temporary file
-		// TODO
-	}
-	else {
-		dataentry->isLoaded = 1;
-		dataentry->data = QByteArray(data);
-		dataentry->filename = "";
-	}
-	datahash.insert(entry.pid, dataentry);
-	playlist.append(entry);
+        // fill dataentry
+        pld->filename = filename;
+        if (saved && (playlist.count() > MAX_XML_LOADED)) {
+            pld->isLoaded = false;
+        }
+        else {
+            pld->isLoaded = true;
+            pld->data = data;
+        }
+        datahash.insert(ple.pid, pld);
+        playlist.append(ple);
+        flushPlaylist();
 
 	return;
 }
@@ -71,13 +140,22 @@ void evePlayListManager::addEntry(QString name, QString author, QByteArray data)
  */
 void evePlayListManager::removeEntry(int id){
 
-	for (int i = 0; i < playlist.size(); ++i) {
-		if (playlist.at(i).pid == id) {
-			playlist.removeAt(i);
-			break;
-		}
-	}
-	datahash.remove(id);
+    for (int i = 0; i < playlist.size(); ++i) {
+        if (playlist.at(i).pid == id) {
+            playlist.removeAt(i);
+            modified = true;
+            break;
+        }
+    }
+    evePlayListData* entry = datahash.take(id);
+    QFile tmpfile(entry->filename);
+    if (tmpfile.exists() && entry->filename.startsWith(playlistPath.absolutePath()))
+        tmpfile.remove();
+    else
+        eveError::log(ERROR, QString("evePlayListManager: cannot find file: %1").arg(entry->filename));
+
+    delete entry;
+    if (modified) flushPlaylist();
 }
 
 /**
@@ -87,19 +165,21 @@ void evePlayListManager::removeEntry(int id){
  */
 void evePlayListManager::reorderEntry(int id, int steps){
 
-	if (steps == 0) return;
+    if (steps == 0) return;
 
-	for (int i = 0; i < playlist.size(); ++i) {
-		if (playlist.at(i).pid == id) {
-			int pos = steps + i;
-			if (pos > playlist.size()) pos = playlist.size();
-			else if (pos < 0) pos = 0;
-			evePlayListEntry entry = playlist.takeAt(i);
-			playlist.insert(pos,entry);
-			break;
-		}
-	}
-	return;
+    for (int i = 0; i < playlist.size(); ++i) {
+        if (playlist.at(i).pid == id) {
+            int pos = steps + i;
+            if (pos > playlist.size()) pos = playlist.size();
+            else if (pos < 0) pos = 0;
+            evePlayListEntry entry = playlist.takeAt(i);
+            playlist.insert(pos,entry);
+            modified = true;
+            break;
+        }
+    }
+    if (modified) flushPlaylist();
+    return;
 }
 
 /**
@@ -110,31 +190,95 @@ evePlayListData* evePlayListManager::takeFirst(){
 
 	if (playlist.size() == 0) return NULL;
 
-	evePlayListEntry entry = playlist.takeFirst();
-	eveDataEntry * dataentry;
+        // flush before taking the next entry, so the current entry is still on disk
+        removeCurrentEntry();
 
-	if (datahash.contains(entry.pid)){
-		dataentry = datahash.take(entry.pid);
+        currentPLE = playlist.takeFirst();
+        evePlayListData *pld;
+
+        if (datahash.contains(currentPLE.pid)){
+                pld = datahash.take(currentPLE.pid);
 	}
 	else {
 		eveError::log(ERROR, "evePlayListManager::takeFirst: List inconsistency no data found");
 		return NULL;
 	}
-	if (!dataentry->isLoaded) {
-		// TODO
-		//load data from temporary file
-		return NULL;
+        currentFilename = pld->filename;
+        haveCurrent=true;
+
+        if (!pld->isLoaded) {
+            QFile file(pld->filename);
+            if (file.open(QIODevice::ReadOnly)) {
+                pld->data.clear();
+                pld->data = file.readAll();
+                file.close();
+                pld->isLoaded = true;
+            }
+            else {
+                eveError::log(ERROR, QString("evePlayListManager: cannot find file: %1").arg(pld->filename));
+                return NULL;
+            }
 	}
-	evePlayListData* data = new evePlayListData;
-	data->name = QString(entry.name);
-	data->author = QString(entry.author);
-	data->data = QByteArray(dataentry->data);
-	return data;
+        return pld;
 }
+
+/**
+ * \brief remove current entry from cache file
+ */
+void evePlayListManager::removeCurrentEntry(){
+
+    if (haveCurrent){
+        haveCurrent = false;
+        QFile file(currentFilename);
+        if (file.exists()) file.remove();
+        flushPlaylist();
+    }
+    return;
+}
+
 /**
  * \brief returns a pointer to a message with the current playlist display data
  * \return pointer to evePlayListMessage
  */
 evePlayListMessage* evePlayListManager::getCurrentPlayList(){
 	return new evePlayListMessage(playlist);
+}
+
+/**
+ * \brief find the directory path to store playlist entries temporarily
+ * \return string with path
+ */
+QString evePlayListManager::getTempPath(){
+
+    QString user = "unknown";
+    QString tmpdir = "/tmp";
+
+    QStringList environment = QProcess::systemEnvironment();
+    foreach (QString line, environment){
+        if (line.startsWith("USER=")) user=line.remove(0,5);
+        if (line.startsWith("TMPDIR=")) tmpdir=line.remove(0,7);
+    }
+    QFileInfo path = QFileInfo(tmpdir + "/eve-" + user);
+    return path.absoluteFilePath();
+}
+
+/**
+ * \brief write current playlist to cache file
+ */
+void evePlayListManager::flushPlaylist(){
+
+    QFile file(dirFileName);
+    if (file.exists()) file.remove();
+    if ((playlist.size() > 0) && file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QTextStream out(&file);
+        if (haveCurrent)
+            out << "\"" << currentPLE.name << "\";\"" << currentPLE.author << "\";\"" << currentFilename << "\"\n";
+        foreach (evePlayListEntry ple, playlist){
+            if (datahash.contains(ple.pid))
+                out << "\"" << ple.name << "\";\"" << ple.author << "\";\"" << datahash.value(ple.pid)->filename << "\"\n";
+        }
+        file.close();
+    }
+    modified = false;
+    return;
 }

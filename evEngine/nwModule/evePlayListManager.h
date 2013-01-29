@@ -9,11 +9,12 @@
 #define EVEPLAYLISTMANAGER_H_
 
 #define PLAYLISTMAXENTRIES 500
-#define MAX_XML_LOADED 501
+#define MAX_XML_LOADED 2
 
 #include <QString>
 #include <QHash>
 #include <QByteArray>
+#include <QDir>
 #include "eveMessageChannel.h"
 
 /**
@@ -21,20 +22,23 @@
  *
  */
 struct evePlayListData {
-	QString name;
+    bool isLoaded;
+    int pid;
+        QString name;
 	QString author;
 	QByteArray data;
+        QString filename;
 };
 
 /**
  * \brief internal struct of class evePlayListManager
  *
  */
-struct eveDataEntry {
-	bool isLoaded;
-	QByteArray data;
-	QString filename;
-};
+//struct eveDataEntry {
+//	bool isLoaded;
+//	QByteArray data;
+//	QString filename;
+//};
 
 /**
  * \brief manages the playlist
@@ -53,14 +57,23 @@ public:
 	void addEntry(QString, QString, QByteArray);
 	void reorderEntry(int, int);
 	void removeEntry(int);
+        void removeCurrentEntry();
 	bool isEmpty(){return playlist.isEmpty();};
 	evePlayListData* takeFirst();
 	evePlayListMessage* getCurrentPlayList();
 
 private:
+        bool modified;
+        bool haveCurrent;
 	int lastId;
+        void flushPlaylist();
+        evePlayListEntry currentPLE;
+        QString currentFilename;
+        QString getTempPath();
+        QString dirFileName;
+        QDir playlistPath;
 	QList<evePlayListEntry> playlist;
-	QHash<int, eveDataEntry*> datahash;
+        QHash<int, evePlayListData*> datahash;
 
 };
 

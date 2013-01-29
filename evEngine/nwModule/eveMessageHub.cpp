@@ -159,236 +159,244 @@ void eveMessageHub::unregisterChannel(int channelId)
  */
 void eveMessageHub::newMessage(int messageSource)
 {
-	eveMessage *message=NULL;
+    eveMessage *message=NULL;
 
-	QReadLocker locker(&channelLock);
+    QReadLocker locker(&channelLock);
 
-	if (!mChanHash.contains(messageSource)){
-		// addError(DEBUG,0,QString("unable to process message from unregistered source %1").arg(messageSource));
-		return;
-	}
+    if (!mChanHash.contains(messageSource)){
+        // addError(DEBUG,0,QString("unable to process message from unregistered source %1").arg(messageSource));
+        return;
+    }
 
-	// try to get the lock
-	if (mChanHash.value(messageSource)->getLock()){
-		message = mChanHash.value(messageSource)->getMessage();
-		mChanHash.value(messageSource)->releaseLock();
-	}
-	else {
-		// we couldn't get the lock, try again later
-		emit messageWaiting(messageSource);
-	}
+    // try to get the lock
+    if (mChanHash.value(messageSource)->getLock()){
+        message = mChanHash.value(messageSource)->getMessage();
+        mChanHash.value(messageSource)->releaseLock();
+    }
+    else {
+        // we couldn't get the lock, try again later
+        emit messageWaiting(messageSource);
+    }
 
-	while (message != NULL ){
+    while (message != NULL ){
 
-		switch (message->getType()) {
-			case EVEMESSAGETYPE_ERROR:
-			{
-				eveErrorMessage* emesg = (eveErrorMessage*)message;
-				eveError::log(emesg->getSeverity(), emesg->getErrorText(), emesg->getFacility());
-				// skip messages with severity below loglevel
-				if (loglevel < emesg->getSeverity()) {
-					delete message;
-					message = NULL;
-					break;
-				}
-			}
-			case EVEMESSAGETYPE_CURRENTXML:
-			case EVEMESSAGETYPE_ENGINESTATUS:
-				if (useNet && mChanHash.contains(EVECHANNEL_NET)){
-					if (mChanHash.value(EVECHANNEL_NET)->queueMessage(message))message = NULL;
-				}
-				else {
-					delete message;
-					message = NULL;
-				}
-				break;
-			case EVEMESSAGETYPE_CHAINSTATUS:
-			{
-				/* send  to storagemodules if available */
-				if (haveStorage()){
-					eveMessage *mclone = message->clone();
-					if (!sendToStorage(mclone))
-						delete mclone;
-				}
-				eveMessage *mclone = message->clone();
-				if (!sendToMath(mclone)) delete mclone;
-				/* send chainstatus to viewers if available */
-				if (mChanHash.contains(EVECHANNEL_NET)){
-					eveMessage *mclone = message->clone();
-					if(!mChanHash.value(EVECHANNEL_NET)->queueMessage(mclone)) delete mclone;
-				}
-				/* send chainstatus to eventManager (we always have one)*/
-				if (mChanHash.contains(EVECHANNEL_EVENT)){
-					eveMessage *mclone = message->clone();
-					if(!mChanHash.value(EVECHANNEL_EVENT)->queueMessage(mclone)) delete mclone;
-				}
-				/* send chainstatus to manager (we always have one)*/
-				if (mChanHash.contains(EVECHANNEL_MANAGER)){
-					if (mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(message))message = NULL;
-				}
-				break;
-			}
-			case EVEMESSAGETYPE_DATA:
-				{
-					if (((eveDataMessage*)message)->getDataMod() == DMTdeviceData){
-						int channel = message->getDestination();
-						if (mChanHash.contains(channel) && (mChanHash.value(channel)->queueMessage(message)))
-							message = NULL;
-						else {
-							addError(MINOR, 0, QString("unable to deliver DataMessage to channel %1").arg(channel));
-							message = NULL;
-							delete message;
-						}
-						break;
-					}
-					/* send data to viewers if available */
-					if (mChanHash.contains(EVECHANNEL_NET)){
-						eveMessage *mclone = message->clone();
-						if (!mChanHash.value(EVECHANNEL_NET)->queueMessage(mclone)) delete mclone;
-					}
-					/* send data to storagemodules if available */
-					if (haveStorage()){
-						eveMessage *mclone = message->clone();
-						if (!sendToStorage(mclone)) delete mclone;
-					}
-					if (!sendToMath(message)) delete message;
-					message = NULL;
-				}
-				break;
-			case EVEMESSAGETYPE_AUTOPLAY:
-			case EVEMESSAGETYPE_REORDERPLAYLIST:
-			case EVEMESSAGETYPE_ADDTOPLAYLIST:
-			case EVEMESSAGETYPE_REMOVEFROMPLAYLIST:
-			case EVEMESSAGETYPE_START:
-			case EVEMESSAGETYPE_STOP:
-			case EVEMESSAGETYPE_HALT:
-			case EVEMESSAGETYPE_BREAK:
-			case EVEMESSAGETYPE_PAUSE:
-				// forward this to manager
-				if (mChanHash.contains(EVECHANNEL_MANAGER)) {
-					if (mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(message)) message = NULL;
-				}
-				else {
-					addError(ERROR,0,"MessageHub: Manager not connected");
-				}
-				break;
-			case EVEMESSAGETYPE_PLAYLIST:
-				/* send to viewers if any available */
-				if (mChanHash.contains(EVECHANNEL_NET)){
-					if (mChanHash.value(EVECHANNEL_NET)->queueMessage(message)) message = NULL;
-				}
-				break;
-			case EVEMESSAGETYPE_ENDPROGRAM:
-				addError(DEBUG, 0, "received End command, exiting...");
-				delete message;
-				message = NULL;
-				// don't just call close(); we locked the channelLock !
-				QTimer::singleShot(0, this, SLOT(close()));
-				break;
-			case EVEMESSAGETYPE_LIVEDESCRIPTION:
-			case EVEMESSAGETYPE_METADATA:
-				if (haveStorage()){
-					((eveMessageText*)message)->setDestination(EVECHANNEL_STORAGE);
-					if (sendToStorage(message)) message = NULL;
-				}
-				else {
-					delete message;
-					message = NULL;
-				}
-				break;
-			case EVEMESSAGETYPE_REQUEST:
-			case EVEMESSAGETYPE_REQUESTCANCEL:
-				// requests may be cancelled by SMs too
-				/* send requests to viewers if available */
-				if (mChanHash.contains(EVECHANNEL_NET)){
-					/* do we need to keep track of requests ? */
-					if (mChanHash.value(EVECHANNEL_NET)->queueMessage(message)) message = NULL;
-				}
-				else {
-					// no network connection, we log an error and drop the message
-					addError(ERROR, 0, "EVEMESSAGETYPE_REQUEST(CANCEL): request cannot send request, running without net");
-				}
-				break;
-			case EVEMESSAGETYPE_REQUESTANSWER:
-			{
-				/* find the request source and send the answer */
-				int rid = ((eveRequestAnswerMessage*)message)->getReqId();
-				int mChannelId = reqMan->takeId(rid);
-				if (mChannelId){
-					if (mChanHash.contains(mChannelId)){
-						// send answer to request source
-						if (mChanHash.value(mChannelId)->queueMessage(message)) message = NULL;
-					}
-					else {
-						// request source unavailable, log an error and drop the message
-						addError(ERROR,0,QString("request source unavailable %1").arg(((eveRequestAnswerMessage*)message)->getReqId()));
-					}
-				}
-				else {
-					addError(ERROR,0,"request without source");
-				}
-				// cancel this request for other viewers
-				if (mChanHash.contains(EVECHANNEL_NET)){
-					eveMessage *cMessage = new eveRequestCancelMessage(rid);
-					if (!mChanHash.value(EVECHANNEL_NET)->queueMessage(cMessage)){
-						delete cMessage;
-						addError(ERROR,0,"NetChannel does not accept a cancelRequest Message");
-					}
-				}
-			}
-				break;
-			case EVEMESSAGETYPE_STORAGECONFIG:
-				/* send configuration to storagemodule if available */
-				if (haveStorage()){
-					// tell manager cids with storage
-					if (mChanHash.contains(EVECHANNEL_MANAGER)){
-						eveMessage *mclone = message->clone();
-						if (!mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(mclone)) delete mclone;
-					}
-					if (sendToStorage(message)) message = NULL;
-				}
-				else {
-					delete message;
-					message = NULL;
-				}
-				break;
-			case EVEMESSAGETYPE_DEVINFO:
-				/* send device info to storagemodule if available */
-				if (haveStorage()){
-					if (sendToStorage(message)) message = NULL;
-				}
-				else {
-					delete message;
-					message = NULL;
-				}
-				break;
-			case EVEMESSAGETYPE_EVENTREGISTER:
-			case EVEMESSAGETYPE_MONITORREGISTER:
-			case EVEMESSAGETYPE_STORAGEDONE:
-			case EVEMESSAGETYPE_DETECTORREADY:
-				if (mChanHash.contains(EVECHANNEL_EVENT)){
-					if (mChanHash.value(EVECHANNEL_EVENT)->queueMessage(message)) message = NULL;
-				}
-				break;
-			default:
-				addError(ERROR, 0, "newMessage: unknown message type");
-				break;
-		}
-		if (message != NULL) {
-			addError(ERROR, 0, QString("newMessage: unable to forward message, type: %1").arg(message->getType()));
-			delete message;
-		}
-		// get the next message, if we get the lock
-		if (mChanHash.value(messageSource)->getLock()){
-			message = mChanHash.value(messageSource)->getMessage();
-			mChanHash.value(messageSource)->releaseLock();
-		}
-		else {
-			// we couldn't get the lock, try again later
-			message = NULL;
-			emit messageWaiting(messageSource);
-		}
-	}
+        switch (message->getType()) {
+        case EVEMESSAGETYPE_ERROR:
+        {
+            eveErrorMessage* emesg = (eveErrorMessage*)message;
+            eveError::log(emesg->getSeverity(), emesg->getErrorText(), emesg->getFacility());
+            // skip messages with severity below loglevel
+            if (loglevel < emesg->getSeverity()) {
+                delete message;
+                message = NULL;
+                break;
+            }
+        }
+        case EVEMESSAGETYPE_CURRENTXML:
+            if (useNet && mChanHash.contains(EVECHANNEL_NET)){
+                if (mChanHash.value(EVECHANNEL_NET)->queueMessage(message))message = NULL;
+            }
+            else {
+                delete message;
+                message = NULL;
+            }
+            break;
+        case EVEMESSAGETYPE_ENGINESTATUS:
+            if (useNet && mChanHash.contains(EVECHANNEL_NET)){
+                eveMessage *mclone = message->clone();
+                if(!mChanHash.value(EVECHANNEL_NET)->queueMessage(mclone)) delete mclone;
+            }
+            if (mChanHash.contains(EVECHANNEL_MANAGER)){
+                if (mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(message))message = NULL;
+            }
+            break;
+        case EVEMESSAGETYPE_CHAINSTATUS:
+        {
+            /* send  to storagemodules if available */
+            if (haveStorage()){
+                eveMessage *mclone = message->clone();
+                if (!sendToStorage(mclone))
+                    delete mclone;
+            }
+            eveMessage *mclone = message->clone();
+            if (!sendToMath(mclone)) delete mclone;
+            /* send chainstatus to viewers if available */
+            if (mChanHash.contains(EVECHANNEL_NET)){
+                eveMessage *mclone = message->clone();
+                if(!mChanHash.value(EVECHANNEL_NET)->queueMessage(mclone)) delete mclone;
+            }
+            /* send chainstatus to eventManager (we always have one)*/
+            if (mChanHash.contains(EVECHANNEL_EVENT)){
+                eveMessage *mclone = message->clone();
+                if(!mChanHash.value(EVECHANNEL_EVENT)->queueMessage(mclone)) delete mclone;
+            }
+            /* send chainstatus to manager (we always have one)*/
+            if (mChanHash.contains(EVECHANNEL_MANAGER)){
+                if (mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(message))message = NULL;
+            }
+            break;
+        }
+        case EVEMESSAGETYPE_DATA:
+        {
+            if (((eveDataMessage*)message)->getDataMod() == DMTdeviceData){
+                int channel = message->getDestination();
+                if (mChanHash.contains(channel) && (mChanHash.value(channel)->queueMessage(message)))
+                    message = NULL;
+                else {
+                    addError(MINOR, 0, QString("unable to deliver DataMessage to channel %1").arg(channel));
+                    message = NULL;
+                    delete message;
+                }
+                break;
+            }
+            /* send data to viewers if available */
+            if (mChanHash.contains(EVECHANNEL_NET)){
+                eveMessage *mclone = message->clone();
+                if (!mChanHash.value(EVECHANNEL_NET)->queueMessage(mclone)) delete mclone;
+            }
+            /* send data to storagemodules if available */
+            if (haveStorage()){
+                eveMessage *mclone = message->clone();
+                if (!sendToStorage(mclone)) delete mclone;
+            }
+            if (!sendToMath(message)) delete message;
+            message = NULL;
+        }
+            break;
+        case EVEMESSAGETYPE_AUTOPLAY:
+        case EVEMESSAGETYPE_REORDERPLAYLIST:
+        case EVEMESSAGETYPE_ADDTOPLAYLIST:
+        case EVEMESSAGETYPE_REMOVEFROMPLAYLIST:
+        case EVEMESSAGETYPE_START:
+        case EVEMESSAGETYPE_STOP:
+        case EVEMESSAGETYPE_HALT:
+        case EVEMESSAGETYPE_BREAK:
+        case EVEMESSAGETYPE_PAUSE:
+            // forward this to manager
+            if (mChanHash.contains(EVECHANNEL_MANAGER)) {
+                if (mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(message)) message = NULL;
+            }
+            else {
+                addError(ERROR,0,"MessageHub: Manager not connected");
+            }
+            break;
+        case EVEMESSAGETYPE_PLAYLIST:
+            /* send to viewers if any available */
+            if (mChanHash.contains(EVECHANNEL_NET)){
+                if (mChanHash.value(EVECHANNEL_NET)->queueMessage(message)) message = NULL;
+            }
+            break;
+        case EVEMESSAGETYPE_ENDPROGRAM:
+            addError(DEBUG, 0, "received End command, exiting...");
+            delete message;
+            message = NULL;
+            // don't just call close(); we locked the channelLock !
+            QTimer::singleShot(0, this, SLOT(close()));
+            break;
+        case EVEMESSAGETYPE_LIVEDESCRIPTION:
+        case EVEMESSAGETYPE_METADATA:
+            if (haveStorage()){
+                ((eveMessageText*)message)->setDestination(EVECHANNEL_STORAGE);
+                if (sendToStorage(message)) message = NULL;
+            }
+            else {
+                delete message;
+                message = NULL;
+            }
+            break;
+        case EVEMESSAGETYPE_REQUEST:
+        case EVEMESSAGETYPE_REQUESTCANCEL:
+            // requests may be cancelled by SMs too
+            /* send requests to viewers if available */
+            if (mChanHash.contains(EVECHANNEL_NET)){
+                /* do we need to keep track of requests ? */
+                if (mChanHash.value(EVECHANNEL_NET)->queueMessage(message)) message = NULL;
+            }
+            else {
+                // no network connection, we log an error and drop the message
+                addError(ERROR, 0, "EVEMESSAGETYPE_REQUEST(CANCEL): request cannot send request, running without net");
+            }
+            break;
+        case EVEMESSAGETYPE_REQUESTANSWER:
+        {
+            /* find the request source and send the answer */
+            int rid = ((eveRequestAnswerMessage*)message)->getReqId();
+            int mChannelId = reqMan->takeId(rid);
+            if (mChannelId){
+                if (mChanHash.contains(mChannelId)){
+                    // send answer to request source
+                    if (mChanHash.value(mChannelId)->queueMessage(message)) message = NULL;
+                }
+                else {
+                    // request source unavailable, log an error and drop the message
+                    addError(ERROR,0,QString("request source unavailable %1").arg(((eveRequestAnswerMessage*)message)->getReqId()));
+                }
+            }
+            else {
+                addError(ERROR,0,"request without source");
+            }
+            // cancel this request for other viewers
+            if (mChanHash.contains(EVECHANNEL_NET)){
+                eveMessage *cMessage = new eveRequestCancelMessage(rid);
+                if (!mChanHash.value(EVECHANNEL_NET)->queueMessage(cMessage)){
+                    delete cMessage;
+                    addError(ERROR,0,"NetChannel does not accept a cancelRequest Message");
+                }
+            }
+        }
+            break;
+        case EVEMESSAGETYPE_STORAGECONFIG:
+            /* send configuration to storagemodule if available */
+            if (haveStorage()){
+                // tell manager cids with storage
+                if (mChanHash.contains(EVECHANNEL_MANAGER)){
+                    eveMessage *mclone = message->clone();
+                    if (!mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(mclone)) delete mclone;
+                }
+                if (sendToStorage(message)) message = NULL;
+            }
+            else {
+                delete message;
+                message = NULL;
+            }
+            break;
+        case EVEMESSAGETYPE_DEVINFO:
+            /* send device info to storagemodule if available */
+            if (haveStorage()){
+                if (sendToStorage(message)) message = NULL;
+            }
+            else {
+                delete message;
+                message = NULL;
+            }
+            break;
+        case EVEMESSAGETYPE_EVENTREGISTER:
+        case EVEMESSAGETYPE_MONITORREGISTER:
+        case EVEMESSAGETYPE_STORAGEDONE:
+        case EVEMESSAGETYPE_DETECTORREADY:
+            if (mChanHash.contains(EVECHANNEL_EVENT)){
+                if (mChanHash.value(EVECHANNEL_EVENT)->queueMessage(message)) message = NULL;
+            }
+            break;
+        default:
+            addError(ERROR, 0, "newMessage: unknown message type");
+            break;
+        }
+        if (message != NULL) {
+            addError(ERROR, 0, QString("newMessage: unable to forward message, type: %1").arg(message->getType()));
+            delete message;
+        }
+        // get the next message, if we get the lock
+        if (mChanHash.value(messageSource)->getLock()){
+            message = mChanHash.value(messageSource)->getMessage();
+            mChanHash.value(messageSource)->releaseLock();
+        }
+        else {
+            // we couldn't get the lock, try again later
+            message = NULL;
+            emit messageWaiting(messageSource);
+        }
+    }
 }
 
 /**

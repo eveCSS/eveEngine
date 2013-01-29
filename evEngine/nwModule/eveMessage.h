@@ -108,9 +108,9 @@
 #define EVEENGINESTATUS_AUTOSTART 0x0100		// autostart bit
 
 struct evePlayListEntry {
-	int pid;
-	QString name;
-	QString author;
+        int pid;
+        QString name;
+        QString author;
 };
 
 enum eveDataModType {DMTunmodified, DMTcenter, DMTedge, DMTmin, DMTmax, DMTfwhm, DMTmean, DMTstandarddev, DMTsum, DMTnormalized, DMTpeak, DMTdeviceData,  DMTmetaData, DMTunknown};

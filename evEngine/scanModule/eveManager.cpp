@@ -37,6 +37,7 @@ eveManager::eveManager() {
 	if (!eveParameter::getParameter("startFile").isEmpty()){
 		connect(engineStatus, SIGNAL(engineIdle()), mHub, SLOT(close()), Qt::QueuedConnection);
 	}
+        addMessage(engineStatus->getEngineStatusMessage());
 }
 
 eveManager::~eveManager() {
@@ -54,111 +55,112 @@ eveManager::~eveManager() {
  */
 void eveManager::handleMessage(eveMessage *message){
 
-	eveError::log(DEBUG, "eveManager: message arrived");
-	switch (message->getType()) {
-		case EVEMESSAGETYPE_ADDTOPLAYLIST:
-			playlist->addEntry(((eveAddToPlMessage*)message)->getXmlName(), ((eveAddToPlMessage*)message)->getXmlAuthor(), ((eveAddToPlMessage*)message)->getXmlData());
-			// answer with the current playlist
-			addMessage(playlist->getCurrentPlayList());
-			// load the next playlist entry, if Engine is idle and no XML is loaded
-			if (engineStatus->isNoXmlLoaded())
-				if (loadPlayListEntry()){
-					if (engineStatus->isAutoStart())
-						if (!sendStart())
-							sendError(INFO,0,"cannot process START command with current engine status");
-				}
-			break;
-		case EVEMESSAGETYPE_REMOVEFROMPLAYLIST:
-			playlist->removeEntry( ((eveMessageInt*)message)->getInt() );
-			// answer with the current playlist
-			addMessage(playlist->getCurrentPlayList());
-			break;
-		case EVEMESSAGETYPE_REORDERPLAYLIST:
-			playlist->reorderEntry( ((eveMessageIntList*)message)->getInt(0), ((eveMessageIntList*)message)->getInt(1));
-			// answer with the current playlist
-			addMessage(playlist->getCurrentPlayList());
-			break;
-		case EVEMESSAGETYPE_AUTOPLAY:
-			{
-				bool autostart = true;
-				if (((eveMessageInt*)message)->getInt() == 0) autostart = false;
-				if (engineStatus->setAutoStart(autostart)) addMessage(engineStatus->getEngineStatusMessage());
+    eveError::log(DEBUG, "eveManager: message arrived");
+    switch (message->getType()) {
+    case EVEMESSAGETYPE_ADDTOPLAYLIST:
+        playlist->addEntry(((eveAddToPlMessage*)message)->getXmlName(), ((eveAddToPlMessage*)message)->getXmlAuthor(), ((eveAddToPlMessage*)message)->getXmlData());
+        // answer with the current playlist
+        addMessage(playlist->getCurrentPlayList());
+        // load the next playlist entry, if Engine is idle and no XML is loaded
+        if (engineStatus->isNoXmlLoaded())
+            if (loadPlayListEntry()){
+                if (engineStatus->isAutoStart())
+                    if (!sendStart())
+                        sendError(INFO,0,"cannot process START command with current engine status");
+            }
+        break;
+    case EVEMESSAGETYPE_REMOVEFROMPLAYLIST:
+        playlist->removeEntry( ((eveMessageInt*)message)->getInt() );
+        // answer with the current playlist
+        addMessage(playlist->getCurrentPlayList());
+        break;
+    case EVEMESSAGETYPE_REORDERPLAYLIST:
+        playlist->reorderEntry( ((eveMessageIntList*)message)->getInt(0), ((eveMessageIntList*)message)->getInt(1));
+        // answer with the current playlist
+        addMessage(playlist->getCurrentPlayList());
+        break;
+    case EVEMESSAGETYPE_AUTOPLAY:
+    {
+        bool autostart = true;
+        if (((eveMessageInt*)message)->getInt() == 0) autostart = false;
+        if (engineStatus->setAutoStart(autostart)) addMessage(engineStatus->getEngineStatusMessage());
 
-			}
-			break;
-		case EVEMESSAGETYPE_START:
-			if (!sendStart()) sendError(INFO,0,"cannot process START command with current engine status");
-		break;
-		case EVEMESSAGETYPE_STOP:
-			if (engineStatus->setStop()){
-				engineStatus->setAutoStart(false);
-				emit stopSMs();
-				addMessage(engineStatus->getEngineStatusMessage());
-			}
-			else {
-				sendError(INFO,0,"cannot process STOP command with current engine status");
-			}
-			break;
-		case EVEMESSAGETYPE_HALT:
-			if (engineStatus->setHalt()){
-				engineStatus->setAutoStart(false);
-				emit haltSMs();
-				addMessage(engineStatus->getEngineStatusMessage());
-			}
-			else {
-				sendError(INFO,0,"cannot process HALT command");
-			}
-		break;
-		case EVEMESSAGETYPE_BREAK:
-			if (engineStatus->setBreak()){
-				emit breakSMs();
-			}
-			else {
-				sendError(INFO,0,"cannot process BREAK command with current engine status");
-			}
-			break;
-		case EVEMESSAGETYPE_PAUSE:
-			if (engineStatus->setPause()){
-				emit pauseSMs();
-				addMessage(engineStatus->getEngineStatusMessage());
-			}
-			else {
-				sendError(INFO,0,"cannot process PAUSE command with current engine status");
-			}
-			break;
-		case EVEMESSAGETYPE_STORAGECONFIG:
-			engineStatus->addStorageId(((eveStorageMessage*)message)->getChainId());
-			break;
-		case EVEMESSAGETYPE_CHAINSTATUS:
-			if (engineStatus->setChainStatus((eveChainStatusMessage*)message)){
-				addMessage(engineStatus->getEngineStatusMessage());
-			}
-			// load the next entry from playlist, if whole chain is done
-			if (engineStatus->getEngineStatus() == eveEngIDLENOXML) {
-				if (loadPlayListEntry()){
-					if (engineStatus->isAutoStart())
-						if (!sendStart())
-							sendError(INFO,0,"cannot process START command with current engine status");
-				}
-			}
-
-			break;
-		default:
-			sendError(ERROR,0,"eveManager::handleMessage: unknown message");
-			break;
-	}
-	delete message;
+    }
+        break;
+    case EVEMESSAGETYPE_START:
+        if (!sendStart()) sendError(INFO,0,"cannot process START command with current engine status");
+        break;
+    case EVEMESSAGETYPE_STOP:
+        if (engineStatus->setStop()){
+            engineStatus->setAutoStart(false);
+            emit stopSMs();
+            addMessage(engineStatus->getEngineStatusMessage());
+        }
+        else {
+            sendError(INFO,0,"cannot process STOP command with current engine status");
+        }
+        break;
+    case EVEMESSAGETYPE_HALT:
+        if (engineStatus->setHalt()){
+            engineStatus->setAutoStart(false);
+            emit haltSMs();
+            addMessage(engineStatus->getEngineStatusMessage());
+        }
+        else {
+            sendError(INFO,0,"cannot process HALT command");
+        }
+        break;
+    case EVEMESSAGETYPE_BREAK:
+        if (engineStatus->setBreak()){
+            emit breakSMs();
+        }
+        else {
+            sendError(INFO,0,"cannot process BREAK command with current engine status");
+        }
+        break;
+    case EVEMESSAGETYPE_PAUSE:
+        if (engineStatus->setPause()){
+            emit pauseSMs();
+            addMessage(engineStatus->getEngineStatusMessage());
+        }
+        else {
+            sendError(INFO,0,"cannot process PAUSE command with current engine status");
+        }
+        break;
+    case EVEMESSAGETYPE_STORAGECONFIG:
+        engineStatus->addStorageId(((eveStorageMessage*)message)->getChainId());
+        break;
+    case EVEMESSAGETYPE_CHAINSTATUS:
+        if (engineStatus->setChainStatus((eveChainStatusMessage*)message)){
+            addMessage(engineStatus->getEngineStatusMessage());
+        }
+        break;
+    case EVEMESSAGETYPE_ENGINESTATUS:
+        // load the next entry from playlist, if whole chain is done
+        if (engineStatus->getEngineStatus() == eveEngIDLENOXML) {
+            if (loadPlayListEntry()){
+                if (engineStatus->isAutoStart())
+                    if (!sendStart())
+                        sendError(INFO,0,"cannot process START command with current engine status");
+            }
+        }
+        break;
+    default:
+        sendError(ERROR,0,"eveManager::handleMessage: unknown message");
+        break;
+    }
+    delete message;
 }
 void eveManager::shutdown(){
 
-	if (!shutdownPending){
-		shutdownPending = true;
-		disableInput();
-		connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
-	}
+    if (!shutdownPending){
+        shutdownPending = true;
+        disableInput();
+        connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
+    }
 
-	// make sure mHub reads all outstanding messages before closing the channel
-	shutdownThreadIfQueueIsEmpty();
+    // make sure mHub reads all outstanding messages before closing the channel
+    shutdownThreadIfQueueIsEmpty();
 }
 
 /**
@@ -167,41 +169,42 @@ void eveManager::shutdown(){
  */
 bool eveManager::loadPlayListEntry(){
 
-	// we load a new playlist entry if not already done
-	if (engineStatus->isNoXmlLoaded()){
-		bool isRepeat = false;
-		if (engineStatus->getRepeatCount() > 0){
-			engineStatus->decrRepeatCount();
-			isRepeat = true;
-		}
-		if (isRepeat || !playlist->isEmpty()){
-			// load next playlist entry
-			if (!isRepeat) {
-				if (currentPlEntry != NULL){
-					delete currentPlEntry;
-					currentPlEntry = NULL;
-				}
-				currentPlEntry = playlist->takeFirst();
-			}
-			engineStatus->setLoadingXML(currentPlEntry->name);
-			addMessage(engineStatus->getEngineStatusMessage());
-			// load XML, send the appropriate engineStatus-Message, send playlist if successful
-			if (engineStatus->setXMLLoaded(createSMs(currentPlEntry->data, isRepeat))){
-				addMessage(new eveCurrentXmlMessage(currentPlEntry->name, currentPlEntry->author, currentPlEntry->data));
-				addMessage(playlist->getCurrentPlayList());
-				addMessage(engineStatus->getEngineStatusMessage());
-				startChains();
-			}
-			else {
-				addMessage(engineStatus->getEngineStatusMessage());
-			}
-		}
-		else {
-			// Playlist is empty, there is nothing we can do
-			return false;
-		}
-	}
-	return true;
+    // we load a new playlist entry if not already done
+    if (engineStatus->isNoXmlLoaded()){
+        bool isRepeat = false;
+        if (engineStatus->getRepeatCount() > 0){
+            engineStatus->decrRepeatCount();
+            isRepeat = true;
+        }
+        if (isRepeat || !playlist->isEmpty()){
+            // load next playlist entry
+            if (!isRepeat) {
+                if (currentPlEntry != NULL){
+                    delete currentPlEntry;
+                    currentPlEntry = NULL;
+                }
+                currentPlEntry = playlist->takeFirst();
+            }
+            engineStatus->setLoadingXML(currentPlEntry->name);
+            addMessage(engineStatus->getEngineStatusMessage());
+            // load XML, send the appropriate engineStatus-Message, send playlist if successful
+            if (engineStatus->setXMLLoaded(createSMs(currentPlEntry->data, isRepeat))){
+                addMessage(new eveCurrentXmlMessage(currentPlEntry->name, currentPlEntry->author, currentPlEntry->data));
+                addMessage(playlist->getCurrentPlayList());
+                addMessage(engineStatus->getEngineStatusMessage());
+                startChains();
+            }
+            else {
+                addMessage(engineStatus->getEngineStatusMessage());
+            }
+        }
+        else {
+            // Current entry is ready, remove current play list entry from cache
+            playlist->removeCurrentEntry();
+            return false;
+        }
+    }
+    return true;
 }
 
 /**

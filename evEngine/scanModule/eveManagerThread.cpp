@@ -16,9 +16,10 @@ eveManagerThread::~eveManagerThread()
 void eveManagerThread::run()
 {
 	// create a Manager
-	eveManager *manager = new eveManager();
+        eveManager *manager = new eveManager();
 	waitMutex->lock();
 	channelRegistered->wakeAll();
 	waitMutex->unlock();
 	exec();
+        delete manager;
 }
