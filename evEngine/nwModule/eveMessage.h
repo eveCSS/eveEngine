@@ -353,7 +353,8 @@ public:
 	int getReqId(){return requestId;};
 	int getReqType(){return requestType;};
 	//int getAnswerInt(){return answerInt;};
-	bool compare(eveMessage *);
+        bool getAnswerBool(){return answerBool;};
+        bool compare(eveMessage *);
 	virtual eveRequestAnswerMessage* clone(){return new eveRequestAnswerMessage(*this);};
 
 private:

@@ -387,14 +387,19 @@ void eveScanModule::stgGotoStartInit() {
                 axis->gotoStartPos(false, true, true);
                 ++signalCounter;
             }
-            if (nestedSM != NULL) {
-                nestedSM->gotoStartInit();
-                ++signalCounter;
-            }
-            if (appendedSM != NULL) {
-                appendedSM->gotoStartInit();
-                ++signalCounter;
-            }
+            // for now we skip this for appended and nested SMs
+            // 1. don't go to start pos during init if axis is relative, because
+            // presumably the axis will be driven in a previous SM
+            // 2. if several appended/nested SMs use the same axis, the start position for
+            // this axis will be positioned several times.
+//            if (nestedSM != NULL) {
+//                nestedSM->gotoStartInit();
+//                ++signalCounter;
+//            }
+//            if (appendedSM != NULL) {
+//                appendedSM->gotoStartInit();
+//                ++signalCounter;
+//            }
         }
         emit sigExecStage();
     }
@@ -406,8 +411,8 @@ void eveScanModule::stgGotoStartInit() {
             // check if all axes are done
             bool allDone = true;
             foreach (eveSMAxis *axis, *axisList) if (!axis->isDone()) allDone = false;
-            if ((nestedSM != NULL) && (!nestedSM->isStageDone())) allDone = false;
-            if ((appendedSM != NULL) && (!appendedSM->isStageDone())) allDone = false;
+//            if ((nestedSM != NULL) && (!nestedSM->isStageDone())) allDone = false;
+//            if ((appendedSM != NULL) && (!appendedSM->isStageDone())) allDone = false;
             if (allDone){
                 sendError(DEBUG, 0, "stgGotoStartInit done");
                 currentStageReady=true;

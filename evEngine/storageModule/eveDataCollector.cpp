@@ -37,12 +37,15 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QStri
 	fileWriter = NULL;
 	fwInitDone = false;
 	fwOpenDone = false;
+        keepFile = true;
 	StartTimeDone = false;
 	StartDateDone = false;
 	bool fileTest = false;
 	bool doAutoNumber = false;
+        doConfirmSave = false;
 
 	if (paraHash.value("autonumber", emptyString).toLower() == "true") doAutoNumber = true;;
+        if (paraHash.value("confirmsave", emptyString).toLower() == "true") doConfirmSave = true;;
 
 	if (fileName.isEmpty()){
 		sman->sendError(ERROR,0,QString("eveDataCollector: empty filename not allowed, using dummy-filename"));
@@ -242,6 +245,7 @@ eveDataCollector::~eveDataCollector() {
 		manager->sendError(status, 0, QString("FileWriter: close message: %1").arg(fileWriter->errorText()));
 		delete fileWriter;
 	}
+        if (!keepFile) QFile(fileName).remove();
 	deviceList.clear();
 }
 
@@ -347,7 +351,7 @@ QString eveDataCollector::macroExpand(QString eString){
 	if (eString.contains("${DATE-}")){
 		eString.replace(QString("${DATE-}"), QString("%1").arg(now.toString("yyyy-MM-dd")));
 	}
-	if (eString.contains("${TIME}")){
+        if (eString.contains("${TIME}")){
 		eString.replace(QString("${TIME}"), QString("%1").arg(now.toString("hhmmss")));
 	}
 	if (eString.contains("${TIME-}")){

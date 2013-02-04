@@ -353,7 +353,7 @@ eveRequestMessage::eveRequestMessage(int rid, int rtype, QString rtext){
 	type = EVEMESSAGETYPE_REQUEST;
 	requestId = rid;
 	requestType = rtype;
-	requestString = QString(rtext);
+        requestString = rtext;
 }
 /**
  * \brief compare two messages

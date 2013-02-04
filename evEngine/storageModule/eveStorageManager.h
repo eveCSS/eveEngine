@@ -33,8 +33,9 @@ private:
 	void initShutdown();
 	bool configStorage(eveStorageMessage*);
 	void addToHash(QHash<QString, QString>&, int, QString, eveXMLReader*);
-	QHash<int, int> chainIdChannelHash;
-	eveDataCollector* dc;
+        int confirmSaveRid;
+        QHash<int, int> chainIdChannelHash;
+        eveDataCollector* dc;
 	QString fileName;
 	//QByteArray* xmlData;
 	bool shutdownPending;

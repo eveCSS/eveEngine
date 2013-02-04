@@ -18,7 +18,7 @@ public:
 	virtual ~eveAverage();
 	void reset();
 	bool isDone(){return allDone;};
-	void addValue(eveVariant);
+        bool addValue(double);
 	eveDataMessage* getResultMessage();
 
 private:

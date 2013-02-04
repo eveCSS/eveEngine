@@ -113,8 +113,10 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 
 			inStream >> rid >> rtype;
 			if ((rtype == EVEREQUESTTYPE_YESNO) || (rtype == EVEREQUESTTYPE_OKCANCEL)){
-				bool answer;
-				inStream >> answer;
+                                bool answer = false;
+                                int intAnswer;
+                                inStream >> intAnswer;
+                                if (intAnswer != 0) answer = true;
 				message = new eveRequestAnswerMessage(rid, rtype, answer);
 			}
 			else if ((rtype == EVEREQUESTTYPE_INT) || (rtype == EVEREQUESTTYPE_TRIGGER)){

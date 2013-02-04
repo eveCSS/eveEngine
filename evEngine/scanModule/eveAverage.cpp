@@ -38,8 +38,8 @@ eveAverage::~eveAverage() {
  *
  */
 void eveAverage::reset(){
-	dataArray.clear();
-	attempt = 0;
+        dataArray.clear();
+        attempt = 0;
 	allDone = false;
 }
 
@@ -47,34 +47,24 @@ void eveAverage::reset(){
  *
  * @param dataVar add value to list of values for calculations if it passes the tests
  */
-void eveAverage::addValue(eveVariant dataVar){
+bool eveAverage::addValue(double value){
 
-    if (allDone) return;
+    if (allDone) return true;
 
-    if (dataVar.canConvert(QVariant::Double)){
-        bool ok = false;
-        double data = dataVar.toDouble(&ok);
-        if (ok){
-            if ((attempt < maxAttempt) && (deviation > 0.0)){
-                if ((lowLimit != 0.0) && (dataArray.size() == 0) && (fabs(data) < lowLimit)) {
-                    ++attempt;
-                    return;
-                }
-                if ((dataArray.size() == 1) && (fabs(dataArray.at(0)*deviation/100.0) < fabs(dataArray.at(0)-data))) {
-                    ++attempt;
-                    return;
-                }
-            }
-            dataArray.append(data);
-        }
-        else {
+    if ((attempt < maxAttempt) && (deviation > 0.0)){
+        if ((lowLimit != 0.0) && (dataArray.size() == 0) && (fabs(value) < lowLimit)) {
             ++attempt;
+            return false;
+        }
+        if ((dataArray.size() == 1) && (fabs(dataArray.at(0)*deviation/100.0) < fabs(dataArray.at(0)-value))) {
+            ++attempt;
+            return false;
         }
     }
-    else {
-        ++attempt;
-    }
+    dataArray.append(value);
+
     if ((dataArray.size() >= averageCount) || (attempt > maxAttempt)) allDone = true;
+    return true;
 }
 
 eveDataMessage* eveAverage::getResultMessage(){

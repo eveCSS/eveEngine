@@ -25,6 +25,8 @@ public:
 	void addChain(eveStorageMessage*);
 	void addDevice(eveDevInfoMessage *);
 	void addMetaData(int, QString, QString&);
+        void setKeepFile(bool keep){keepFile = keep;};
+        bool isConfirmSave(){return doConfirmSave;};
 
 private:
 	QString macroExpand(QString);
@@ -32,6 +34,8 @@ private:
 	bool fwOpenDone;
 	bool StartTimeDone;
 	bool StartDateDone;
+        bool doConfirmSave;
+        bool keepFile;
 	QList<int> chainIdList;
 	QString fileName;
 	QString comment;
