@@ -305,18 +305,14 @@ void eveDataCollector::addMetaData(int Id, QString attribute, QString& messageTe
  */
 void eveDataCollector::addDevice(eveDevInfoMessage* message) {
 
-	if (fwInitDone){
-		if (deviceList.contains(message->getXmlId()))
-			manager->sendError(DEBUG, 0, QString("DataCollector: already received device info for %1").arg(message->getXmlId()));
-		else {
-			deviceList.append(message->getXmlId());
-			manager->sendError(DEBUG, 0, QString("DataCollector: setting device info for %1").arg(message->getXmlId()));
-			int status = fileWriter->addColumn(message);
-			manager->sendError(status, 0, QString("addDevice: %1").arg(fileWriter->errorText()));
-		}
-	}
-	else
-		manager->sendError(ERROR, 0, "DataCollector: can't add devices, file initialization unsuccessful or file already opened");
+    if (fwInitDone){
+        deviceList.append(message->getXmlId());
+        manager->sendError(DEBUG, 0, QString("DataCollector: setting device info for %1").arg(message->getXmlId()));
+        int status = fileWriter->addColumn(message);
+        manager->sendError(status, 0, QString("addDevice: %1").arg(fileWriter->errorText()));
+    }
+    else
+        manager->sendError(ERROR, 0, "DataCollector: can't add devices, file initialization unsuccessful or file already opened");
 }
 
 void eveDataCollector::addChain(eveStorageMessage* message){

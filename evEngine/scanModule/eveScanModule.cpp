@@ -100,7 +100,8 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     expectedPositions *= valuesPerPos;
     eveError::log(DEBUG, QString("Scan will have approx. %1 steps").arg(expectedPositions));
 
-    // get all used detector channels
+    // get all used detector channels and create a list of detectors
+    // channels used as normalize channels are removed from this list
     channelList = parser->getChannelList(this, chainId, smId);
     foreach (eveSMChannel *channel, *channelList){
         connect (channel, SIGNAL(channelDone()), this, SLOT(execStage()), Qt::QueuedConnection);
@@ -303,7 +304,11 @@ void eveScanModule::stgReadPos() {
         }
         foreach (eveSMChannel *channel, *channelList){
             channel->setTimer(startTime);
-            sendMessage(channel->getDeviceInfo());
+            sendMessage(channel->getDeviceInfo(false));
+            if (channel->getNormalizeChannel() != NULL) {
+                sendMessage(channel->getDeviceInfo(true));
+                sendMessage(channel->getNormalizeChannel()->getDeviceInfo(false));
+            }
             //read channel value to check if it is working, skip channels with long integration time;
             if (channel->readAtInit()){
                 sendError(INFO,0,QString("testing detector channel %1").arg(channel->getName()));
@@ -706,7 +711,22 @@ void eveScanModule::stgTrigRead() {
             if (ready) {
                 foreach (eveSMChannel *channel, *channelList){
                     eveDataMessage* normMsg = channel->getNormValueMessage();
+                    eveDataMessage* normRawMsg = channel->getNormRawValueMessage();
                     eveDataMessage* dataMsg = channel->getValueMessage();
+                    if (normMsg != NULL){
+                        normMsg->setPositionCount(triggerPosCount);
+                        bool ok = false;
+                        double dval = normMsg->toVariant().toDouble(&ok);
+                        if (ok) sendError(DEBUG, 0, QString("%1: normalized value %2").arg(channel->getName()).arg(dval));
+                        sendMessage(normMsg);
+                    }
+                    if (normRawMsg != NULL){
+                        normRawMsg->setPositionCount(triggerPosCount);
+                        bool ok = false;
+                        double dval = normRawMsg->toVariant().toDouble(&ok);
+                        if (ok) sendError(DEBUG, 0, QString("%2: channel (used for normalization by %1) raw value: %3").arg(channel->getName()).arg(normRawMsg->getName()).arg(dval));
+                        sendMessage(normRawMsg);
+                    }
                     if (dataMsg != NULL) {
                         dataMsg->setPositionCount(triggerPosCount);
                         bool ok = false;
@@ -722,19 +742,10 @@ void eveScanModule::stgTrigRead() {
                             }
                         }
                         sendMessage(dataMsg);
-                    }
-                    if (normMsg != NULL){
-                        normMsg->setPositionCount(triggerPosCount);
-                        sendMessage(normMsg);
-                        dataMsg = normMsg;
-                        bool ok = false;
-                        double dval = dataMsg->toVariant().toDouble(&ok);
-                        if (ok) sendError(DEBUG, 0, QString("%1: normalized value %2").arg(channel->getName()).arg(dval));
-                    }
-                    if (dataMsg == NULL)
-                        sendError(ERROR, 0, QString("%1: no data available").arg(channel->getName()));
-                    else {
                         channel->loadPositioner(manager->getPositionCount());
+                    }
+                    else {
+                        sendError(ERROR, 0, QString(" no data available for channel %1").arg(channel->getName()));
                     }
                 }
                 sendError(DEBUG, 0, "stgTrigRead Done");

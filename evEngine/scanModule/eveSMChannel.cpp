@@ -41,6 +41,7 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveSMDetector* smdetector,
     triggerValue = 1;
     valueRawMsg = NULL;
     normCalcMsg = NULL;
+    normRawMsg = NULL;
     channelStatus = eveCHANNELINIT;
     channelType=definition->getChannelType();
     eventList = eventlist;
@@ -363,24 +364,23 @@ void eveSMChannel::transportReady(int status) {
 
                 if(averageRaw->isDone()){
                     // ready with average measurements
-                    delete valueRawMsg;
                     valueRawMsg = averageRaw->getResultMessage();
                     valueRawMsg->setXmlId(xmlId);
                     valueRawMsg->setName(name);
                     valueRaw = valueRawMsg->toVariant().toDouble();
                     if (normalizeChannel){
-                        if (normCalcMsg != NULL) delete normCalcMsg;
                         normCalcMsg = averageNormCalc->getResultMessage();
-                        if (normCalcMsg->getArraySize() > 0){
-                            normCalcMsg->setXmlId(xmlId);
-                            normCalcMsg->setName(name);
-                            normCalcMsg->setNormalizeId(normalizeChannel->getXmlId());
-                            normCalc = normCalcMsg->toVariant().toDouble();
-                        }
-                        else
-                            sendError(ERROR, 0, QString("No value for channel %1 needed for normalization of %2").arg(normalizeChannel->getXmlId()).arg(xmlId));
+                        normCalcMsg->setXmlId(xmlId);
+                        normCalcMsg->setName(name);
+                        normCalcMsg->setNormalizeId(normalizeChannel->getXmlId());
+                        normCalcMsg->setDataMod(DMTnormalized);
+                        normCalc = normCalcMsg->toVariant().toDouble();
+                        normRawMsg = averageNormRaw->getResultMessage();
+                        normRawMsg->setXmlId(normalizeChannel->getXmlId());
+                        normRawMsg->setName(normalizeChannel->getName());
+                        normRaw = normRawMsg->toVariant().toDouble();
 
-                        sendError(DEBUG, 0, QString("Channel %1, Average Value %2, Average Normalized %3").arg(xmlId).arg(valueRaw).arg(normCalc));
+                        sendError(DEBUG, 0, QString("Channel %1, Average Value %2, Average Normalized %3, Average channel %4 is %5").arg(xmlId).arg(valueRaw).arg(normCalc).arg(normRawMsg->getName()).arg(normRaw));
                         averageNormCalc->reset();
                         averageNormRaw->reset();
                     }
@@ -397,7 +397,6 @@ void eveSMChannel::transportReady(int status) {
                 valueRawMsg->setXmlId(xmlId);
                 valueRawMsg->setName(name);
                 if (normalizeChannel){
-                    if (normCalcMsg != NULL) delete normCalcMsg;
                     normCalcMsg = new eveDataMessage(xmlId, name, valueRawMsg->getDataStatus(), DMTnormalized, valueRawMsg->getDataTimeStamp(), QVector<double>(1, normCalc));
                     normCalcMsg->setNormalizeId(normalizeChannel->getXmlId());
                 }
@@ -503,7 +502,7 @@ void eveSMChannel::stop() {
 
 /**
  *
- * @return current channel value
+ * @return current channel value or NULL
  */
 eveDataMessage* eveSMChannel::getValueMessage(){
     eveDataMessage* return_data = valueRawMsg;
@@ -513,11 +512,21 @@ eveDataMessage* eveSMChannel::getValueMessage(){
 
 /**
  *
- * @return value of normalize channel
+ * @return value of normalize channel or NULL
  */
 eveDataMessage* eveSMChannel::getNormValueMessage(){
     eveDataMessage* return_data = normCalcMsg;
     normCalcMsg = NULL;
+    return return_data;
+}
+
+/**
+ *
+ * @return value of raw value of channel used for normalization or NULL
+ */
+eveDataMessage* eveSMChannel::getNormRawValueMessage(){
+    eveDataMessage* return_data = normRawMsg;
+    normRawMsg = NULL;
     return return_data;
 }
 
@@ -530,6 +539,12 @@ bool eveSMChannel::retrieveData(){
     if ((normalizeChannel) && (!normalizeChannel->isDone())) return false;
 
     if (valueRawMsg != NULL) delete valueRawMsg;
+    if (normCalcMsg != NULL) delete normCalcMsg;
+    if (normRawMsg != NULL) delete normRawMsg;
+
+    normRawMsg = NULL;
+    normCalcMsg = NULL;
+
     valueRawMsg = valueTrans->getData();
     if (valueRawMsg == NULL) {
         sendError(ERROR,0,QString("unable to retrieve value of Channel %1").append(xmlId));
@@ -552,17 +567,17 @@ bool eveSMChannel::retrieveData(){
         normRaw = 1.0;
         normCalc = valueRaw;
 
-        eveDataMessage* normChannelMsg = normalizeChannel->getValueMessage();
-        if (normChannelMsg == NULL){
+        normRawMsg = normalizeChannel->getValueMessage();
+        if (normRawMsg == NULL){
             sendError(ERROR,0,QString("unable to retrieve value of normalized Channel %1").arg(normalizeChannel->getXmlId()));
             return true;
         }
-        if (normChannelMsg->getArraySize() > 1){
+        if (normRawMsg->getArraySize() > 1){
             sendError(ERROR,0,QString("normalize Channel may not have array data%1").arg(normalizeChannel->getXmlId()));
             return true;
         }
         bool ok = true;
-        normRaw = normChannelMsg->toVariant().toDouble(&ok);
+        normRaw = normRawMsg->toVariant().toDouble(&ok);
         if (!ok){
             sendError(ERROR,0,QString("normalize Channel data to type double %1").arg(normalizeChannel->getXmlId()));
             return true;
@@ -575,7 +590,6 @@ bool eveSMChannel::retrieveData(){
         sendError(DEBUG, 0, QString("Normalize Channel %1, Raw Value %2").arg(normalizeChannel->getXmlId()).arg(normRaw));
         sendError(DEBUG, 0, QString("Channel %1, Normalized Value %2").arg(xmlId).arg(normCalc));
 
-        delete normChannelMsg;
     }
     return true;
 }
@@ -584,7 +598,7 @@ bool eveSMChannel::retrieveData(){
  *
  * @return pointer to a message with all info about this channel
  */
-eveDevInfoMessage* eveSMChannel::getDeviceInfo(){
+eveDevInfoMessage* eveSMChannel::getDeviceInfo(bool normalizeInfo){
 
     QStringList* sl;
     QString auxInfo = "";
@@ -608,7 +622,7 @@ eveDevInfoMessage* eveSMChannel::getDeviceInfo(){
         sl->append(QString("maxDeviation:%1").arg(maxDeviation));
         sl->append(QString("minimum:%1").arg(minimum));
     }
-    if (normalizeChannel){
+    if (normalizeChannel && normalizeInfo){
         sl->append(QString("NormalizeChannelID:%1").arg(normalizeChannel->getXmlId()));
         dataMod = DMTnormalized;
         auxInfo = normalizeChannel->getXmlId();

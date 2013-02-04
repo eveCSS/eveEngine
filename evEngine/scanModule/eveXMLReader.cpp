@@ -965,18 +965,33 @@ QList<eveSMChannel*>* eveXMLReader::getChannelList(eveScanModule* scanmodule, in
 
 	QList<eveSMChannel *> *channellist = new QList<eveSMChannel *>;
 	QHash<QString, eveSMDetector *> detectorHash;
+        QStringList normalizeIdList;
 
 	try
 	{
 		if (!smIdHash.contains(chain)) return channellist;
-		QDomElement domElement = smIdHash.value(chain)->value(smid);
-		domElement = domElement.firstChildElement("smchannel");
-		while (!domElement.isNull()) {
+                QDomElement domSMElement = smIdHash.value(chain)->value(smid);
+                QDomElement domElement = domSMElement.firstChildElement("smchannel");
+                while (!domElement.isNull()) {
+                    // first loop collects all normalizeIDs
+                    QDomElement normId = domElement.firstChildElement("normalize_id");
+                    if (!normId.isNull()) normalizeIdList.append(normId.text());
+                    domElement = domElement.nextSiblingElement("smchannel");
+                }
+
+                domElement = domSMElement.firstChildElement("smchannel");
+                while (!domElement.isNull()) {
 			QHash<QString, QString> paraHash;
 			eveSMChannel* nmChannel = NULL;
 			eveSMDetector* detector = NULL;
 			eveChannelDefinition* channelDefinition = NULL;
 			QDomElement domId = domElement.firstChildElement("channelid");
+
+                        if (normalizeIdList.contains(domId.text())){
+                            // skip this channel if it is used as normalized channel elsewhere
+                            domElement = domElement.nextSiblingElement("smchannel");
+                            continue;
+                        }
 
 			channelDefinition = deviceList.getChannelDef(domId.text());
 			if (channelDefinition == NULL){

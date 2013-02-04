@@ -43,10 +43,11 @@ public:
 	bool isOK(){return channelOK;};
         bool isDeferred(){return deferredTrigger;};
         QString getUnit(){return unit;};
-	virtual eveDevInfoMessage* getDeviceInfo();
+        virtual eveDevInfoMessage* getDeviceInfo(bool);
 	eveDataMessage* getValueMessage();
 	eveDataMessage* getNormValueMessage();
-	void sendError(int, int, int, QString);
+        eveDataMessage* getNormRawValueMessage();
+        void sendError(int, int, int, QString);
 	void addPositioner(eveCalc* pos){positionerList.append(pos);};
 	void loadPositioner(int pc);
 	void setTimer(QDateTime start);
@@ -94,6 +95,7 @@ private:
         eveAverage* averageNormCalc;
         eveAverage* averageNormRaw;
         eveDataMessage* valueRawMsg;
+        eveDataMessage* normRawMsg;
         eveDataMessage* normCalcMsg;
         double valueRaw;
         double normCalc;
@@ -112,7 +114,5 @@ private:
 	eveSMDetector* detector;
 
 };
-
-
 
 #endif /* EVESMCHANNEL_H_ */
