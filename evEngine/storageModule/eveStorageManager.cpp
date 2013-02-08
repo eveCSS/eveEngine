@@ -73,7 +73,9 @@ void eveStorageManager::handleMessage(eveMessage *message){
                 sendError(DEBUG,0,QString("handleMessage: unable to remove not existing chainId %1 from chainList").arg(id));
             }
             else {
-                addMessage(new eveChainStatusMessage(eveChainSTORAGEDONE, id, 0, 0));
+                eveChainStatusMessage* statusMessage = new eveChainStatusMessage(eveChainSTORAGEDONE, id, 0, 0);
+                statusMessage->addDestinationFacility(EVECHANNEL_NET | EVECHANNEL_MANAGER);
+                addMessage(statusMessage);
                 // init  shutdown if no chains left
                 if (!dc->isConfirmSave()){
                     if (chainIdChannelHash.isEmpty()) initShutdown();

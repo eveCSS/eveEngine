@@ -19,49 +19,50 @@ class eveMessageHub: public QObject
     Q_OBJECT
 
 public:
-	eveMessageHub(bool, bool);
-	virtual ~eveMessageHub();
-	int registerChannel(eveMessageChannel *, int);
-	void unregisterChannel(int);
-	void log(QString);
-	void init();
-	static eveMessageHub* getmHub();
+    eveMessageHub(bool, bool);
+    virtual ~eveMessageHub();
+    int registerChannel(eveMessageChannel *, int);
+    void unregisterChannel(int);
+    void log(QString);
+    void init();
+    static eveMessageHub* getmHub();
 
 public slots:
-	void newMessage(int);
-	void close();
-	void waitUntilDone();
+    void newMessage(int);
+    void close();
+    void waitUntilDone();
 
 signals:
-	void finished();
-	void closeAll();
-	void closeNet();
-	void closeParent();
-	void messageWaiting(int);
+    void finished();
+    void closeAll();
+    void closeNet();
+    void closeParent();
+    void messageWaiting(int);
 
 private:
-	void addError(int, int,  QString);
-	bool sendToStorage(eveMessage*);
-	bool sendToMath(eveMessage*);
-	bool haveStorage(){return !storageChannelList.isEmpty();};
-	int scanChannelCounter;
-	int nextChannel;
-	QThread* nwThread;
-	QThread* managerThread;
-	QThread* eventThread;
-	eveMessageChannel * netChannel;
-	QHash<int, eveMessageChannel * > mChanHash;
-//	QList<eveMessageChannel> scanChannels;
-	QList<int> storageChannelList;
-	QList<int> mathChannelList;
-	static eveMessageHub* mHub;
-	int engineStatus;
-	QString currentXmlId;
-	eveRequestManager *reqMan;
-	QReadWriteLock channelLock;
-	bool useGui;
-	bool useNet;
-	int loglevel;
+    void addError(int, int,  QString);
+    bool sendToStorage(eveMessage*);
+    bool sendToMath(eveMessage*);
+    bool haveStorage(){return !storageChannelList.isEmpty();};
+    int scanChannelCounter;
+    int nextChannel;
+    QThread* nwThread;
+    QThread* managerThread;
+    QThread* eventThread;
+    eveMessageChannel* netChannel;
+    QHash<int, eveMessageChannel* > mChanHash;
+    //	QList<eveMessageChannel> scanChannels;
+    QList<int> storageChannelList;
+    //	QList<int> mathChannelList;
+    QHash<int, eveMessageChannel* > mathChidHash;
+    static eveMessageHub* mHub;
+    int engineStatus;
+    QString currentXmlId;
+    eveRequestManager *reqMan;
+    QReadWriteLock channelLock;
+    bool useGui;
+    bool useNet;
+    int loglevel;
 };
 
 #endif /*EVEMESSAGEHUB_H_*/

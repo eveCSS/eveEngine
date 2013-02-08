@@ -54,17 +54,30 @@ void eveMathManager::handleMessage(eveMessage *message){
 		{
 			//sendError(DEBUG, 0 ,"eveMathManager::handleMessage: data message arrived");
 			eveDataMessage* datamessage = (eveDataMessage*)message;
-			if ((datamessage->getChainId() == chid) &&
-					(datamessage->getDataMod() == DMTunmodified)){
+            if (datamessage->getDataMod() == DMTunmodified){
 				eveVariant data = datamessage->toVariant();
 				foreach(eveMath* math, mathHash.values(datamessage->getSmId())){
 					math->addValue(datamessage->getXmlId(), datamessage->getSmId(), datamessage->getPositionCount(), data);
 				}
 			}
-		}
+            else if (datamessage->getDataMod() == DMTnormalized){
+                // TODO get normalized values
+                eveVariant data = datamessage->toVariant();
+                foreach(eveMath* math, mathHash.values(datamessage->getSmId())){
+                    // feed math with normalized values, if it doesn't computes them by itself
+                    if (math->getNormalizeExternal() && (math->getNormalizeId() == datamessage->getNormalizeId())
+                            && (math->getChannelId() == datamessage->getXmlId()))
+                        math->addValue(datamessage->getXmlId(), datamessage->getSmId(), datamessage->getPositionCount(), data);
+                }
+            }
+            message->setDestinationChannel(0);
+            message->setDestinationFacility(EVECHANNEL_NET);
+            addMessage(message);
+        }
 		break;
 		case EVEMESSAGETYPE_CHAINSTATUS:
 		{
+            bool sendShutdown = false;
 			if (((eveChainStatusMessage*)message)->getChainId() == chid){
 				if (((eveChainStatusMessage*)message)->getStatus()== eveChainSmDONE){
 					int smid = ((eveChainStatusMessage*)message)->getSmId();
@@ -92,18 +105,30 @@ void eveMathManager::handleMessage(eveMessage *message){
 						}
 					}
 				}
-				else if (((eveChainStatusMessage*)message)->getStatus()== eveChainDONE){
-					addMessage(new eveChainStatusMessage(eveChainMATHDONE, chid, 0, 0, eveTime::getCurrent(), 0, 0, storageChannel));
-					shutdown();
-				}
+                else if (((eveChainStatusMessage*)message)->getStatus()== eveChainDONE)
+                    sendShutdown = true;
 			}
-		}
-		break;
+            else
+                sendError(ERROR,0,QString("received chainstatus message for chain %1 my id: %2").arg(((eveChainStatusMessage*)message)->getChainId()).arg(chid));
+            // forward message
+            message->setDestinationChannel(0);
+            message->setDestinationFacility(EVECHANNEL_STORAGE | EVECHANNEL_NET | EVECHANNEL_MANAGER);
+            message->addDestinationFacility(EVECHANNEL_EVENT);
+            addMessage(message);
+            if (sendShutdown){
+                eveChainStatusMessage* doneMessage = new eveChainStatusMessage(eveChainMATHDONE, chid, 0, 0, eveTime::getCurrent(), 0, 0, storageChannel);
+                doneMessage->setDestinationChannel(storageChannel);
+                doneMessage->addDestinationFacility(EVECHANNEL_STORAGE);
+                addMessage(doneMessage);
+                shutdown();
+            }
+        }
+        break;
 		default:
 			sendError(ERROR,0,"eveMathManager::handleMessage: unknown message");
-			break;
+            delete message;
+            break;
 	}
-	delete message;
 }
 
 /**
@@ -163,7 +188,10 @@ void eveMathManager::sendError(int severity, int facility, int errorType,  QStri
  */
 void eveMathManager::sendMessage(eveDataMessage* message){
 	message->setChainId(chid);
-	addMessage(message);
+    message->setDestinationChannel(storageChannel);
+    message->addDestinationFacility(EVECHANNEL_STORAGE);
+    message->addDestinationFacility(EVECHANNEL_NET);
+    addMessage(message);
 	if (message->getDataMod() == DMTnormalized)
 		sendError(DEBUG,0,QString("sending normalized DataMessage: %1").arg(message->getName()));
 }

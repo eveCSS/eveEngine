@@ -34,6 +34,7 @@ eveCalc::eveCalc(eveMessageChannel* manag, QString calcAlgorithm, QString xAxis,
 	else
 		doNormalize = true;
 	saveValues = true;
+    normalizeExt = false;
         // don't save all values for MIN, MAX, SUM
         if ((algorithm == MIN) || (algorithm == MAX) || (algorithm == SUM)) saveValues = false;
 	reset();
@@ -46,10 +47,9 @@ eveCalc::eveCalc(eveMathConfig mathConfig, eveMessageChannel* manag) {
 	detectorId = QString(mathConfig.getDetector());
 	normalizeId = QString(mathConfig.getNormalizeDetector());
 	algorithm = UNKNOWN;
-	if (normalizeId.isEmpty())
-		doNormalize = false;
-	else
-		doNormalize = true;
+    normalizeExt = mathConfig.getNormalizeExternal();
+    doNormalize = false;
+    if (!normalizeId.isEmpty() && !normalizeExt) doNormalize = true;
 	saveValues = true;
 	reset();
 
@@ -127,6 +127,10 @@ bool eveCalc::addValue(QString deviceId, int pos, eveVariant dataVar){
             else if (doNormalize && (deviceId == normalizeId)) {
                 zdata = data;
                 zpos = pos;
+            }
+            else if (normalizeExt && (deviceId == normalizeId)) {
+                ydata = data;
+                ypos = pos;
             }
             else
                 return retval;
@@ -487,7 +491,7 @@ eveCalc::Calcresult eveCalc::getPeak(const QVector<QPointF>& curve){
 
 /**
  * @param curve
- * @return normAxis id of normalization axis
+ * @return
  */
 eveCalc::Calcresult eveCalc::getCenter(eveCalc::Calcresult minmax, const QVector<QPointF>& curve){
 

@@ -27,6 +27,7 @@ public:
 	void sendMessage(eveDataMessage* message);
 	void sendError(int, int, QString);
 	void shutdown();
+        int getChainId(){return chid;};
 
 private:
 	void handleMessage(eveMessage *);

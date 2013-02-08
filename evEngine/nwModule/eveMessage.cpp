@@ -10,6 +10,7 @@ eveMessage::eveMessage()
 	type = 0;
 	priority = EVEMESSAGEPRIO_NORMAL;
 	destination = 0;
+    facility = 0;
 }
 
 /**
@@ -21,7 +22,8 @@ eveMessage::eveMessage(int mtype, int prio, int dest)
 	priority = prio;
 	destination = dest;
 	type = mtype;
-	// TODO remove this assertion
+    facility = 0;
+    // TODO remove this assertion
 	assert ((type == EVEMESSAGETYPE_START) ||
 			(type == EVEMESSAGETYPE_HALT) ||
 			(type == EVEMESSAGETYPE_STORAGECONFIG) ||
@@ -56,7 +58,7 @@ eveMessage::~eveMessage()
 bool eveMessage::compare(eveMessage *message)
 {
 	if ((message->getType() == type) && (message->getPriority() == priority)
-				&& (message->getDestination() == destination)) return true;
+                && (message->getDestinationChannel() == destination)) return true;
 	return false;
 }
 void eveMessage::dump()
@@ -128,7 +130,7 @@ bool eveMessageTextList::compare(eveMessage *message)
 
 
 /**
- * \brief Constructor a message holding an int
+ * \brief Constructor of message holding an int
  * \param mtype the type of message
  * \param ival integer value of the message
  */
@@ -869,10 +871,10 @@ bool evePlayListMessage::compare(eveMessage *message)
  * \brief clone a messages
  * \return identical evePlayListMessage Pointer
  */
-evePlayListMessage* evePlayListMessage::clone()
-{
-	return new evePlayListMessage(plList, priority);
-}
+//evePlayListMessage* evePlayListMessage::clone()
+//{
+//	return new evePlayListMessage(plList, priority);
+//}
 /**
  * \brief copy constructor
  */

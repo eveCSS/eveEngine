@@ -128,15 +128,20 @@ public:
 	int getType(){return type;};
 	int getPriority(){return priority;};
 	void setPriority(int prio){priority = prio;};
-	int getDestination(){return destination;};
-	void setDestination(int channel){destination = channel;};
-	virtual bool compare(eveMessage *);
+    int getDestinationChannel(){return destination;};
+    void setDestinationChannel(int channel){destination = channel;};
+    int getDestinationFacility(){return facility;};
+    void setDestinationFacility(int fac){facility = fac;};
+    void addDestinationFacility(int fac){facility |= fac;};
+    bool hasDestinationFacility(int fac){return facility & fac;};
+    virtual bool compare(eveMessage *);
 	void dump();
 	virtual eveMessage* clone(){return new eveMessage(type, priority, destination);};
 protected:
 	int destination;
 	int type;
 	int priority;
+    int facility;
 };
 
 /**
@@ -212,7 +217,6 @@ private:
 /**
  * \brief a message to add an entry to the playlist
  */
-// TODO make one message out of the following, get rid of virtual clone method and protected members
 class eveAddToPlMessage : public eveMessage
 {
 public:
@@ -222,7 +226,7 @@ public:
 	QString getXmlAuthor(){return XmlAuthor;};
 	QByteArray getXmlData(){return XmlData;};
 	bool compare(eveMessage *);
-	virtual eveAddToPlMessage* clone(){return new eveAddToPlMessage(*this);};
+//	virtual eveAddToPlMessage* clone(){return new eveAddToPlMessage(*this);};
 
 
 protected:
@@ -535,7 +539,7 @@ public:
 	int getCount(){return plList.size();};
 	evePlayListEntry getEntry(int);
 	bool compare(eveMessage *);
-	virtual evePlayListMessage* clone();
+//	virtual evePlayListMessage* clone();
 	void dump();
 
 private:

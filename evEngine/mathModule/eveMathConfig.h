@@ -20,17 +20,16 @@ public:
 	virtual ~eveMathConfig();
 	void addYAxis(QString, QString);
 	void addScanModule(int);
-	// bool haveNormalize();
 	QString& getXAxis(){return xAxisId;};
 	QString& getDetector(){return detectorId;};
 	QString& getNormalizeDetector(){return normalizeId;};
-	//bool containsSmId(int smid){return smidlist.contains(smid);};
-	//int getChainId(){return chId;};
 	int getPlotWindowId(){return plotWindowId;};
 	bool hasEqualDevices(eveMathConfig);
 	bool hasInit(){return init;};
 	int getFirstScanModuleId();
 	QList<int> getAllScanModuleIds(){return smidlist;};
+    void setNormalizeExternal(bool normExt){normalizeExt = normExt;};
+    bool getNormalizeExternal(){return normalizeExt;};
 
 protected:
 	QString xAxisId;
@@ -38,11 +37,10 @@ protected:
 	QString normalizeId;
 
 private:
-	//int chId;
 	bool init;
 	int plotWindowId;
 	QList<int> smidlist;
-
+    bool normalizeExt;
 
 };
 

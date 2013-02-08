@@ -1,13 +1,13 @@
 #ifndef EVEMESSAGECHANNEL_H_
 #define EVEMESSAGECHANNEL_H_
 
-// predefined (reserved) Channels
-#define EVECHANNELS_RESERVED 5
+// predefined (reserved) Channels and facilities
+#define EVECHANNELS_RESERVED 32
 #define EVECHANNEL_NET 1
 #define EVECHANNEL_STORAGE 2
-#define EVECHANNEL_MANAGER 3
-#define EVECHANNEL_EVENT 4
-#define EVECHANNEL_MATH 5
+#define EVECHANNEL_MANAGER 4
+#define EVECHANNEL_EVENT 8
+#define EVECHANNEL_MATH 16
 
 
 #include <QObject>

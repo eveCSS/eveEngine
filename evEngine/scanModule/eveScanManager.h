@@ -75,7 +75,6 @@ private:
 	int chainId;
 	int storageChannel;
 	bool useStorage;
-	bool sentData;
 	eveScanModule * rootSM;
 	eveManager *manager;
 	int posCounter;

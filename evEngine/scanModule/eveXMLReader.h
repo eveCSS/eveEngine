@@ -77,6 +77,7 @@ private:
 	void createOption(QDomNode);
 	eveTransportDefinition* createTransportDefinition(QDomElement node);
 	void getPluginData(QDomElement, QHash<QString, QString>&);
+    bool compareWithSMChannel(QDomElement, QString, QString);
 	eveDeviceList deviceList;
 	eveManager *parent;
 	QHash<int, QDomElement> chainDomIdHash;

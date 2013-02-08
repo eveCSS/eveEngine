@@ -10,6 +10,7 @@
 #include "eveError.h"
 #include "eveRequestManager.h"
 #include "eveParameter.h"
+#include "eveMathManager.h"
 
 eveMessageHub* eveMessageHub::mHub=NULL;
 
@@ -113,7 +114,8 @@ int eveMessageHub::registerChannel(eveMessageChannel * channel, int channelId)
 	}
 	else if (channelId == EVECHANNEL_MATH ) {
 		newId = ++nextChannel;
-		mathChannelList.append(newId);
+                int channelchid = ((eveMathManager*)channel)->getChainId();
+                mathChidHash.insert(channelchid, channel);
 	}
 	else
 		newId = channelId;
@@ -137,16 +139,18 @@ int eveMessageHub::registerChannel(eveMessageChannel * channel, int channelId)
  */
 void eveMessageHub::unregisterChannel(int channelId)
 {
-	QWriteLocker locker(&channelLock);
-	if (mChanHash.contains(channelId)){
-		disconnect (mChanHash.value(channelId), SIGNAL(messageWaiting(int)), this, SLOT(newMessage(int)));
-		disconnect (this, SIGNAL(closeAll()), mChanHash.value(channelId), SLOT(shutdown()));
-		mChanHash.remove(channelId);
-	}
-	storageChannelList.removeAll(channelId);
-	mathChannelList.removeAll(channelId);
-	eveError::log(DEBUG, QString("eveMessageHub: unregistered channel %1").arg(channelId));
-	return;
+    QWriteLocker locker(&channelLock);
+    if (mChanHash.contains(channelId)){
+        disconnect (mChanHash.value(channelId), SIGNAL(messageWaiting(int)), this, SLOT(newMessage(int)));
+        disconnect (this, SIGNAL(closeAll()), mChanHash.value(channelId), SLOT(shutdown()));
+        // remove the channel from mathChidHash
+        eveMessageChannel* mchannel = mChanHash.take(channelId);
+        int key = mathChidHash.key(mchannel, 0);
+        if (key != 0) mathChidHash.remove(key);
+    }
+    storageChannelList.removeAll(channelId);
+    eveError::log(DEBUG, QString("eveMessageHub: unregistered channel %1").arg(channelId));
+    return;
 }
 
 /**
@@ -212,54 +216,65 @@ void eveMessageHub::newMessage(int messageSource)
             break;
         case EVEMESSAGETYPE_CHAINSTATUS:
         {
+            eveMessage* mclone = NULL;
             /* send  to storagemodules if available */
-            if (haveStorage()){
-                eveMessage *mclone = message->clone();
-                if (!sendToStorage(mclone))
-                    delete mclone;
+            if (haveStorage() && message->hasDestinationFacility(EVECHANNEL_STORAGE)){
+                if (mclone == NULL) mclone = message->clone();
+                if (sendToStorage(mclone)) mclone = NULL;
             }
-            eveMessage *mclone = message->clone();
-            if (!sendToMath(mclone)) delete mclone;
+            /* send to math if available */
+            if (message->hasDestinationFacility(EVECHANNEL_MATH)){
+                if (mclone == NULL) mclone = message->clone();
+                if (sendToMath(mclone)) mclone = NULL;
+            }
+
             /* send chainstatus to viewers if available */
-            if (mChanHash.contains(EVECHANNEL_NET)){
-                eveMessage *mclone = message->clone();
-                if(!mChanHash.value(EVECHANNEL_NET)->queueMessage(mclone)) delete mclone;
+            if (mChanHash.contains(EVECHANNEL_NET) && message->hasDestinationFacility(EVECHANNEL_NET)){
+                if (mclone == NULL) mclone = message->clone();
+                if(mChanHash.value(EVECHANNEL_NET)->queueMessage(mclone)) mclone = NULL;
             }
             /* send chainstatus to eventManager (we always have one)*/
-            if (mChanHash.contains(EVECHANNEL_EVENT)){
-                eveMessage *mclone = message->clone();
-                if(!mChanHash.value(EVECHANNEL_EVENT)->queueMessage(mclone)) delete mclone;
+            if (mChanHash.contains(EVECHANNEL_EVENT) && message->hasDestinationFacility(EVECHANNEL_EVENT)){
+                if (mclone == NULL) mclone = message->clone();
+                if(mChanHash.value(EVECHANNEL_EVENT)->queueMessage(mclone)) mclone = NULL;
             }
+            if (mclone != NULL) delete mclone;
             /* send chainstatus to manager (we always have one)*/
-            if (mChanHash.contains(EVECHANNEL_MANAGER)){
+            if (mChanHash.contains(EVECHANNEL_MANAGER) && message->hasDestinationFacility(EVECHANNEL_MANAGER)){
                 if (mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(message))message = NULL;
+            }
+            else {
+                delete message;
+                message = NULL;
             }
             break;
         }
         case EVEMESSAGETYPE_DATA:
         {
-            if (((eveDataMessage*)message)->getDataMod() == DMTdeviceData){
-                int channel = message->getDestination();
-                if (mChanHash.contains(channel) && (mChanHash.value(channel)->queueMessage(message)))
-                    message = NULL;
-                else {
-                    addError(MINOR, 0, QString("unable to deliver DataMessage to channel %1").arg(channel));
-                    message = NULL;
-                    delete message;
-                }
-                break;
-            }
+            eveMessage* mclone = NULL;
             /* send data to viewers if available */
-            if (mChanHash.contains(EVECHANNEL_NET)){
-                eveMessage *mclone = message->clone();
-                if (!mChanHash.value(EVECHANNEL_NET)->queueMessage(mclone)) delete mclone;
+            if (message->hasDestinationFacility(EVECHANNEL_NET)){
+                if (mclone == NULL) mclone = message->clone();
+                // if this is a normalized detector value, append normalizeId
+                // we need this unless ecp is modified to specify normalizeId
+                eveDataMessage* dataclone = (eveDataMessage*)mclone;
+                if ((dataclone->getDataMod() != DMTunmodified) && !dataclone->getNormalizeId().isEmpty())
+                    dataclone->setXmlId(dataclone->getXmlId() + "__" + dataclone->getNormalizeId());
+                if (mChanHash.value(EVECHANNEL_NET)->queueMessage(mclone)) mclone = NULL;
             }
+            /* measurement data will be sent to Math */
+            if (message->hasDestinationFacility(EVECHANNEL_MATH)){
+                if (mclone == NULL) mclone = message->clone();
+                if (sendToMath(mclone)) mclone = NULL;
+            }
+
+            // use message for the last test
+            if (mclone != NULL) delete mclone;
             /* send data to storagemodules if available */
-            if (haveStorage()){
-                eveMessage *mclone = message->clone();
-                if (!sendToStorage(mclone)) delete mclone;
+            if (haveStorage() && message->hasDestinationFacility(EVECHANNEL_STORAGE)){
+                if (sendToStorage(message)) message = NULL;
             }
-            if (!sendToMath(message)) delete message;
+            if (message != NULL) delete message;
             message = NULL;
         }
             break;
@@ -296,7 +311,7 @@ void eveMessageHub::newMessage(int messageSource)
         case EVEMESSAGETYPE_LIVEDESCRIPTION:
         case EVEMESSAGETYPE_METADATA:
             if (haveStorage()){
-                ((eveMessageText*)message)->setDestination(EVECHANNEL_STORAGE);
+                ((eveMessageText*)message)->setDestinationFacility(EVECHANNEL_STORAGE);
                 if (sendToStorage(message)) message = NULL;
             }
             else {
@@ -457,29 +472,31 @@ void eveMessageHub::waitUntilDone()
  */
 bool eveMessageHub::sendToStorage(eveMessage* message)
 {
-	eveMessage* clone;
-	bool retval = false;
-	int channel = message->getDestination();
-	// channel EVECHANNEL_STORAGE means: send it to all storageChannels
-	if ( channel == EVECHANNEL_STORAGE ){
-		int count = storageChannelList.count();
-		foreach (int chan, storageChannelList) {
-			if (count > 1)
-				clone = message->clone();
-			else
-				clone = message;
-			if (!mChanHash.value(chan)->queueMessage(clone)) delete clone;
-			--count;
-			retval = true;
-		}
-	}
-	else {
-		if (mChanHash.contains(channel) && storageChannelList.contains(channel)){
-			if (!mChanHash.value(channel)->queueMessage(message)) delete message;
-			retval = true;
-		}
-	}
-	return retval;
+    eveMessage* clone;
+    bool retval = false;
+    int channel = message->getDestinationChannel();
+
+    // if destination == 0 => send it to all storageChannels
+    // else => send it to a specific storageChannel
+    if ( channel == 0 ){
+        int count = storageChannelList.count();
+        foreach (int chan, storageChannelList) {
+            if (count > 1)
+                clone = message->clone();
+            else
+                clone = message;
+            if (!mChanHash.value(chan)->queueMessage(clone)) delete clone;
+            --count;
+            retval = true;
+        }
+    }
+    else {
+        if (mChanHash.contains(channel) && storageChannelList.contains(channel)){
+            if (!mChanHash.value(channel)->queueMessage(message)) delete message;
+            retval = true;
+        }
+    }
+    return retval;
 }
 
 /**
@@ -489,26 +506,20 @@ bool eveMessageHub::sendToStorage(eveMessage* message)
  */
 bool eveMessageHub::sendToMath(eveMessage* message)
 {
-	eveMessage* clone;
-	bool retval = false;
+    bool retval = false;
 
-	// send only raw data to math
-	if ((message->getType() == EVEMESSAGETYPE_DATA) &&
-			(((eveDataMessage*)message)->getDataMod() != DMTunmodified)){
-		delete message;
-		return true;
-	}
-	// TODO
-	// we should send the message to MathManager of corresponding chain only
-	int count = mathChannelList.count();
-	foreach (int chan, mathChannelList) {
-		if (count > 1)
-			clone = message->clone();
-		else
-			clone = message;
-		if (!mChanHash.value(chan)->queueMessage(clone)) delete clone;
-		--count;
-		retval = true;
-	}
-	return retval;
-}
+    // send all data to corresponding math
+    if (message->getType() == EVEMESSAGETYPE_DATA) {
+        int chid = ((eveDataMessage*)message)->getChainId();
+        if (mathChidHash.contains(chid)) {
+            retval = mathChidHash.value(chid)->queueMessage(message);
+        }
+    }
+    else if (message->getType() == EVEMESSAGETYPE_CHAINSTATUS) {
+        int chid = ((eveChainStatusMessage*)message)->getChainId();
+        if (mathChidHash.contains(chid)) {
+            retval = mathChidHash.value(chid)->queueMessage(message);
+        }
+    }
+    return retval;
+    }

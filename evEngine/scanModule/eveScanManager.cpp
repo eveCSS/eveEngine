@@ -34,7 +34,6 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 	posCounter = 0;
         totalPositions = 1;
 	useStorage = false;
-	sentData = false;
 	manager = parent;
 	shutdownPending = false;
         isStarted = false;
@@ -262,30 +261,31 @@ void eveScanManager::smDone() {
 }
 
 void eveScanManager::sendMessage(eveMessage *message){
-	// a message with destination zero is sent to all storageModules
-	if ((message->getType() == EVEMESSAGETYPE_DATA)
-		|| (message->getType() == EVEMESSAGETYPE_DEVINFO)
-		|| (message->getType() == EVECHANNEL_STORAGE)) {
-		message->setDestination(storageChannel);
-	}
-	if (message->getType() == EVEMESSAGETYPE_DATA) {
-		if (((eveDataMessage*)message)->getPositionCount() == 0) ((eveDataMessage*)message)->setPositionCount(posCounter);
-		sentData = true;
-	}
-	addMessage(message);
+    // a message with destination zero is sent to all storageModules
+    if (message->getType() == EVEMESSAGETYPE_DEVINFO) {
+        message->setDestinationChannel(storageChannel);
+        message->setDestinationFacility(EVECHANNEL_STORAGE);
+    }
+    else if (message->getType() == EVEMESSAGETYPE_DATA) {
+        message->setDestinationChannel(storageChannel);
+        message->setDestinationFacility(EVECHANNEL_STORAGE);
+        message->addDestinationFacility(EVECHANNEL_MATH);
+        if (((eveDataMessage*)message)->getPositionCount() == 0) ((eveDataMessage*)message)->setPositionCount(posCounter);
+    }
+    addMessage(message);
 }
 
 void eveScanManager::sendRemainingTime(){
 
-        if (isStarted){
-            if ((totalPositions > 2) && (posCounter > 1)){
-                if (totalPositions < posCounter) totalPositions = posCounter;
-                int elapsed = startTime.secsTo(QDateTime::currentDateTime());
-                int remaining = elapsed * totalPositions / posCounter - elapsed;
-                sendError(DEBUG, 0, QString("remaining %4, elapsed %1, totalPositions %2, posCounter %3").arg(elapsed).arg(totalPositions).arg(posCounter).arg(remaining));
-                sendStatus(0, remaining);
-            }
+    if (isStarted){
+        if ((totalPositions > 2) && (posCounter > 1)){
+            if (totalPositions < posCounter) totalPositions = posCounter;
+            int elapsed = startTime.secsTo(QDateTime::currentDateTime());
+            int remaining = elapsed * totalPositions / posCounter - elapsed;
+            sendError(DEBUG, 0, QString("remaining %4, elapsed %1, totalPositions %2, posCounter %3").arg(elapsed).arg(totalPositions).arg(posCounter).arg(remaining));
+            sendStatus(0, remaining);
         }
+    }
 }
 
 /**
@@ -362,7 +362,10 @@ void eveScanManager::setStatus(int smid, smStatusT status){
 void eveScanManager::sendStatus(int smid, int remainTime){
 
 	// fill in our storage channel
-	addMessage(new eveChainStatusMessage(currentStatus.getStatus(), chainId, smid, posCounter, eveTime::getCurrent(), remainTime, 0, storageChannel));
+    eveChainStatusMessage* message = new eveChainStatusMessage(currentStatus.getStatus(), chainId, smid, posCounter, eveTime::getCurrent(), remainTime);
+    // we send all status messages to math first from where it will be sent to everone else
+    message->addDestinationFacility(EVECHANNEL_MATH);
+    addMessage(message);
 }
 
 void eveScanManager::addToHash(QHash<QString, QString>& hash, QString key, eveXMLReader* parser){
@@ -380,8 +383,9 @@ void eveScanManager::addToHash(QHash<QString, QString>& hash, QString key, eveXM
  */
 void eveScanManager::nextPos(){
 	++posCounter;
-        eveDataMessage* message = new eveDataMessage("PosCountTimer", "", eveDataStatus(), DMTmetaData, eveTime::getCurrent(), QVector<int>(1, eveStartTime::getMSecsSinceStart()));
-	message->setDestination(storageChannel);
+    eveDataMessage* message = new eveDataMessage("PosCountTimer", "", eveDataStatus(), DMTmetaData, eveTime::getCurrent(), QVector<int>(1, eveStartTime::getMSecsSinceStart()));
+    message->setDestinationChannel(storageChannel);
+    message->setDestinationFacility(EVECHANNEL_STORAGE);
 	message->setPositionCount(posCounter);
 	message->setChainId(chainId);
 	addMessage(message);

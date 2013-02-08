@@ -118,7 +118,8 @@ void eveDeviceMonitor::saveValue(eveDataMessage* newdata) {
 	}
 
 	if (newdata != NULL){
-		newdata->setDestination(destination);
+        newdata->setDestinationChannel(destination);
+        newdata->setDestinationFacility(EVECHANNEL_STORAGE);
 		newdata->setDataMod(DMTdeviceData);
 		manager->addMessage(newdata);
 		if ((newdata->getDataStatus().getSeverity() != 0) || (newdata->getDataStatus().getAlarmCondition() != 0)){

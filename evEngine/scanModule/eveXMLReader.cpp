@@ -1264,7 +1264,7 @@ QList<eveDeviceDefinition *>* eveXMLReader::getMonitorDeviceList(){
 	foreach(QString xmlid, monitorList){
 		eveDeviceDefinition* deviceDef = deviceList.getAnyDef(xmlid);
 		if ((deviceDef == NULL) || (deviceDef->getValueCmd() == NULL)){
-			sendError(ERROR, 0, QString("MonitorList: no or invalid device definition found for %1").arg(xmlid));
+            sendError(ERROR, 0, QString("MonitorList: no or invalid device definition found for %1").arg(xmlid));
 		}
 		else{
 			monitors->append(deviceDef);
@@ -1302,7 +1302,9 @@ QList<eveMathConfig*>* eveXMLReader::getFilteredMathConfigs(int chid){
 				if (math->hasEqualDevices(*mathNext) && !mathNext->hasInit()) {
 					math->addScanModule(mathNext->getFirstScanModuleId());
 					mathConfigList->removeAt(next);
-					delete mathNext;
+                    if (math->getNormalizeExternal() != mathNext->getNormalizeExternal())
+                        sendError(MINOR, 0, QString("SM id %1: yaxis/normalize_id/external inconsistency found, might show a slightly inaccurate plot %2").arg(mathNext->getFirstScanModuleId()).arg(math->getDetector()));
+                    delete mathNext;
 				}
 				else {
 					break;
@@ -1352,6 +1354,7 @@ void eveXMLReader::getMathConfigFromPlot(int chid, int smid, QList<eveMathConfig
 					eveMathConfig *mathConfig = new eveMathConfig(plotId, init, xAxisId);
 					mathConfig->addScanModule(smid);
 					mathConfig->addYAxis(yAxisId, normalizeId);
+                    if ((normalizeId.length() > 0 ) && compareWithSMChannel(domElement, yAxisId, normalizeId)) mathConfig->setNormalizeExternal(true);
 					mathConfigList->append(mathConfig);
 				}
 				domYAxis = domYAxis.nextSiblingElement("yaxis");
@@ -1361,4 +1364,18 @@ void eveXMLReader::getMathConfigFromPlot(int chid, int smid, QList<eveMathConfig
 	}
 	if (getNested(chid, smid) != 0) getMathConfigFromPlot(chid, getNested(chid, smid), mathConfigList);
 	if (getAppended(chid, smid) != 0) getMathConfigFromPlot(chid, getAppended(chid, smid), mathConfigList);
+}
+
+bool eveXMLReader:: compareWithSMChannel(QDomElement elem, QString yaxis, QString normalize){
+
+    QDomElement smchannelElement = elem.firstChildElement("smchannel");
+    while (!smchannelElement.isNull()) {
+        QDomElement chidElem = smchannelElement.firstChildElement("channelid");
+        QDomElement normidElem = smchannelElement.firstChildElement("normalize_id");
+
+        if (!chidElem.isNull() && !normidElem.isNull() && (chidElem.text() == yaxis) &&
+                    (normidElem.text() == normalize)) return true;
+        smchannelElement = smchannelElement.nextSiblingElement("smchannel");
+    }
+    return false;
 }
