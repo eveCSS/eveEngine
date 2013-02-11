@@ -23,7 +23,7 @@ public:
 	bool isExecuting();
 	bool isDone();
 	bool isRedo(){return (chainRedo || redo);};
-	bool isPaused(){return (chainPause || pause);};
+    bool isPaused(){return (chainPause || pause || masterPause);};
 	smStatusT getStatus(){return status;};
 	bool setEvent(eveEventProperty* evprop );
 	void redoStart(){trackRedo = false;};
@@ -44,6 +44,7 @@ private:
 	bool pause;
 	bool redo;
 	bool chainPause;
+    bool masterPause;
 	bool chainRedo;
 	bool trackRedo; // wird mit redoStart gelöscht, von redoEvent
 	                // gesetzt und redoStatus gelesen

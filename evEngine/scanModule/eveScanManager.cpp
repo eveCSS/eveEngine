@@ -126,6 +126,7 @@ void eveScanManager::init() {
 		registerEvent(0, evprop, true);
 		if (evprop->getActionType() == eveEventProperty::REDO) haveRedoEvent = true;
 	}
+    if (haveRedoEvent) rootSM->setDoRedo();
 	delete eventList;
 	eventList = NULL;
 
@@ -442,11 +443,8 @@ void eveScanManager::newEvent(eveEventProperty* evprop) {
                     sendStartTime();
                     isStarted = true;
                 }
-                if (currentStatus.setEvent(evprop) && rootSM) rootSM->newEvent(evprop);
 	}
-	else {
-		if (rootSM) rootSM->newEvent(evprop);
-	}
+    if (rootSM) rootSM->newEvent(evprop);
 /*
 	switch (evprop->getActionType()){
 	case eveEventProperty::START:

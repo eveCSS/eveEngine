@@ -51,9 +51,9 @@ public:
         int getTotalSteps();
         int getChainId(){return chainId;};
 	int getSmId(){return smId;};
-	void gotoStartInit();
 	void readPos();
 	bool newEvent(eveEventProperty*);
+    void setDoRedo();
 
 public slots:
 	void execStage();

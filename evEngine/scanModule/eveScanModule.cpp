@@ -233,7 +233,6 @@ void eveScanModule::stgInit() {
             sendError(DEBUG, 0, QString("registering event for ..."));
             if (evprop->getActionType() == eveEventProperty::TRIGGER) eventTrigger=true;
             else if (evprop->getActionType() == eveEventProperty::REDO) doRedo=true;
-
             manager->registerEvent(smId, evprop, false);
         }
         delete eventList;
@@ -356,75 +355,17 @@ void eveScanModule::stgReadPos() {
 }
 
 /**
- *  will be called for nested/appended SMs only
- *
-*/
-void eveScanModule::gotoStartInit() {
-    currentStage = eveStgGOTOSTARTINIT;
-    currentStageCounter = 0;
-    currentStageReady = false;
-    emit sigExecStage();
-}
-
-
-/**
  * \brief Goto Start Position during Init
  *
- * move motors  to start position,
- * - read motor positions
- * - send motor positions
+ * not used any more,
+ * keep it until stage has been removed from execStage
  *
  */
 void eveScanModule::stgGotoStartInit() {
 
-    if (currentStageCounter == 0){
-        if (myStatus.isExecuting()){
-            // skip this stage, proceed with gotoStart
-            currentStageReady = true;
-        }
-        else {
-            sendError(DEBUG, 0, "stgGotoStartInit");
-            currentStageCounter = 1;
-            signalCounter = 0;
-            foreach (eveSMAxis *axis, *axisList){
-                sendError(DEBUG, 0, QString("Moving axis %1").arg(axis->getName()));
-                // gotoStartPos but do not queue, set offset, ignore timer
-                axis->gotoStartPos(false, true, true);
-                ++signalCounter;
-            }
-            // for now we skip this for appended and nested SMs
-            // 1. don't go to start pos during init if axis is relative, because
-            // presumably the axis will be driven in a previous SM
-            // 2. if several appended/nested SMs use the same axis, the start position for
-            // this axis will be positioned several times.
-//            if (nestedSM != NULL) {
-//                nestedSM->gotoStartInit();
-//                ++signalCounter;
-//            }
-//            if (appendedSM != NULL) {
-//                appendedSM->gotoStartInit();
-//                ++signalCounter;
-//            }
-        }
-        emit sigExecStage();
-    }
-    else {
-        if (signalCounter > 0){
-            --signalCounter;
-        }
-        else {
-            // check if all axes are done
-            bool allDone = true;
-            foreach (eveSMAxis *axis, *axisList) if (!axis->isDone()) allDone = false;
-//            if ((nestedSM != NULL) && (!nestedSM->isStageDone())) allDone = false;
-//            if ((appendedSM != NULL) && (!appendedSM->isStageDone())) allDone = false;
-            if (allDone){
-                sendError(DEBUG, 0, "stgGotoStartInit done");
-                currentStageReady=true;
-                emit sigExecStage();
-            }
-        }
-    }
+    // skip this stage, proceed with gotoStart
+    currentStageReady = true;
+    emit sigExecStage();
 }
 
 /**
@@ -1088,7 +1029,7 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
 				channel->stop();
 			}
 		case eveEventProperty::STOP:
-                        if (nestedSM) nestedSM->newEvent(evprop);
+            if (nestedSM) nestedSM->newEvent(evprop);
 			if ((myStatus.isExecuting()) || (myStatus.getStatus() == eveSmNOTSTARTED)){
 				if(myStatus.forceExecuting()) manager->setStatus(smId, myStatus.getStatus());
                                 sendError(INFO, 0, QString("Chain Stop/Halt Event: %1; Scan will end now").arg(evprop->getName()));
@@ -1100,31 +1041,31 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
 			else if ((appendedSM) && (myStatus.getStatus() == eveSmAPPEND))
 				appendedSM->newEvent(evprop);
 			break;
-		case eveEventProperty::REDO:
-                    if (nestedSM) nestedSM->newEvent(evprop);
-                    if (myStatus.setEvent(evprop)) {
-                        if (evprop->getOn())
-                            sendError(INFO, 0, QString("Chain Redo Event: %1; Pause Scan").arg(evprop->getName()));
-                        else
-                            sendError(INFO, 0, QString("Chain Redo Event: %1; Resume Scan").arg(evprop->getName()));
-                        manager->setStatus(smId, myStatus.getStatus());
-                        emit sigExecStage();
-                    }
-                    if (appendedSM) appendedSM->newEvent(evprop);
-                    break;
-                case eveEventProperty::PAUSE:
-			if (nestedSM) nestedSM->newEvent(evprop);
-			if (myStatus.setEvent(evprop)) {
-                            if (evprop->isSwitchOn())
-                                sendError(INFO, 0, QString("Chain Pause Event: %1; Pause Scan").arg(evprop->getName()));
-                            if (evprop->isSwitchOff())
-                                sendError(INFO, 0, QString("Chain Pause Event: %1; Resume Scan").arg(evprop->getName()));
-                            manager->setStatus(smId, myStatus.getStatus());
-                            emit sigExecStage();
-			}
-			if (appendedSM) appendedSM->newEvent(evprop);
-			break;
-		case eveEventProperty::START:
+        case eveEventProperty::REDO:
+            if (nestedSM) nestedSM->newEvent(evprop);
+            if (myStatus.setEvent(evprop)) {
+                if (evprop->getOn())
+                    sendError(INFO, 0, QString("Chain Redo Event: %1; Pause Scan").arg(evprop->getName()));
+                else
+                    sendError(INFO, 0, QString("Chain Redo Event: %1; Resume Scan").arg(evprop->getName()));
+                manager->setStatus(smId, myStatus.getStatus());
+                emit sigExecStage();
+            }
+            if (appendedSM) appendedSM->newEvent(evprop);
+            break;
+        case eveEventProperty::PAUSE:
+            if (nestedSM) nestedSM->newEvent(evprop);
+            if (myStatus.setEvent(evprop)) {
+                if (evprop->isSwitchOn())
+                    sendError(INFO, 0, QString("Chain Pause Event: %1; Pause Scan").arg(evprop->getName()));
+                if (evprop->isSwitchOff())
+                    sendError(INFO, 0, QString("Chain Pause Event: %1; Resume Scan").arg(evprop->getName()));
+                manager->setStatus(smId, myStatus.getStatus());
+                emit sigExecStage();
+            }
+            if (appendedSM) appendedSM->newEvent(evprop);
+            break;
+        case eveEventProperty::START:
 			if (myStatus.getStatus() == eveSmNOTSTARTED) {
 				sendError(DEBUG, 0, QString("Starting Scan Module"));
 				startExec();
@@ -1251,6 +1192,12 @@ eveSMAxis* eveScanModule::findAxis(QString axisid){
 		return axis;
 	}
 	return NULL;
+}
+
+void eveScanModule::setDoRedo(){
+    doRedo = true;
+    if (nestedSM) nestedSM->setDoRedo();
+    if (appendedSM) appendedSM->setDoRedo();
 }
 
 int eveScanModule::getTotalSteps(){

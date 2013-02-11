@@ -13,7 +13,8 @@ eveSMStatus::eveSMStatus() {
 	pause = false;
 	redo = false;
 	chainPause = false;
-	chainRedo = false;
+    masterPause = false;
+    chainRedo = false;
 	trackRedo = false;
 	evTrigWait = false;
 	maTrigWait = false;
@@ -140,83 +141,111 @@ bool eveSMStatus::triggerDetecStart(int rid){
 
 bool eveSMStatus::setEvent(eveEventProperty* evprop ) {
 
-	bool changed = false;
-	bool *setPause, *leavePause, *setRedo;
+    bool changed = false;
+    bool *setPause, *leavePause, *setRedo;
 
-	if (evprop->isChainAction()){
-		setPause = &chainPause;
-		leavePause = &pause;
-		setRedo = &chainRedo;
-	}
-	else {
-		leavePause = &chainPause;
-		setPause = &pause;
-		setRedo = &redo;
-	}
+    if (evprop->isChainAction()){
+        setPause = &chainPause;
+        leavePause = &pause;
+        setRedo = &chainRedo;
+    }
+    else {
+        leavePause = &chainPause;
+        setPause = &pause;
+        setRedo = &redo;
+    }
 
-	switch (evprop->getActionType()){
-	case eveEventProperty::REDO:
-		if (evprop->getOn()){
-			trackRedo = true;
-			*setRedo = true;
-		}
-		else {
-			*setRedo = false;
-		}
-		break;
-	case eveEventProperty::PAUSE:
-		if (evprop->isSwitchOn()){
-			if (isExecuting() && !isPaused()) {
-				changed = true;
-				status = eveSmPAUSED;
-			}
-			*setPause = true;
-		}
-		else if (evprop->isSwitchOff()) {
-			if (isExecuting() && *setPause && !*leavePause) {
-				changed = true;
-				if (isTriggerWait())
-					status = eveSmTRIGGERWAIT;
-				else
-					status = eveSmEXECUTING;
-			}
-			*setPause = false;
-		}
-		break;
-	case eveEventProperty::START:
-		// resume from pause
-		if (!*leavePause && (status == eveSmPAUSED)){
-			changed = true;
-			if (isTriggerWait())
-				status = eveSmTRIGGERWAIT;
-			else
-				status = eveSmEXECUTING;
-		}
-		*setPause = false;
-		break;
-	case eveEventProperty::BREAK:
-		if (isExecuting())	status = eveSmEXECUTING;
-		break;
-	case eveEventProperty::TRIGGER:
-		// accept a trigger even if paused
-		if (isTriggerWait()) {
-			if (evprop->getEventId() == 0)
-				evTrigWait = false;
-			else if (manualRid == evprop->getEventId())
-				maTrigWait = false;
-			else if (detecRid == evprop->getEventId())
-				detTrigWait = false;
+    if (evprop->getEventType() == eveEventTypeGUI){
+        if (evprop->getActionType() == eveEventProperty::PAUSE){
+            if (evprop->isSwitchOn()){
+                if (isExecuting() && !isPaused()) {
+                    changed = true;
+                    status = eveSmPAUSED;
+                }
+                masterPause = true;
+            }
+            else if (evprop->isSwitchOff()) {
+                if (isExecuting() && isPaused()) {
+                    changed = true;
+                    if (isTriggerWait())
+                        status = eveSmTRIGGERWAIT;
+                    else
+                        status = eveSmEXECUTING;
+                }
+                pause = false;
+                chainPause = false;
+                masterPause = false;
+            }
 
-			if ( isExecuting() && !isPaused() && !isTriggerWait()) {
-				status = eveSmEXECUTING;
-				changed = true;
-			}
-		}
-		break;
-	default:
-		break;
-	}
+        }
+    }
+    else {
+        switch (evprop->getActionType()){
+        case eveEventProperty::REDO:
+            if (evprop->getOn()){
+                if (!trackRedo) changed = true;
+                trackRedo = true;
+                *setRedo = true;
+            }
+            else {
+                if (*setRedo) changed = true;
+                *setRedo = false;
+            }
+            break;
+        case eveEventProperty::PAUSE:
+            if (evprop->isSwitchOn()){
+                if (isExecuting() && !isPaused()) {
+                    changed = true;
+                    status = eveSmPAUSED;
+                }
+                *setPause = true;
+            }
+            else if (evprop->isSwitchOff()) {
+                if (isExecuting() && *setPause && !*leavePause && !masterPause) {
+                    changed = true;
+                    if (isTriggerWait())
+                        status = eveSmTRIGGERWAIT;
+                    else
+                        status = eveSmEXECUTING;
+                }
+                *setPause = false;
+            }
+            break;
+        case eveEventProperty::START:
+            // resume from pause
+            if (!*leavePause && (status == eveSmPAUSED)){
+                changed = true;
+                if (isTriggerWait())
+                    status = eveSmTRIGGERWAIT;
+                else
+                    status = eveSmEXECUTING;
+            }
+            *setPause = false;
+            break;
+        case eveEventProperty::BREAK:
+            if (isExecuting())	status = eveSmEXECUTING;
+            break;
+        case eveEventProperty::TRIGGER:
+            // accept a trigger even if paused
+            if (isTriggerWait()) {
+                if (evprop->getEventId() == 0)
+                    evTrigWait = false;
+                else if (manualRid == evprop->getEventId())
+                    maTrigWait = false;
+                else if (detecRid == evprop->getEventId())
+                    detTrigWait = false;
 
-	return changed;
+                if ( isExecuting() && !isPaused() && !isTriggerWait()) {
+                    status = eveSmEXECUTING;
+                    changed = true;
+                }
+            }
+            break;
+        default:
+            break;
+        }
+    }
+
+    return changed;
 }
 
