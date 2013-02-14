@@ -16,3 +16,4 @@ Makefile.Release$
 .*\.hd5$
 .*\.hdf$
 .*\.so$
+.*\.pro\.user$
