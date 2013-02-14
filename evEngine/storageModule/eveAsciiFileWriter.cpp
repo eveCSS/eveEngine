@@ -198,3 +198,20 @@ int eveAsciiFileWriter::close() {
 	return DEBUG;
 }
 
+/**
+ * @brief			flush data to disk
+ * @return			error severity
+ */
+int eveAsciiFileWriter::flush() {
+
+    errorString.clear();
+    if (fileOpen) {
+        filePtr->flush();
+        if (filePtr->handle() > 0) {
+            fsync(filePtr->handle());
+            errorString = QString("AsciiFileWriter: flushed File %1").arg(fileName);
+        }
+    }
+    return DEBUG;
+}
+

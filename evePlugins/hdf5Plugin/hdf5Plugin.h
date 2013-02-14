@@ -39,6 +39,7 @@ public:
 	int addColumn(eveDevInfoMessage* message);
 	int open();
 	int close();
+    int flush();
 	int addData(int, eveDataMessage*);
 	int addMetaData(int, QString, QString);
 	int setXMLData(QByteArray*);

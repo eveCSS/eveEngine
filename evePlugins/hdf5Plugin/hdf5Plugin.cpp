@@ -286,6 +286,18 @@ void hdf5Plugin::compareNames(H5Object& obj, string str, void* data){
 	}
 }
 
+/**
+ * @brief			flush data to disk
+ * @return			error severity
+ */
+int hdf5Plugin::flush()
+{
+    if (isFileOpen) {
+        dataFile->flush(H5F_SCOPE_GLOBAL);
+        errorString = QString("HDF5Plugin::flush: flushed %1").arg(fileName);
+    }
+    return DEBUG;
+}
 
 /**
  * @brief			close File

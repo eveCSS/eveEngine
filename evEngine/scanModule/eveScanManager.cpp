@@ -77,13 +77,13 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 
 	if (savePluginHash.contains("savefilename")) useStorage = true;
 
-	sendStatusTimer = new QTimer(this);
-	sendStatusTimer->setInterval(5000);
-        sendStatusTimer->setSingleShot(false);
-        if (rootSM) totalPositions = rootSM->getTotalSteps();
-        sendError(EVEMESSAGESEVERITY_SYSTEM, EVEERRORMESSAGETYPE_TOTALCOUNT, QString("%1").arg(totalPositions));
-	connect(sendStatusTimer, SIGNAL(timeout()), this, SLOT(sendRemainingTime()));
-	sendStatusTimer->start(3000);
+    sendStatusTimer = new QTimer(this);
+    sendStatusTimer->setInterval(5000);
+    sendStatusTimer->setSingleShot(false);
+    if (rootSM) totalPositions = rootSM->getTotalSteps();
+    sendError(EVEMESSAGESEVERITY_SYSTEM, EVEERRORMESSAGETYPE_TOTALCOUNT, QString("%1").arg(totalPositions));
+    connect(sendStatusTimer, SIGNAL(timeout()), this, SLOT(sendRemainingTime()));
+    sendStatusTimer->start(3000);
 
 }
 

@@ -123,7 +123,8 @@ void hdf5DataSet::init(eveDataMessage* data){
 		errorString += QString("hdf5DataSet::init: Exception: %1").arg(error.getCDetailMsg());
 		status = ERROR;
 	}
-	addLink(dspath, basename, name);
+    // don't link to name
+    // addLink(dspath, basename, name);
 	isInit = true;
 
 }
@@ -140,7 +141,6 @@ int hdf5DataSet::addData(eveDataMessage* data){
 		try {
 			filespace = dset.getSpace();
 			filespace.selectHyperslab( H5S_SELECT_SET, chunk_dims, currentOffset );
-
 		}
 		catch (...) {
 			errorString += QString("hdf5DataSet:addData: error opening dataset %1").arg(dsname);
@@ -179,7 +179,7 @@ int hdf5DataSet::addData(eveDataMessage* data){
 			void *buffer = getDataBufferAddress(data);
 			memcpy(&memBuffer->aPtr, buffer, getMinimumDataBufferLength(data, compoundType.getSize() - sizeof(qint32)));
 		}
-		dset.write( (void*)memBuffer, compoundType, memspace, filespace );
+        dset.write ( (void*)memBuffer, compoundType, memspace, filespace );
 
 		++currentOffset[0];
 		if (currentOffset[0] >= currentDim[0]){
@@ -233,22 +233,44 @@ int hdf5DataSet::addData(eveDataMessage* data){
 			return ERROR;
 		}
 		dsname = QString("%1/%2").arg(dspath).arg(posCounter);
-		if (!dsetOpen){
-			try {
-				currentDim[0] = arraySize;		// not constant
-				currentDim[1] = 1; 				// default array sizeIncrement
-				currentOffset[0] = 0;
-				currentOffset[1] = 0;
-				dset = dataFile->createDataSet(qPrintable(dsname), convertToHdf5Type(dataType), dspace, createProps);
-				dset.extend( currentDim );
-				dsetOpen = true;
-			}
-			catch (...) {
-				errorString += QString("hdf5DataSet:addData: error creating dataset %1").arg(dsname);
-				return ERROR;
-			}
-			errorString += QString("successfully created dataset %1").arg(dsname);
-		}
+        if (!dsetOpen){
+            bool  datasetExists = true;
+            try {
+                dset = dataFile->openDataSet(qPrintable(dsname));
+            }
+            catch (...){
+                datasetExists = false;
+            }
+            if (datasetExists){
+                try {
+                    DataSpace newdspace = dset.getSpace();
+                    newdspace.getSimpleExtentDims(currentDim, NULL);
+                    currentOffset[0] = currentDim[0];
+                    currentOffset[1] = currentDim[1];
+                }
+                catch (...) {
+                    errorString += QString("hdf5DataSet:addData: error creating dataset %1").arg(dsname);
+                    return ERROR;
+                }
+                errorString += QString("successfully opened dataset %1").arg(dsname);
+            }
+            else {
+                try {
+                    currentDim[0] = arraySize;		// not constant
+                    currentDim[1] = 1; 				// default array sizeIncrement
+                    currentOffset[0] = 0;
+                    currentOffset[1] = 0;
+                    dset = dataFile->createDataSet(qPrintable(dsname), convertToHdf5Type(dataType), dspace, createProps);
+                    dset.extend( currentDim );
+                    dsetOpen = true;
+                }
+                catch (...) {
+                    errorString += QString("hdf5DataSet:addData: error creating dataset %1").arg(dsname);
+                    return ERROR;
+                }
+                errorString += QString("successfully created dataset %1").arg(dsname);
+            }
+        }
 
 		try {
 			DataSpace filespace = dset.getSpace();
@@ -267,7 +289,19 @@ int hdf5DataSet::addData(eveDataMessage* data){
 			return ERROR;
 		}
 		errorString += QString("successfully wrote dataset %1").arg(dsname);
-	}
+        if (dsetOpen) {
+            try {
+                currentDim[1] = currentOffset[1];
+                dset.extend( currentDim );
+                dset.close();
+                dsetOpen = false;
+            }
+            catch (...) {
+                errorString += QString("hdf5DataSet:addData: error closing dataset posCount %1").arg(posCounter);
+                return ERROR;
+            }
+        }
+    }
 	return status;
 }
 

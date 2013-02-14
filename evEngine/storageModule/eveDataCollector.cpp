@@ -22,27 +22,34 @@
  * @param message configuration info
  * @param xmldata pointer to xml buffer with scandescription
  */
-eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QString>& paraHash, QByteArray* xmldata) {
+eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QString>& paraHash, QByteArray* xmldata) :
+            QObject(sman) {
 
-	QString emptyString("");
-	chainIdList.empty();
-	fileName = paraHash.value("filename", emptyString);
-	fileType = paraHash.value("format", emptyString);
-	QString suffix = paraHash.value("suffix", emptyString);
-	pluginName = paraHash.value("pluginname", emptyString);
-	pluginPath = paraHash.value("location", emptyString);
-	comment = paraHash.value("comment", emptyString);
-	bool saveXML = paraHash.value("savescandescription", emptyString).startsWith("true");
-	manager = sman;
-	fileWriter = NULL;
-	fwInitDone = false;
-	fwOpenDone = false;
-        keepFile = true;
-	StartTimeDone = false;
-	StartDateDone = false;
-	bool fileTest = false;
-	bool doAutoNumber = false;
-        doConfirmSave = false;
+    QString emptyString("");
+    chainIdList.empty();
+    fileName = paraHash.value("filename", emptyString);
+    fileType = paraHash.value("format", emptyString);
+    QString suffix = paraHash.value("suffix", emptyString);
+    pluginName = paraHash.value("pluginname", emptyString);
+    pluginPath = paraHash.value("location", emptyString);
+    comment = paraHash.value("comment", emptyString);
+    bool saveXML = paraHash.value("savescandescription", emptyString).startsWith("true");
+    manager = sman;
+    fileWriter = NULL;
+    fwInitDone = false;
+    fwOpenDone = false;
+    keepFile = true;
+    StartTimeDone = false;
+    StartDateDone = false;
+    bool fileTest = false;
+    bool doAutoNumber = false;
+    doConfirmSave = false;
+    writeDataCnt = 0;
+
+    flushTimer = new QTimer(this);
+    flushTimer->setInterval(5000);
+    flushTimer->setSingleShot(false);
+    connect(flushTimer, SIGNAL(timeout()), this, SLOT(flushData()));
 
 	if (paraHash.value("autonumber", emptyString).toLower() == "true") doAutoNumber = true;;
         if (paraHash.value("confirmsave", emptyString).toLower() == "true") doConfirmSave = true;;
@@ -231,6 +238,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QStri
 				fwInitDone = true;
 			}
 		}
+            flushTimer->start(5000);
 	}
 
 	if (fwInitDone && !comment.isEmpty()) addMetaData(0, "Comment", comment);
@@ -245,7 +253,8 @@ eveDataCollector::~eveDataCollector() {
 		manager->sendError(status, 0, QString("FileWriter: close message: %1").arg(fileWriter->errorText()));
 		delete fileWriter;
 	}
-        if (!keepFile) QFile(fileName).remove();
+    delete flushTimer;
+    if (!keepFile) QFile(fileName).remove();
 	deviceList.clear();
 }
 
@@ -264,7 +273,8 @@ void eveDataCollector::addData(eveDataMessage* message) {
 		if (fwOpenDone){
 			int status = fileWriter->addData(message->getChainId(), message);
 			manager->sendError(status, 0, QString("FileWriter: addData: %1").arg(fileWriter->errorText()));
-		}
+            incWriteDataCnt();
+        }
 	}
 	else {
 		manager->sendError(ERROR, 0, QString("DataCollector: cannot add data for %1 (%2), no device info")
@@ -293,6 +303,7 @@ void eveDataCollector::addMetaData(int Id, QString attribute, QString& messageTe
 			fileWriter->addMetaData(0, attribute, messageText);
 			StartDateDone = true;
 		}
+        incWriteDataCnt();
 	}
 	else {
 		manager->sendError(ERROR, 0, QString("DataCollector: cannot add metadata before init: %1").arg(messageText));
@@ -381,3 +392,17 @@ QString eveDataCollector::macroExpand(QString eString){
 	return eString;
 }
 
+/**
+ * @brief flush data to disk
+ */
+void eveDataCollector::flushData() {
+
+    if (writeDataCnt > 0){
+        writeDataCnt = 0;
+        if (fileWriter) {
+//            int status =
+            fileWriter->flush();
+//            manager->sendError(status, 0, QString("Flush: %1").arg(fileWriter->errorText()));
+        }
+    }
+}

@@ -38,6 +38,7 @@ void eveMath::addValue(QString deviceId, int smid, int pos, eveVariant dataVar){
 				eveDataStatus(), DMTnormalized, eveTime::getCurrent(), QVector<double>(1,ydata));
 		// TODO remove
 		manager->sendError(DEBUG, 0, QString("normalized value: %1").arg(ydata));
+        normalizedMessage->setNormalizeId(normalizeId);
 		normalizedMessage->setPositionCount(ypos);
 		normalizedMessage->setSmId(smid);
         manager->sendMessage(normalizedMessage);

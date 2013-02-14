@@ -30,6 +30,7 @@ public:
 	int addData(int, eveDataMessage* );
 	int addMetaData(int, QString, QString);
 	int close();
+    int flush();
 	int setXMLData(QByteArray*);
 	QString errorText() {return errorString;};
 

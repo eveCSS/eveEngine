@@ -90,6 +90,12 @@ public:
     */
 	virtual int setXMLData(QByteArray* xmldata) = 0;
 	virtual QString errorText() = 0;
+    //! flush data to disk
+    /*!
+      \return status (DEBUG/INFO/MINOR/ERROR/FATAL)
+      \sa hdf5Plugin::flush, eveAsciiFileWriter::flush
+    */
+    virtual int flush() = 0;
 };
 
 QT_BEGIN_NAMESPACE
