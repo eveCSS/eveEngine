@@ -20,6 +20,7 @@ eveBasicStatusTracker::eveBasicStatusTracker() {
 	loadedXML = false;
 	engineStatus = eveEngIDLENOXML;
 	repeatCount = 0;
+    XmlName = "unbekannt";
 }
 
 eveBasicStatusTracker::~eveBasicStatusTracker() {
@@ -123,7 +124,7 @@ bool eveManagerStatusTracker::setStart() {
 		engineStatus = eveEngEXECUTING;
 		return true;
 	}
-	else if (engineStatus = eveEngEXECUTING){
+    else if (engineStatus == eveEngEXECUTING){
 		// some chains might be paused and should resume
 		foreach(int key, chainStatus.keys()){
 			if (chainStatus.value(key) == eveChainSmPAUSED) return true;

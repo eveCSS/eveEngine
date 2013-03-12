@@ -265,7 +265,7 @@ eveCurrentXmlMessage::~eveCurrentXmlMessage()
 eveEngineStatusMessage::eveEngineStatusMessage(unsigned int status, QString xmlname, int prio, int dest) :
 	eveMessage(EVEMESSAGETYPE_ENGINESTATUS, prio, dest)
 {
-	XmlId = QString(xmlname);
+    XmlId = xmlname;
 	estatus = status;
 	timestamp = eveTime::getCurrent();
 }

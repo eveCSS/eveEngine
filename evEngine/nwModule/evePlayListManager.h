@@ -8,7 +8,7 @@
 #ifndef EVEPLAYLISTMANAGER_H_
 #define EVEPLAYLISTMANAGER_H_
 
-#define PLAYLISTMAXENTRIES 500
+#define PLAYLISTMAXENTRIES 5000
 #define MAX_XML_LOADED 2
 
 #include <QString>
@@ -24,10 +24,10 @@
 struct evePlayListData {
     bool isLoaded;
     int pid;
-        QString name;
-	QString author;
-	QByteArray data;
-        QString filename;
+    QString name;
+    QString author;
+    QByteArray data;
+    QString filename;
 };
 
 /**
@@ -49,31 +49,31 @@ struct evePlayListData {
  */
 class evePlayListManager : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	evePlayListManager();
-	virtual ~evePlayListManager();
-	void addEntry(QString, QString, QByteArray);
-	void reorderEntry(int, int);
-	void removeEntry(int);
-        void removeCurrentEntry();
-	bool isEmpty(){return playlist.isEmpty();};
-	evePlayListData* takeFirst();
-	evePlayListMessage* getCurrentPlayList();
+    evePlayListManager();
+    virtual ~evePlayListManager();
+    void addEntry(QString, QString, QByteArray);
+    void reorderEntry(int, int);
+    void removeEntry(int);
+    void removeCurrentEntry();
+    bool isEmpty(){return playlist.isEmpty();};
+    evePlayListData* takeFirst();
+    evePlayListMessage* getCurrentPlayList();
 
 private:
-        bool modified;
-        bool haveCurrent;
-	int lastId;
-        void flushPlaylist();
-        evePlayListEntry currentPLE;
-        QString currentFilename;
-        QString getTempPath();
-        QString dirFileName;
-        QDir playlistPath;
-	QList<evePlayListEntry> playlist;
-        QHash<int, evePlayListData*> datahash;
+    bool modified;
+    bool haveCurrent;
+    int lastId;
+    void flushPlaylist();
+    evePlayListEntry currentPLE;
+    QString currentFilename;
+    QString getTempPath();
+    QString dirFileName;
+    QDir playlistPath;
+    QList<evePlayListEntry> playlist;
+    QHash<int, evePlayListData*> datahash;
 
 };
 

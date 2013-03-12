@@ -120,6 +120,8 @@ void evePlayListManager::addEntry(QString name, QString author, QByteArray data)
 
         // fill dataentry
         pld->filename = filename;
+        pld->author = author;
+        pld->name = name;
         if (saved && (playlist.count() > MAX_XML_LOADED)) {
             pld->isLoaded = false;
         }
