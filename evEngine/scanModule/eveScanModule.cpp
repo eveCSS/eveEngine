@@ -199,8 +199,9 @@ void eveScanModule::stgInit() {
 
     if (currentStageCounter == 0){
         sendError(DEBUG, 0, "stgInit starting");
-        // if (setStatus(eveSmINITIALIZING)) manager->setStatus(smId, currentstatus.getStatus();
-        manager->setStatus(smId, eveSmINITIALIZING);
+        // SMStatus eveSmINITIALIZING is unused, but we send it to GUI if
+        // this SM is not already running
+        if (myStatus.getStatus() == eveSmNOTSTARTED) manager->setStatus(smId, eveSmINITIALIZING);
 
         signalCounter = 0;
 
@@ -987,8 +988,8 @@ void eveScanModule::startExec() {
 	if (myStatus.getStatus() == eveSmNOTSTARTED){
 		sendError(DEBUG, 0, "starting scan");
 		// always send status executing first
-		manager->setStatus(smId, eveSmEXECUTING);
-		if (myStatus.setStatus(eveSmEXECUTING)) manager->setStatus(smId, myStatus.getStatus());
+        myStatus.setStatus(eveSmEXECUTING);
+        manager->setStatus(smId, eveSmEXECUTING);
 		emit sigExecStage();
 	}
     else if (myStatus.getStatus() == eveSmDONE){
@@ -1070,17 +1071,6 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
 				sendError(DEBUG, 0, QString("Starting Scan Module"));
 				startExec();
 			}
-//			else if (myStatus.isExecuting()){
-//				if (nestedSM) nestedSM->newEvent(evprop);
-//                                if (myStatus.setEvent(evprop)) {
-//                                    manager->setStatus(smId, myStatus.getStatus());
-//                                    sendError(INFO, 0, QString("Chain Start Event: %1; Resuming Scan").arg(evprop->getName()));
-//                                }
-//				emit sigExecStage();
-//			}
-//			else if ((appendedSM) && (myStatus.getStatus() == eveSmAPPEND)){
-//				if (appendedSM) appendedSM->newEvent(evprop);
-//			}
 			break;
 		case eveEventProperty::BREAK:
 			if (myStatus.isExecuting()){

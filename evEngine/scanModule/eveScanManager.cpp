@@ -379,8 +379,6 @@ void eveScanManager::addToHash(QHash<QString, QString>& hash, QString key, eveXM
 
 /**
  * increment position counter and send next-position-message
- * do not increment position counter if no data has been received
- * between two calls to nextPos
  */
 void eveScanManager::nextPos(){
 	++posCounter;
