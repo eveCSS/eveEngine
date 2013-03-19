@@ -102,6 +102,7 @@ int hdf5Plugin::init(QString filename, QString format, QHash<QString, QString>& 
 			return ERROR;
 		}
 	}
+    if (isFileOpen) addMetaData(0, "EVEH5Version", EVEH5_VERSION);
 	return DEBUG;
 }
 
