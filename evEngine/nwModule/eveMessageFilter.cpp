@@ -16,6 +16,7 @@ eveMessageFilter::eveMessageFilter(eveNetObject *nwPtr)
 	playlistCache = NULL;
 	currentXmlCache = NULL;
 	filenameCache = NULL;
+    maxPosCountCache = NULL;
 	seqTimer = new QTimer(this);
     connect(seqTimer, SIGNAL(timeout()), this, SLOT(timeout()));
     seqTimer->start(EVEMESSAGEFILTER_TIMEOUT);
@@ -78,7 +79,8 @@ QList<eveMessage * > * eveMessageFilter::getCache()
 	if (playlistCache) cachelist->append(playlistCache);
 	if (engineStatusCache) cachelist->append(engineStatusCache);
 	if (chainStatusCache) cachelist->append(chainStatusCache);
-	if (filenameCache) cachelist->append(filenameCache);
+    if (filenameCache) cachelist->append(filenameCache);
+    if (maxPosCountCache) cachelist->append(maxPosCountCache);
 
 	return cachelist;
 }
@@ -101,7 +103,11 @@ void eveMessageFilter::queueMessage(eveMessage *message)
 				if (filenameCache) delete filenameCache;
 				filenameCache = (eveErrorMessage*) message;
 			}
-			else {
+            else if (((eveErrorMessage*) message)->getErrorType() == EVEERRORMESSAGETYPE_TOTALCOUNT){
+                if (maxPosCountCache) delete maxPosCountCache;
+                maxPosCountCache = (eveErrorMessage*) message;
+            }
+            else {
 				// we keep the last few errors
 				errorMessageCacheList.append(message);
 				while (errorMessageCacheList.count() > EVEMESSAGEFILTER_QUEUELENGTH) {
