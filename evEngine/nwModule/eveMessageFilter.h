@@ -49,6 +49,7 @@ private:
 	evePlayListMessage *playlistCache;
 	eveCurrentXmlMessage *currentXmlCache;
 	eveErrorMessage *filenameCache;
+    eveErrorMessage *maxPosCountCache;
 
 };
 
