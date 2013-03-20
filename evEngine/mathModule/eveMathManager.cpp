@@ -116,7 +116,7 @@ void eveMathManager::handleMessage(eveMessage *message){
             message->addDestinationFacility(EVECHANNEL_EVENT);
             addMessage(message);
             if (sendShutdown){
-                eveChainStatusMessage* doneMessage = new eveChainStatusMessage(eveChainMATHDONE, chid, 0, 0, eveTime::getCurrent(), 0, 0, storageChannel);
+                eveChainStatusMessage* doneMessage = new eveChainStatusMessage(eveChainMATHDONE, chid, 0, -1, eveTime::getCurrent(), -1, 0, storageChannel);
                 doneMessage->setDestinationChannel(storageChannel);
                 doneMessage->addDestinationFacility(EVECHANNEL_STORAGE);
                 addMessage(doneMessage);
