@@ -343,6 +343,14 @@ bool eveChainStatusMessage::compare(eveMessage *message)
 	return false;
 }
 
+bool eveChainStatusMessage::isPaused()
+{
+    if ((cstatus == eveChainSmPAUSED) || (cstatus == eveChainSmChainPAUSED)|| (cstatus == eveChainSmGUIPAUSED))
+        return true;
+    else
+        return false;
+}
+
 /*
  * Class RequestMessage
  */
@@ -699,7 +707,7 @@ eveDataMessage::~eveDataMessage() {
  */
 eveDataMessage* eveDataMessage::clone(){
 
-	eveDataMessage* message;
+    eveDataMessage* message=NULL;
 
 	switch (dataType) {
 		case eveInt8T:					/* eveInt8 */
@@ -726,6 +734,7 @@ eveDataMessage* eveDataMessage::clone(){
 		default:
 			eveError::log(ERROR,"eveDataMessage unknown data type");
 			assert(true);
+            return message;
 		break;
 	}
 	message->setChainId(chainId);

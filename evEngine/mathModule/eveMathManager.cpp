@@ -90,7 +90,7 @@ void eveMathManager::handleMessage(eveMessage *message){
 						}
 					}
 				}
-				else if (((eveChainStatusMessage*)message)->getStatus()== eveChainSmPAUSED){
+                else if (((eveChainStatusMessage*)message)->isPaused()){
 					int smid = ((eveChainStatusMessage*)message)->getSmId();
 					if (!pauseList.contains(smid)) pauseList.append(smid);
 				}

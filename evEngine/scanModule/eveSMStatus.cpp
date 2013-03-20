@@ -37,8 +37,8 @@ bool eveSMStatus::setStatus(smStatusT newStatus ) {
 	bool retval = false;
 
 	if ((newStatus == eveSmEXECUTING) && isPaused()){
-		retval = true;
-		status = eveSmPAUSED;
+        retval = true;
+        status = eveSmPAUSED;
 	}
 	else if (status != newStatus) {
 		retval=true;
@@ -50,30 +50,24 @@ bool eveSMStatus::setStatus(smStatusT newStatus ) {
 	return retval;
 }
 
+bool eveSMStatus::getPause() {
 
-/**
- * \brief check if chain status has changed
- *
- * @return true if actions are necessary
-bool eveSMStatus::checkStatus() {
-
-	chainPause = manager->isPause();
-	chainRedo = manager->isRedo();
-	bool retval = false;
-	if ((status == eveSmEXECUTING) || (status == eveSmTRIGGERWAIT) || (status == eveSmAPPEND)) {
-		retval=true;
-	}
-
-	return retval;
+    if (masterPause)
+        return 3;
+    else if (chainPause)
+        return 2;
+    else if (pause)
+        return 1;
+    return 0;
 }
- */
+
 
 /**
  *
- * @return true if we are executing i.e. we are started and not paused
+ * @return true if status was executing i.e. we are started and may be paused
  */
 bool eveSMStatus::isExecuting() {
-	if ((status == eveSmEXECUTING) || (status == eveSmTRIGGERWAIT) || (status == eveSmPAUSED))
+    if ((status == eveSmEXECUTING) || (status == eveSmTRIGGERWAIT) || (status == eveSmPAUSED))
 		return true;
 	else
 		return false;
@@ -81,7 +75,7 @@ bool eveSMStatus::isExecuting() {
 
 /**
  *
- * @return true if we are executing i.e. we are started and not paused
+ * @return true if status was "not executing"
  */
 bool eveSMStatus::forceExecuting() {
 	bool retval = false;
@@ -90,7 +84,8 @@ bool eveSMStatus::forceExecuting() {
 		status = eveSmEXECUTING;
 	}
 	pause = false;
-	chainPause = false;
+    masterPause = false;
+    chainPause = false;
 	evTrigWait = false;
 	maTrigWait = false;
 	detTrigWait = false;
@@ -121,7 +116,7 @@ bool eveSMStatus::triggerManualStart(int rid){
 bool eveSMStatus::triggerEventStart(){
 
 	evTrigWait=true;
-	if (status != eveSmTRIGGERWAIT){
+    if (status != eveSmTRIGGERWAIT){
 		status = eveSmTRIGGERWAIT;
 		return true;
 	}
@@ -213,7 +208,7 @@ bool eveSMStatus::setEvent(eveEventProperty* evprop ) {
             break;
         case eveEventProperty::START:
             // resume from pause
-            if (!*leavePause && (status == eveSmPAUSED)){
+            if (!*leavePause && !masterPause && (status == eveSmPAUSED)){
                 changed = true;
                 if (isTriggerWait())
                     status = eveSmTRIGGERWAIT;

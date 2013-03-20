@@ -282,7 +282,7 @@ private:
 /**
  *\brief status of chain or scanmodule
  */
-enum chainStatusT {eveChainSmIDLE=1, eveChainSmINITIALIZING, eveChainSmEXECUTING, eveChainSmPAUSED, eveChainSmTRIGGERWAIT, eveChainSmDONE, eveChainDONE, eveChainSTORAGEDONE, eveChainMATHDONE};
+enum chainStatusT {eveChainSmIDLE=1, eveChainSmINITIALIZING, eveChainSmEXECUTING, eveChainSmPAUSED, eveChainSmTRIGGERWAIT, eveChainSmDONE, eveChainDONE, eveChainSTORAGEDONE, eveChainSmChainPAUSED, eveChainSmGUIPAUSED, eveChainMATHDONE};
 enum smStatusT {eveSmNOTSTARTED, eveSmINITIALIZING, eveSmEXECUTING, eveSmPAUSED, eveSmTRIGGERWAIT, eveSmAPPEND, eveSmDONE} ;
 
 /**
@@ -311,6 +311,7 @@ public:
 	eveTime getTime(){return timestamp;};
 	int getRemainingTime(){return remainingTime;};
 	bool compare(eveMessage *);
+    bool isPaused();
 	virtual eveChainStatusMessage* clone(){return new eveChainStatusMessage(*this);};
 
 private:

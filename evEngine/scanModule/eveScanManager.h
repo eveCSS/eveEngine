@@ -42,7 +42,7 @@ public:
 	void sendError(int, int, QString);
 	void sendError(int, int, int, QString);
 	void sendMessage(eveMessage*);
-	void setStatus(int, smStatusT);
+    void setStatus(int, smStatusT, int);
 	void handleMessage(eveMessage *);
 	void nextPos();
 	void registerEvent(int, eveEventProperty*, bool chain=false);

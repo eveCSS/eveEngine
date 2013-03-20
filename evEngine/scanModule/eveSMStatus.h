@@ -11,8 +11,8 @@
 #include "eveMessage.h"
 #include "eveEventProperty.h"
 
-// enum chainStatusT {eveChainSmIDLE=1, eveChainSmINITIALIZING, eveChainSmEXECUTING, eveChainSmPAUSED, eveChainSmTRIGGERWAIT, eveChainSmDONE, eveChainDONE, eveChainSTORAGEDONE};
-// enum smStatusT {eveSmNOTSTARTED, eveSmINITIALIZING, eveSmEXECUTING, eveSmPAUSED, eveSmTRIGGERWAIT, eveSmAPPEND, eveSmDONE} ;
+// enum chainStatusT see eveMessage.h
+// enum smStatusT see eveMessage.h
 
 
 class eveSMStatus {
@@ -25,6 +25,7 @@ public:
 	bool isRedo(){return (chainRedo || redo);};
     bool isPaused(){return (chainPause || pause || masterPause);};
 	smStatusT getStatus(){return status;};
+    bool getPause();
 	bool setEvent(eveEventProperty* evprop );
 	void redoStart(){trackRedo = false;};
 	bool redoStatus(){return trackRedo;};

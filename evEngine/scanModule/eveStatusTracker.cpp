@@ -127,7 +127,9 @@ bool eveManagerStatusTracker::setStart() {
     else if (engineStatus == eveEngEXECUTING){
 		// some chains might be paused and should resume
 		foreach(int key, chainStatus.keys()){
-			if (chainStatus.value(key) == eveChainSmPAUSED) return true;
+            if ((chainStatus.value(key) == eveChainSmPAUSED) ||
+                    (chainStatus.value(key) == eveChainSmChainPAUSED)||
+                    (chainStatus.value(key) == eveChainSmGUIPAUSED)) return true;
 		}
 	}
 	return false;

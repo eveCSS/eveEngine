@@ -255,7 +255,7 @@ void eveScanManager::smDone() {
 //	else
 	if (rootSM && rootSM->isDone()){
 		// TODO
-		currentStatus.setChainStatus(eveChainDONE);
+        currentStatus.setChainStatus(eveChainDONE);
                 sendStatus(0, -1);
 		shutdown();
 	}
@@ -350,8 +350,8 @@ void eveScanManager::sendStartTime() {
  * @param smid id of scanmodule
  * @param status current chain status
  */
-void eveScanManager::setStatus(int smid, smStatusT status){
-    currentStatus.setStatus(status);
+void eveScanManager::setStatus(int smid, smStatusT status, int smpause){
+    currentStatus.setStatus(status, smpause);
 	sendStatus (smid, -1);
 }
 /**
