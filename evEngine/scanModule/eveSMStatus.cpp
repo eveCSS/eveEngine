@@ -173,6 +173,19 @@ bool eveSMStatus::setEvent(eveEventProperty* evprop ) {
             }
 
         }
+        else if (evprop->getActionType() == eveEventProperty::TRIGGER){
+            // accept a trigger even if paused
+            if (isTriggerWait()) {
+                if (manualRid == evprop->getEventId())
+                    maTrigWait = false;
+                else if (detecRid == evprop->getEventId())
+                    detTrigWait = false;
+                if ( isExecuting() && !isPaused() && !isTriggerWait()) {
+                    status = eveSmEXECUTING;
+                    changed = true;
+                }
+            }
+        }
     }
     else {
         switch (evprop->getActionType()){
