@@ -989,7 +989,7 @@ void eveScanModule::startExec() {
 		sendError(DEBUG, 0, "starting scan");
 		// always send status executing first
         myStatus.setStatus(eveSmEXECUTING);
-        manager->setStatus(smId, eveSmEXECUTING, 0);
+        manager->setStatus(smId, myStatus.getStatus(), myStatus.getPause());
 		emit sigExecStage();
 	}
     else if (myStatus.getStatus() == eveSmDONE){
@@ -1195,6 +1195,7 @@ int eveScanModule::getTotalSteps(){
         int totalSteps = expectedPositions;
         if (nestedSM) totalSteps *= nestedSM->getTotalSteps();
         if (appendedSM) totalSteps += appendedSM->getTotalSteps();
+        sendError(DEBUG, 0, QString("Scan Module %1, total steps: %2").arg(smId).arg(totalSteps));
         return totalSteps;
 }
 

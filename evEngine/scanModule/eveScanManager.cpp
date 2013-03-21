@@ -25,57 +25,57 @@
  *
  */
 eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int chainid, int storageChan) :
-	eveMessageChannel(parent)
+    eveMessageChannel(parent)
 {
-	QDomElement rootElement;
+    QDomElement rootElement;
 
-	chainId = chainid;
-	storageChannel = storageChan;
-	posCounter = 0;
-        totalPositions = 1;
-	useStorage = false;
-	manager = parent;
-	shutdownPending = false;
-        isStarted = false;
-	nextEventId = chainId*100;
-	// TODO register global events
+    chainId = chainid;
+    storageChannel = storageChan;
+    posCounter = 0;
+    totalPositions = 1;
+    useStorage = false;
+    manager = parent;
+    shutdownPending = false;
+    isStarted = false;
+    nextEventId = chainId*100;
+    // TODO register global events
 
-	// TODO check startevent
+    // TODO check startevent
 
-	//parser->addScanManager(chainId, this);
-	int rootId = parser->getRootId(chainId);
-	if (rootId == 0)
-		sendError(ERROR,0,"eveScanManager::eveScanManager: no root scanmodule found");
-	else {
-		// walk down the tree and create all ScanModules
-		rootSM = new eveScanModule(this, parser, chainId, rootId, eveSmTypeROOT);
-		connect (rootSM, SIGNAL(SMready()), this, SLOT(smDone()), Qt::QueuedConnection);
-	}
+    //parser->addScanManager(chainId, this);
+    int rootId = parser->getRootId(chainId);
+    if (rootId == 0)
+        sendError(ERROR,0,"eveScanManager::eveScanManager: no root scanmodule found");
+    else {
+        // walk down the tree and create all ScanModules
+        rootSM = new eveScanModule(this, parser, chainId, rootId, eveSmTypeROOT);
+        connect (rootSM, SIGNAL(SMready()), this, SLOT(smDone()), Qt::QueuedConnection);
+    }
 
-	// register with messageHub
-	channelId = eveMessageHub::getmHub()->registerChannel(this, 0);
+    // register with messageHub
+    channelId = eveMessageHub::getmHub()->registerChannel(this, 0);
 
-	connect (manager, SIGNAL(startSMs()), this, SLOT(smStart()), Qt::QueuedConnection);
-	connect (manager, SIGNAL(stopSMs()), this, SLOT(smStop()), Qt::QueuedConnection);
-	connect (manager, SIGNAL(breakSMs()), this, SLOT(smBreak()), Qt::QueuedConnection);
-	connect (manager, SIGNAL(haltSMs()), this, SLOT(smHalt()), Qt::QueuedConnection);
-	connect (manager, SIGNAL(pauseSMs()), this, SLOT(smPause()), Qt::QueuedConnection);
+    connect (manager, SIGNAL(startSMs()), this, SLOT(smStart()), Qt::QueuedConnection);
+    connect (manager, SIGNAL(stopSMs()), this, SLOT(smStop()), Qt::QueuedConnection);
+    connect (manager, SIGNAL(breakSMs()), this, SLOT(smBreak()), Qt::QueuedConnection);
+    connect (manager, SIGNAL(haltSMs()), this, SLOT(smHalt()), Qt::QueuedConnection);
+    connect (manager, SIGNAL(pauseSMs()), this, SLOT(smPause()), Qt::QueuedConnection);
 
-	// collect various data
-	addToHash(chainHash, "confirmsave", parser);
+    // collect various data
+    addToHash(chainHash, "confirmsave", parser);
 
 
-	eventList = parser->getChainEventList(chainId);
+    eventList = parser->getChainEventList(chainId);
 
-	// collect all storage-related data
-	savePluginHash = parser->getChainPlugin(chainId, "saveplugin");
-	addToHash(savePluginHash, "savefilename", parser);
-	addToHash(savePluginHash, "autonumber", parser);
-	addToHash(savePluginHash, "confirmsave", parser);
-	addToHash(savePluginHash, "savescandescription", parser);
-	addToHash(savePluginHash, "comment", parser);
+    // collect all storage-related data
+    savePluginHash = parser->getChainPlugin(chainId, "saveplugin");
+    addToHash(savePluginHash, "savefilename", parser);
+    addToHash(savePluginHash, "autonumber", parser);
+    addToHash(savePluginHash, "confirmsave", parser);
+    addToHash(savePluginHash, "savescandescription", parser);
+    addToHash(savePluginHash, "comment", parser);
 
-	if (savePluginHash.contains("savefilename")) useStorage = true;
+    if (savePluginHash.contains("savefilename")) useStorage = true;
 
     sendStatusTimer = new QTimer(this);
     sendStatusTimer->setInterval(5000);
@@ -88,10 +88,10 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
 }
 
 eveScanManager::~eveScanManager() {
-	//delete sendStatusTimer;
+    //delete sendStatusTimer;
 
-	// TODO
-	// unregister events ? (or is it done elsewhere)
+    // TODO
+    // unregister events ? (or is it done elsewhere)
 }
 
 /**
@@ -101,35 +101,36 @@ eveScanManager::~eveScanManager() {
  */
 void eveScanManager::init() {
 
-	if (!rootSM) {
-		sendError(ERROR,0,"init: no root scanmodule found");
-		shutdown();
-		return;
-	}
-	// init StorageModule if we have a Datafilename
-	if (useStorage) {
-		sendMessage(new eveStorageMessage(chainId, channelId, savePluginHash, 0, storageChannel));
-	}
+    if (!rootSM) {
+        sendError(ERROR,0,"init: no root scanmodule found");
+        shutdown();
+        return;
+    }
+    // init StorageModule if we have a Datafilename
+    if (useStorage) {
+        sendMessage(new eveStorageMessage(chainId, channelId, savePluginHash, 0, storageChannel));
+    }
 
-	// init PosCountTimer
-	eveDevInfoMessage* message = new eveDevInfoMessage("PosCountTimer", "", new QStringList("unit:msecs"), DMTmetaData, "");
-	message->setChainId(chainId);
-	sendMessage(message);
-	sendError(DEBUG,0,"sent PosCountTimer message");
+    // init PosCountTimer
+    eveDevInfoMessage* message = new eveDevInfoMessage("PosCountTimer", "", new QStringList("unit:msecs"), DMTmetaData, "");
+    message->setChainId(chainId);
+    sendMessage(message);
+    sendError(DEBUG,0,"sent PosCountTimer message");
 
-	rootSM->initialize();
-	// init events
-	bool haveRedoEvent = false;
-	foreach (eveEventProperty* evprop, *eventList){
-		sendError(DEBUG, 0, QString("registering chain event"));
-		if (haveRedoEvent) sendError(MINOR, 0, QString("more than one redo event in a chain is unsupported"));
-		registerEvent(0, evprop, true);
-		if (evprop->getActionType() == eveEventProperty::REDO) haveRedoEvent = true;
-	}
+    rootSM->initialize();
+    // init events
+    bool haveRedoEvent = false;
+    if (eventList != NULL){
+        foreach (eveEventProperty* evprop, *eventList){
+            sendError(DEBUG, 0, QString("registering chain event"));
+            if (haveRedoEvent) sendError(MINOR, 0, QString("more than one redo event in a chain is unsupported"));
+            registerEvent(0, evprop, true);
+            if (evprop->getActionType() == eveEventProperty::REDO) haveRedoEvent = true;
+        }
+        delete eventList;
+    }
     if (haveRedoEvent) rootSM->setDoRedo();
-	delete eventList;
-	eventList = NULL;
-
+    eventList = NULL;
 }
 
 /**
@@ -137,34 +138,34 @@ void eveScanManager::init() {
  */
 void eveScanManager::shutdown(){
 
-	eveError::log(DEBUG, QString("eveScanManager: shutdown"));
+    eveError::log(DEBUG, QString("eveScanManager: shutdown"));
 
-	if (!shutdownPending) {
-		shutdownPending = true;
-		disconnect (manager, SIGNAL(startSMs()), this, SLOT(smStart()));
-		disconnect (manager, SIGNAL(stopSMs()), this, SLOT(smStop()));
-		disconnect (manager, SIGNAL(breakSMs()), this, SLOT(smBreak()));
-		disconnect (manager, SIGNAL(haltSMs()), this, SLOT(smHalt()));
-		disconnect (manager, SIGNAL(pauseSMs()), this, SLOT(smPause()));
+    if (!shutdownPending) {
+        shutdownPending = true;
+        disconnect (manager, SIGNAL(startSMs()), this, SLOT(smStart()));
+        disconnect (manager, SIGNAL(stopSMs()), this, SLOT(smStop()));
+        disconnect (manager, SIGNAL(breakSMs()), this, SLOT(smBreak()));
+        disconnect (manager, SIGNAL(haltSMs()), this, SLOT(smHalt()));
+        disconnect (manager, SIGNAL(pauseSMs()), this, SLOT(smPause()));
 
-		// unregister events, do not delete them
-		foreach(eveEventProperty* eprop, eventPropList){
-			addMessage(new eveEventRegisterMessage(false, eprop));
-		}
-		eventPropList.clear();
+        // unregister events, do not delete them
+        foreach(eveEventProperty* eprop, eventPropList){
+            addMessage(new eveEventRegisterMessage(false, eprop));
+        }
+        eventPropList.clear();
 
-		// stop input Queue
-		disableInput();
+        // stop input Queue
+        disableInput();
 
-		// delete all SMs
-		if (rootSM) delete rootSM;
-		rootSM = NULL;
+        // delete all SMs
+        if (rootSM) delete rootSM;
+        rootSM = NULL;
 
-		connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
-	}
+        connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
+    }
 
-	// make sure mHub reads all outstanding messages before closing the channel
-	if (shutdownThreadIfQueueIsEmpty()) eveError::log(DEBUG, QString("eveScanManager: shutdown done"));
+    // make sure mHub reads all outstanding messages before closing the channel
+    if (shutdownThreadIfQueueIsEmpty()) eveError::log(DEBUG, QString("eveScanManager: shutdown done"));
 }
 
 
@@ -175,20 +176,20 @@ void eveScanManager::shutdown(){
  * only the first Start event starts the chain, all others resume from pause
  */
 void eveScanManager::smStart() {
-	sendError(INFO,0,"eveScanManager::smStart: starting root");
-        if (!isStarted) {
-            sendStartTime();
-            isStarted = true;
-            eveEventProperty evprop(eveEventProperty::START, 0);
-            if (rootSM) rootSM->newEvent(&evprop);
-        }
-        else {
-            eveEventProperty evprop(eveEventProperty::PAUSE, 0);
-            evprop.setOn(false);
-            evprop.setDirection(eveDirectionONOFF);
-            if (rootSM) rootSM->newEvent(&evprop);
-        }
-//	if (rootSM) rootSM->startChain();
+    sendError(INFO,0,"eveScanManager::smStart: starting root");
+    if (!isStarted) {
+        sendStartTime();
+        isStarted = true;
+        eveEventProperty evprop(eveEventProperty::START, 0);
+        if (rootSM) rootSM->newEvent(&evprop);
+    }
+    else {
+        eveEventProperty evprop(eveEventProperty::PAUSE, 0);
+        evprop.setOn(false);
+        evprop.setDirection(eveDirectionONOFF);
+        if (rootSM) rootSM->newEvent(&evprop);
+    }
+    //	if (rootSM) rootSM->startChain();
 }
 
 /**
@@ -200,9 +201,9 @@ void eveScanManager::smStart() {
  *
  */
 void eveScanManager::smHalt() {
-	eveEventProperty evprop(eveEventProperty::HALT, 0);
-	if (rootSM) rootSM->newEvent(&evprop);
-//	if (rootSM) rootSM->haltChain();
+    eveEventProperty evprop(eveEventProperty::HALT, 0);
+    if (rootSM) rootSM->newEvent(&evprop);
+    //	if (rootSM) rootSM->haltChain();
 }
 
 /**
@@ -212,9 +213,9 @@ void eveScanManager::smHalt() {
  * do nothing, if we are halted or stopped
  */
 void eveScanManager::smBreak() {
-	eveEventProperty evprop(eveEventProperty::BREAK, 0);
-	if (rootSM) rootSM->newEvent(&evprop);
-//	if (rootSM) rootSM->breakChain();
+    eveEventProperty evprop(eveEventProperty::BREAK, 0);
+    if (rootSM) rootSM->newEvent(&evprop);
+    //	if (rootSM) rootSM->breakChain();
 }
 
 /**
@@ -225,9 +226,9 @@ void eveScanManager::smBreak() {
  * do nothing, if we are already halted, clear a break
  */
 void eveScanManager::smStop() {
-	eveEventProperty evprop(eveEventProperty::STOP, 0);
-	if (rootSM) rootSM->newEvent(&evprop);
-//	if (rootSM) rootSM->stopChain();
+    eveEventProperty evprop(eveEventProperty::STOP, 0);
+    if (rootSM) rootSM->newEvent(&evprop);
+    //	if (rootSM) rootSM->stopChain();
 }
 
 /**
@@ -237,9 +238,9 @@ void eveScanManager::smStop() {
  * do only if we are currently executing
  */
 void eveScanManager::smPause() {
-	eveEventProperty evprop(eveEventProperty::PAUSE, 0);
-	if (rootSM) rootSM->newEvent(&evprop);
-//	if (rootSM) rootSM->pauseChain();
+    eveEventProperty evprop(eveEventProperty::PAUSE, 0);
+    if (rootSM) rootSM->newEvent(&evprop);
+    //	if (rootSM) rootSM->pauseChain();
 }
 
 
@@ -249,16 +250,16 @@ void eveScanManager::smPause() {
  */
 void eveScanManager::smDone() {
 
-//	if (rootSM && rootSM->isInitializing()){
-//		rootSM->initialize();
-//	}
-//	else
-	if (rootSM && rootSM->isDone()){
-		// TODO
+    //	if (rootSM && rootSM->isInitializing()){
+    //		rootSM->initialize();
+    //	}
+    //	else
+    if (rootSM && rootSM->isDone()){
+        // TODO
         currentStatus.setChainStatus(eveChainDONE);
-                sendStatus(0, -1);
-		shutdown();
-	}
+        sendStatus(0, -1);
+        shutdown();
+    }
 }
 
 void eveScanManager::sendMessage(eveMessage *message){
@@ -295,24 +296,30 @@ void eveScanManager::sendRemainingTime(){
  */
 void eveScanManager::handleMessage(eveMessage *message){
 
-	eveError::log(DEBUG, "eveScanManager: message arrived");
-	switch (message->getType()) {
-		case EVEMESSAGETYPE_REQUESTANSWER:
-		{
-			int rid = ((eveRequestAnswerMessage*)message)->getReqId();
-			if (requestHash.contains(rid)) {
-				eveEventProperty evprop(eveEventProperty::TRIGGER, rid);
-				if (rootSM) rootSM->newEvent(&evprop);
-//				if (rootSM) rootSM->triggerSM(requestHash.value(rid), rid);
-				requestHash.remove(rid);
-			}
-		}
-		break;
-		default:
-			sendError(ERROR,0,"eveScanManager::handleMessage: unknown message");
-			break;
-	}
-	delete message;
+    eveError::log(DEBUG, "eveScanManager: message arrived");
+    switch (message->getType()) {
+    case EVEMESSAGETYPE_REQUESTANSWER:
+    {
+        int rid = ((eveRequestAnswerMessage*)message)->getReqId();
+        if (requestHash.contains(rid)) {
+            eveEventProperty evprop(eveEventProperty::TRIGGER, rid);
+            if (rootSM) rootSM->newEvent(&evprop);
+            //				if (rootSM) rootSM->triggerSM(requestHash.value(rid), rid);
+            requestHash.remove(rid);
+        }
+    }
+        break;
+    default:
+        sendError(ERROR,0,"eveScanManager::handleMessage: unknown message");
+        break;
+    }
+    try {
+        delete message;
+    }
+    catch (std::exception& e)
+    {
+        sendError(FATAL, 0, QString("C++ Exception while deleting message %1").arg(e.what()));
+    }
 }
 
 /**
@@ -322,7 +329,7 @@ void eveScanManager::handleMessage(eveMessage *message){
  * @param errorString String describing the error
  */
 void eveScanManager::sendError(int severity, int errorType,  QString errorString){
-	sendError(severity, EVEMESSAGEFACILITY_SCANCHAIN, errorType, errorString);
+    sendError(severity, EVEMESSAGEFACILITY_SCANCHAIN, errorType, errorString);
 }
 /**
  * \brief add an error message
@@ -352,7 +359,7 @@ void eveScanManager::sendStartTime() {
  */
 void eveScanManager::setStatus(int smid, smStatusT status, int smpause){
     currentStatus.setStatus(status, smpause);
-	sendStatus (smid, -1);
+    sendStatus (smid, -1);
 }
 /**
  *
@@ -362,7 +369,7 @@ void eveScanManager::setStatus(int smid, smStatusT status, int smpause){
  */
 void eveScanManager::sendStatus(int smid, int remainTime){
 
-	// fill in our storage channel
+    // fill in our storage channel
     eveChainStatusMessage* message = new eveChainStatusMessage(currentStatus.getStatus(), chainId, smid, posCounter, eveTime::getCurrent(), remainTime);
     // we send all status messages to math first from where it will be sent to everone else
     message->addDestinationFacility(EVECHANNEL_MATH);
@@ -371,9 +378,9 @@ void eveScanManager::sendStatus(int smid, int remainTime){
 
 void eveScanManager::addToHash(QHash<QString, QString>& hash, QString key, eveXMLReader* parser){
 
-	QString value;
-	value = parser->getChainString(chainId, key);
-	if (!value.isEmpty()) hash.insert(key, value);
+    QString value;
+    value = parser->getChainString(chainId, key);
+    if (!value.isEmpty()) hash.insert(key, value);
 
 }
 
@@ -381,13 +388,13 @@ void eveScanManager::addToHash(QHash<QString, QString>& hash, QString key, eveXM
  * increment position counter and send next-position-message
  */
 void eveScanManager::nextPos(){
-	++posCounter;
+    ++posCounter;
     eveDataMessage* message = new eveDataMessage("PosCountTimer", "", eveDataStatus(), DMTmetaData, eveTime::getCurrent(), QVector<int>(1, eveStartTime::getMSecsSinceStart()));
     message->setDestinationChannel(storageChannel);
     message->setDestinationFacility(EVECHANNEL_STORAGE);
-	message->setPositionCount(posCounter);
-	message->setChainId(chainId);
-	addMessage(message);
+    message->setPositionCount(posCounter);
+    message->setChainId(chainId);
+    addMessage(message);
 }
 
 /**
@@ -400,140 +407,61 @@ void eveScanManager::nextPos(){
  */
 void eveScanManager::registerEvent(int smid, eveEventProperty* evproperty, bool chain) {
 
-	if (evproperty == NULL){
-		sendError(ERROR, 0, "Not registering event; invalid event property");
-		return;
-	}
-	if (nextEventId > 999999) {
-		delete evproperty;
-		sendError(ERROR, 0, "Not registering event; eventId overflow");
-		return;
-	}
-	sendError(DEBUG, 0, "registering event");
-	if (chain){
-		++nextEventId;
-		evproperty->setEventId(nextEventId);
-	}
-	evproperty->setSmId(smid);
-	evproperty->setChainAction(chain);
-	connect(evproperty, SIGNAL(signalEvent(eveEventProperty*)), this, SLOT(newEvent(eveEventProperty*)), Qt::QueuedConnection);
-	eventPropList.append(evproperty);
-	eveEventRegisterMessage* regmessage = new eveEventRegisterMessage(true, evproperty);
-	addMessage(regmessage);
+    if (evproperty == NULL){
+        sendError(ERROR, 0, "Not registering event; invalid event property");
+        return;
+    }
+    if (nextEventId > 999999) {
+        delete evproperty;
+        sendError(ERROR, 0, "Not registering event; eventId overflow");
+        return;
+    }
+    sendError(DEBUG, 0, "registering event");
+    if (chain){
+        ++nextEventId;
+        evproperty->setEventId(nextEventId);
+    }
+    evproperty->setSmId(smid);
+    evproperty->setChainAction(chain);
+    connect(evproperty, SIGNAL(signalEvent(eveEventProperty*)), this, SLOT(newEvent(eveEventProperty*)), Qt::QueuedConnection);
+    eventPropList.append(evproperty);
+    eveEventRegisterMessage* regmessage = new eveEventRegisterMessage(true, evproperty);
+    addMessage(regmessage);
 }
 
 void eveScanManager::newEvent(eveEventProperty* evprop) {
 
-	if (shutdownPending) return;
+    if (shutdownPending) return;
 
-	if (evprop == NULL){
-		sendError(ERROR,0,"eveScanManager: invalid event property");
-		return;
-	}
+    if (evprop == NULL){
+        sendError(ERROR,0,"eveScanManager: invalid event property");
+        return;
+    }
 
-	if (evprop->getEventType() == eveEventTypeSCHEDULE )
-		sendError(DEBUG, 0, QString("eveScanManager: received new schedule event, action type %1").arg(evprop->getActionType()));
-	else
-		sendError(DEBUG, 0, QString("eveScanManager: received new monitor event"));
+    if (evprop->getEventType() == eveEventTypeSCHEDULE )
+        sendError(DEBUG, 0, QString("eveScanManager: received new schedule event, action type %1").arg(evprop->getActionType()));
+    else
+        sendError(DEBUG, 0, QString("eveScanManager: received new monitor event"));
 
-	if (evprop->isChainAction()){
-                if ((evprop->getActionType() == eveEventProperty::START) && (!isStarted)){
-                    sendStartTime();
-                    isStarted = true;
-                }
-	}
+    if (evprop->isChainAction()){
+        if ((evprop->getActionType() == eveEventProperty::START) && (!isStarted)){
+            sendStartTime();
+            isStarted = true;
+        }
+    }
     if (rootSM) rootSM->newEvent(evprop);
-/*
-	switch (evprop->getActionType()){
-	case eveEventProperty::START:
-			if (evprop->isChainAction()){
-				if (rootSM) rootSM->startChain();
-			}
-			else {
-				if (rootSM) rootSM->startSM(evprop->getSmId());
-			}
-		break;
-	case eveEventProperty::PAUSE:
-		if (rootSM) {
-			if (evprop->getOn()){
-				// pause on
-				if (evprop->isChainAction()){
-					sendError(DEBUG, 0, QString("eveScanManager: new event: pause on chain"));
-					rootSM->pauseChain();
-				}
-				else {
-					sendError(DEBUG, 0, QString("eveScanManager: new event: pause on smid %1").arg(evprop->getSmId()));
-					rootSM->pauseSM(evprop->getSmId());
-				}
-			}
-			else {
-				// pause off
-				if (evprop->isChainAction()){
-					sendError(DEBUG, 0, QString("eveScanManager: new event: pause off chain"));
-					rootSM->resumeChain();
-				}
-				else {
-					sendError(DEBUG, 0, QString("eveScanManager: new event: pause off smid %1").arg(evprop->getSmId()));
-					rootSM->resumeSM(evprop->getSmId());
-				}
-			}
-		}
-		break;
-	case eveEventProperty::HALT:
-		if (evprop->isChainAction()){
-			if (rootSM) rootSM->haltChain();
-		}
-		else {
-			if (rootSM) rootSM->haltSM(evprop->getSmId());
-		}
-		break;
-	case eveEventProperty::BREAK:
-		if (evprop->isChainAction()){
-			if (rootSM) rootSM->breakChain();
-		}
-		else {
-			if (rootSM) rootSM->breakSM(evprop->getSmId());
-		}
-		break;
-	case eveEventProperty::STOP:
-		if (evprop->isChainAction()){
-			if (rootSM) rootSM->stopChain();
-		}
-		else {
-			if (rootSM) rootSM->stopSM(evprop->getSmId());
-		}
-		break;
-	case eveEventProperty::REDO:
-		if (evprop->isChainAction()){
-			if (rootSM) rootSM->redoChain();
-		}
-		else {
-			if (rootSM) rootSM->redoSM(evprop->getSmId());
-		}
-		break;
-	case eveEventProperty::TRIGGER:
-		if (!evprop->isChainAction()){
-			if (rootSM) rootSM->triggerSM(evprop->getSmId(), 0);
-		}
-		break;
-	default:
-		sendError(ERROR,0,"eveScanManager: unknown event action");
-		break;
-
-	}
-*/
 }
 
 int eveScanManager::sendRequest(int smid, QString text){
-	int newrid = eveRequestManager::getRequestManager()->newId(channelId);
-	requestHash.insert(newrid, smid);
-	addMessage(new eveRequestMessage(newrid,EVEREQUESTTYPE_TRIGGER, text));
-	return newrid;
+    int newrid = eveRequestManager::getRequestManager()->newId(channelId);
+    requestHash.insert(newrid, smid);
+    addMessage(new eveRequestMessage(newrid,EVEREQUESTTYPE_TRIGGER, text));
+    return newrid;
 }
 
 void eveScanManager::cancelRequest(int rid){
-	if (requestHash.contains(rid)) {
-		requestHash.remove(rid);
-		addMessage(new eveRequestCancelMessage(rid));
-	}
+    if (requestHash.contains(rid)) {
+        requestHash.remove(rid);
+        addMessage(new eveRequestCancelMessage(rid));
+    }
 }

@@ -125,15 +125,27 @@ void eveEventManager::registerEvent(eveEventRegisterMessage* message){
 			if (detectorHash.contains(event->getName())){
 				detectorHash.remove(event->getName());
 				sendError(DEBUG, 0, QString("unregistering detector event: %1").arg(event->getName()));
-				delete event;
-			}
+                try {
+                     delete event;
+                 }
+                 catch (std::exception& e)
+                 {
+                         sendError(FATAL, 0, QString("C++ Exception while deleting event %1").arg(e.what()));
+                 }
+            }
 		}
 		else if (event->getEventType() == eveEventTypeMONITOR) {
 			if (monitorHash.contains(event)){
 				eveDeviceMonitor* devMon = monitorHash.take(event);
-				delete event;
-				delete devMon;
-			}
+               try {
+                    delete event;
+                    delete devMon;
+                }
+                catch (std::exception& e)
+                {
+                        sendError(FATAL, 0, QString("C++ Exception while deleting event %1").arg(e.what()));
+                }
+            }
 		}
 		else
 			sendError(DEBUG, 0, QString("unable to unregister event: %1, unknown event type").arg(event->getName()));

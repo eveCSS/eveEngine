@@ -266,12 +266,19 @@ void evePosCalc::setStepFile(QString stepfilename) {
             bool ok;
             while (!inStream.atEnd()) {
                 QString line = inStream.readLine().trimmed();
+                if (line.isEmpty()) continue;
                 if (axisType == eveINT){
-                    posIntList.append(line.toInt(&ok));
-                    if (!ok) sendError(ERROR, QString("unable to set %1 as (integer) position from file %2").arg(line).arg(fileInfo.absoluteFilePath()));
+                    int value = line.toInt(&ok);
+                    if (ok)
+                        posIntList.append(value);
+                    else
+                        sendError(ERROR, QString("unable to convert >%1< to integer position from file %2").arg(line).arg(fileInfo.absoluteFilePath()));
                 } else if (axisType == eveDOUBLE){
-                    posDoubleList.append(line.toDouble(&ok));
-                    if (!ok) sendError(ERROR, QString("unable to set %1 as (double) position from file %2").arg(line).arg(fileInfo.absoluteFilePath()));
+                    double value = line.toDouble(&ok);
+                    if (ok)
+                        posDoubleList.append(value);
+                    else
+                        sendError(ERROR, QString("unable to convert >%1< to double position from file %2").arg(line).arg(fileInfo.absoluteFilePath()));
                 } else if (axisType == eveSTRING){
                     positionList.append(line);
                 }

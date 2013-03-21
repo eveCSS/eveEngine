@@ -32,8 +32,20 @@ eveXMLReader::eveXMLReader(eveManager *parentObject){
 }
 
 eveXMLReader::~eveXMLReader() {
-	if (domDocument != NULL) delete domDocument;
-	deviceList.clearAll();
+    try
+    {
+        if (domDocument != NULL) delete domDocument;
+        deviceList.clearAll();
+        foreach (int key, smIdHash.keys()){
+            delete smIdHash.value(key);
+        }
+        smIdHash.clear();
+    }
+    catch (std::exception& e)
+    {
+        sendError(ERROR, 0, QString("C++ Exception: %1 in eveXMLReader destructor").arg(e.what()));
+    }
+
 }
 
 /** \brief read XML-Data and create all device definitions and various hashes etc.
@@ -121,8 +133,10 @@ bool eveXMLReader::read(QByteArray xmldata)
 					}
 					domSM = domSM.nextSiblingElement("scanmodule");
 				}
-				if (!rootSMHash.contains(chainNo))
+                if (!rootSMHash.contains(chainNo)){
 					sendError(ERROR,0,QString("no root scanmodule found for chain %1").arg(chainNo));
+                    return false;
+                }
 
 				// check if we have a save plugin with location parameter nosave
 				QDomElement domSavPlugin = domElem.firstChildElement("saveplugin");

@@ -50,7 +50,7 @@ bool eveSMStatus::setStatus(smStatusT newStatus ) {
 	return retval;
 }
 
-bool eveSMStatus::getPause() {
+int eveSMStatus::getPause() {
 
     if (masterPause)
         return 3;

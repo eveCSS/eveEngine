@@ -25,7 +25,7 @@ public:
 	bool isRedo(){return (chainRedo || redo);};
     bool isPaused(){return (chainPause || pause || masterPause);};
 	smStatusT getStatus(){return status;};
-    bool getPause();
+    int getPause();
 	bool setEvent(eveEventProperty* evprop );
 	void redoStart(){trackRedo = false;};
 	bool redoStatus(){return trackRedo;};

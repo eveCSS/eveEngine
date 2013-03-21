@@ -17,8 +17,7 @@
 #include "eveXMLReader.h"
 
 eveStorageManager::eveStorageManager(QString filename, int chainId, eveXMLReader* parser, QByteArray* xmldata) {
-    // register with messageHub
-    //xmlData = new QByteArray(*xmldata);
+
     confirmSaveRid = 0;
     fileName = filename;
     shutdownPending = false;
