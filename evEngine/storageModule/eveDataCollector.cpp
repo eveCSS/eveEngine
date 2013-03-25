@@ -349,8 +349,9 @@ QString eveDataCollector::macroExpand(QString eString){
         if (eString.contains("${DAY}")){
                 eString.replace(QString("${DAY}"), QString("%1").arg(now.toString("dd")));
         }
+        // provide a leading zero for week numbers
         if (eString.contains("${WEEK}")){
-		eString.replace(QString("${WEEK}"), QString("%1").arg(now.date().weekNumber()));
+            eString.replace(QString("${WEEK}"), QString("%1").arg(now.date().weekNumber(), 2, 10, QLatin1Char('0')));
 	}
 	if (eString.contains("${DATE}")){
 		eString.replace(QString("${DATE}"), QString("%1").arg(now.toString("yyyyMMdd")));
