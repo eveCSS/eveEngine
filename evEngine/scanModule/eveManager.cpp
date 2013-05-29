@@ -289,7 +289,9 @@ void eveManager::startChains(){
  */
 bool eveManager::sendStart(){
 
-	if (engineStatus->setStart()){
+    // reset the start time, because we got a valid start signal
+    if (engineStatus->getEngineStatus() == eveEngIDLEXML) eveStartTime::setStartTime(QDateTime::currentDateTime());
+    if (engineStatus->setStart()){
 		emit startSMs();
 		addMessage(engineStatus->getEngineStatusMessage());
 		return true;

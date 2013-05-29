@@ -50,7 +50,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 
     stageHash.insert(eveStgINIT, &eveScanModule::stgInit);
     stageHash.insert(eveStgREADPOS, &eveScanModule::stgReadPos);
-    stageHash.insert(eveStgGOTOSTARTINIT, &eveScanModule::stgGotoStartInit);
+    stageHash.insert(eveStgSTARTEXECUTING, &eveScanModule::eveStgStartExecuting);
     stageHash.insert(eveStgGOTOSTART, &eveScanModule::stgGotoStart);
     stageHash.insert(eveStgPRESCAN, &eveScanModule::stgPrescan);
     stageHash.insert(eveStgSETTLETIME, &eveScanModule::stgSettleTime);
@@ -295,15 +295,15 @@ void eveScanModule::stgReadPos() {
         sendError(DEBUG, 0, "stgReadPos starting");
         currentStageCounter = 1;
         signalCounter = 0;
-        QDateTime startTime = eveStartTime::getStartTime();
+//        QDateTime startTime = eveStartTime::getStartTime();
         foreach (eveSMAxis *axis, *axisList){
-            axis->setTimer(startTime);
+//            axis->setTimer(startTime);
             sendMessage(axis->getDeviceInfo());
             eveVariant dummy = axis->getPos();
             sendError(DEBUG, 0, QString("%1 position is %2").arg(axis->getName()).arg(dummy.toDouble()));
         }
         foreach (eveSMChannel *channel, *channelList){
-            channel->setTimer(startTime);
+//            channel->setTimer(startTime);
             sendMessage(channel->getDeviceInfo(false));
             if (channel->getNormalizeChannel() != NULL) {
                 sendMessage(channel->getDeviceInfo(true));
@@ -356,15 +356,20 @@ void eveScanModule::stgReadPos() {
 }
 
 /**
- * \brief Goto Start Position during Init
- *
- * not used any more,
- * keep it until stage has been removed from execStage
+ * \brief first stage to be executed if scan has been started (and init is done)
  *
  */
-void eveScanModule::stgGotoStartInit() {
+void eveScanModule::eveStgStartExecuting() {
 
-    // skip this stage, proceed with gotoStart
+    QDateTime startTime = eveStartTime::getStartTime();
+    foreach (eveSMAxis *axis, *axisList) axis->setTimer(startTime);
+    foreach (eveSMChannel *channel, *channelList) channel->setTimer(startTime);
+
+    if (smType == eveSmTypeROOT) {
+        // reset manager status from "initialization" to "idle"
+        manager->setStatus(smId, myStatus.getStatus(), myStatus.getPause());
+    }
+
     currentStageReady = true;
     emit sigExecStage();
 }
@@ -388,13 +393,9 @@ void eveScanModule::stgGotoStart() {
         foreach (eveCalc *positioner, positionerList) {
             positioner->reset();
         }
-        QDateTime startTime = QDateTime::currentDateTime();
-        //		foreach (eveSMChannel *channel, *channelList){
-        //			channel->setTimer(startTime);
-        //		}
         foreach (eveSMAxis *axis, *axisList){
             sendError(DEBUG, 0, QString("Moving axis %1").arg(axis->getName()));
-            axis->setTimer(startTime);
+            axis->setTimer(QDateTime::currentDateTime());
             // gotoStartPos but do not queue, don't set offset the first time, don't ignore timer
             axis->gotoStartPos(false, setAxisOffset, false);
             setAxisOffset = true;
@@ -954,7 +955,7 @@ void eveScanModule::execStage() {
                 currentStage = (stageT)(((int) currentStage)+1);
                 currentStageReady = false;
                 currentStageCounter = 0;
-                (this->*stageHash.value(currentStage))();
+                if (currentStage == eveStgINIT) (this->*stageHash.value(currentStage))();
             }
             else {
                 emit SMready();
@@ -963,18 +964,8 @@ void eveScanModule::execStage() {
         else
             (this->*stageHash.value(currentStage))();
     }
-    else if (currentStage == eveStgGOTOSTARTINIT){
-        if (currentStageReady){
-            if (smType == eveSmTypeROOT) {
-                // reset manager status from "initialization" to "idle"
-                manager->setStatus(smId, myStatus.getStatus(), myStatus.getPause());
-            }
-            else {
-                emit SMready();
-            }
-        }
-        else
-            (this->*stageHash.value(currentStage))();
+    else if (currentStage == eveStgSTARTEXECUTING){
+        // do nothing
     }
     return;
 }

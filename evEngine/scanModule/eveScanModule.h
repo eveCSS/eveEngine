@@ -27,7 +27,7 @@ class eveScanManager;
  * \brief process a ScanModule
  */
 
-enum stageT {eveStgINIT, eveStgREADPOS, eveStgGOTOSTARTINIT, eveStgGOTOSTART, eveStgPRESCAN,
+enum stageT {eveStgINIT, eveStgREADPOS, eveStgSTARTEXECUTING, eveStgGOTOSTART, eveStgPRESCAN,
 			eveStgSETTLETIME, eveStgTRIGWAIT, eveStgTRIGREAD, eveStgNEXTPOS,
 			eveStgPOSTSCAN, eveStgENDPOS, eveStgFINISH};
 
@@ -65,7 +65,7 @@ signals:
 private:
 	void startExec();
 	void stgInit();
-	void stgGotoStartInit();
+    void eveStgStartExecuting();
 	void stgGotoStart();
 	void stgReadPos();
 	void stgPrescan();

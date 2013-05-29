@@ -587,7 +587,7 @@ void eveSMAxis::setTimer(QDateTime start) {
 	}
 	else if (!posCalc->isAbs() && !isSetStartTime){
 		// for all relative timers set start time only once
-		// time is relative to loadTime
+        // time is relative to loadTime or time of first start signal
 		isSetStartTime = true;
 		((eveTimer*)gotoTrans)->setStartTime(start);
 		posCalc->setOffset(eveVariant(start));
