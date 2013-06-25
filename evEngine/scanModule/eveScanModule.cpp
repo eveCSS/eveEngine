@@ -677,7 +677,7 @@ void eveScanModule::stgTrigRead() {
                         if (ok) sendError(DEBUG, 0, QString("%1: raw value %2").arg(channel->getName()).arg(dval));
                         if (dataMsg->getDataType() == eveInt32T) {
                             sendError(DEBUG, 0, QString("Severity: %1, Alarm: %2").arg(dataMsg->getDataStatus().getSeverityString()).arg(dataMsg->getDataStatus().getAlarmString()));
-                            sendError(DEBUG, 0, QString("arraySize: %1, ptr: %2").arg(dataMsg->getArraySize()).arg((unsigned int)dataMsg->getIntArray().constData()));
+                            sendError(DEBUG, 0, QString("arraySize: %1, ptr: %2").arg(dataMsg->getArraySize()).arg((unsigned int)((quint64)dataMsg->getIntArray().constData())));
                             int *iarray= (int*) dataMsg->getIntArray().constData();
                             for (int i=0; i< dataMsg->getArraySize(); ++i) {
                                 if ((iarray[i] < 0) || (iarray[i] > 10000))

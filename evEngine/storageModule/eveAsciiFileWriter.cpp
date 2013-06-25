@@ -8,6 +8,7 @@
 #include "eveAsciiFileWriter.h"
 #include <QTextStream>
 #include <QList>
+#include <unistd.h>
 
 eveAsciiFileWriter::eveAsciiFileWriter() {
 	initDone = false;
@@ -208,7 +209,7 @@ int eveAsciiFileWriter::flush() {
     if (fileOpen) {
         filePtr->flush();
         if (filePtr->handle() > 0) {
-            fsync(filePtr->handle());
+            fdatasync(filePtr->handle());
             errorString = QString("AsciiFileWriter: flushed File %1").arg(fileName);
         }
     }

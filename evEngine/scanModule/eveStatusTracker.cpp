@@ -56,8 +56,11 @@ bool eveBasicStatusTracker::setChainStatus(eveChainStatusMessage* message) {
 				if (chidWithStorageList.contains(cid))
 					endStatus = eveChainSTORAGEDONE;
 				if (chainStatus.value(cid) != endStatus) AllDone = false;
+        // TODO remove this log line
+        if (newStatus == eveChainSTORAGEDONE) eveError::log(DEBUG, QString("eveStatusTracker chain: eveChainSTORAGEDONE"));
 			}
 			if (AllDone){
+        eveError::log(DEBUG, QString("eveStatusTracker::Engine done, Idle, NoXML"));
 				if (engineStatus != eveEngIDLENOXML){
 					engineStatus = eveEngIDLENOXML;
 					engStatusChng=true;

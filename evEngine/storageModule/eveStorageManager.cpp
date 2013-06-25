@@ -21,6 +21,7 @@ eveStorageManager::eveStorageManager(QString filename, int chainId, eveXMLReader
     confirmSaveRid = 0;
     fileName = filename;
     shutdownPending = false;
+    delayedStatus = NULL;
     channelId = eveMessageHub::getmHub()->registerChannel(this, EVECHANNEL_STORAGE);
 
     // collect all storage-related data
@@ -66,35 +67,42 @@ void eveStorageManager::handleMessage(eveMessage *message){
         }
         break;
     case EVEMESSAGETYPE_CHAINSTATUS:
-        if (((eveChainStatusMessage*)message)->getStatus() == eveChainMATHDONE){
-            int id = ((eveChainStatusMessage*)message)->getChainId();
-            if (chainIdChannelHash.remove(id) == 0){
-                sendError(DEBUG,0,QString("handleMessage: unable to remove not existing chainId %1 from chainList").arg(id));
+      if (((eveChainStatusMessage*)message)->getStatus() == eveChainMATHDONE){
+        int id = ((eveChainStatusMessage*)message)->getChainId();
+        if (chainIdChannelHash.remove(id) == 0){
+          sendError(DEBUG,0,QString("handleMessage: unable to remove not existing chainId %1 from chainList").arg(id));
+        }
+        else {
+          delayedStatus = new eveChainStatusMessage(eveChainSTORAGEDONE, id, 0, -1, eveTime::getCurrent(), -1, 0, 0);
+          delayedStatus->addDestinationFacility(EVECHANNEL_NET | EVECHANNEL_MANAGER);
+          if (chainIdChannelHash.isEmpty()) {
+            // no chains left, shut down
+            if (!dc->isConfirmSave()){
+              initShutdown();
+              eveError::log(DEBUG, QString("eveStorageManager: shutdown"));
+              eveChainStatusMessage* statusMessage = new eveChainStatusMessage(eveChainSTORAGEDONE, id, 0, -1, eveTime::getCurrent(), -1, 0, 0);
+              statusMessage->addDestinationFacility(EVECHANNEL_NET | EVECHANNEL_MANAGER);
+              addMessage(delayedStatus);
+              delayedStatus = NULL;
+              addMessage(new eveMessageInt(EVEMESSAGETYPE_STORAGEDONE, channelId));
+              shutdown();
             }
             else {
-                eveChainStatusMessage* statusMessage = new eveChainStatusMessage(eveChainSTORAGEDONE, id, 0, -1, eveTime::getCurrent(), -1, 0, 0);
-                statusMessage->addDestinationFacility(EVECHANNEL_NET | EVECHANNEL_MANAGER);
-                addMessage(statusMessage);
-                // init  shutdown if no chains left
-                if (!dc->isConfirmSave()){
-                    if (chainIdChannelHash.isEmpty()) initShutdown();
-                    // do shutdown if initShutdown() has been done
-                    if (shutdownPending) {
-                        addMessage(new eveMessageInt(EVEMESSAGETYPE_STORAGEDONE, channelId));
-                        shutdown();
-                    }
-                }
-                else if (chainIdChannelHash.isEmpty()){
-                    confirmSaveRid = eveRequestManager::getRequestManager()->newId(channelId);
-                    addMessage(new eveRequestMessage(confirmSaveRid, EVEREQUESTTYPE_YESNO, "Keep the data file?"));
-                }
+              confirmSaveRid = eveRequestManager::getRequestManager()->newId(channelId);
+              addMessage(new eveRequestMessage(confirmSaveRid, EVEREQUESTTYPE_YESNO, "Keep the data file?"));
             }
+          }
+          else {
+            addMessage(delayedStatus);
+            delayedStatus = NULL;
+          }
         }
-        break;
+      }
+      break;
     case EVEMESSAGETYPE_DATA:
     {
-        int id = ((eveDataMessage*)message)->getChainId();
-        if ((id == 0) || chainIdChannelHash.contains(id)){
+       int id = ((eveDataMessage*)message)->getChainId();
+       if ((id == 0) || chainIdChannelHash.contains(id)){
             dc->addData((eveDataMessage*)message);
         }
         else
@@ -145,6 +153,8 @@ void eveStorageManager::handleMessage(eveMessage *message){
                 ((reqType == EVEREQUESTTYPE_YESNO) || (reqType == EVEREQUESTTYPE_OKCANCEL))){
             dc->setKeepFile(((eveRequestAnswerMessage*)message)->getAnswerBool());
             initShutdown();
+            addMessage(delayedStatus);
+            delayedStatus = NULL;
             addMessage(new eveMessageInt(EVEMESSAGETYPE_STORAGEDONE, channelId));
             shutdown();
         }
@@ -196,9 +206,11 @@ void eveStorageManager::initShutdown(){
 
     if (!shutdownPending) {
         disableInput();
+        eveError::log(DEBUG, QString("eveStorageManager::initShutdown"));
         sendError(DEBUG, 0, QString("eveStorageManager: initShutdown"));
         shutdownPending = true;
         delete dc;
+        eveError::log(DEBUG, QString("eveStorageManager::initShutdown dc deleted"));
         connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
     }
 }

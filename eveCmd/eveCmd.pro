@@ -41,12 +41,20 @@ INCLUDEPATH += \
     ../evEngine/nwModule \
     ../evEngine/scanModule \
 
-unix:INCLUDEPATH += /soft/epics/base-3.14.12.2/include \
-    /soft/epics/base-3.14.12.2/include/os/Linux \
-    ...
-unix:LIBS += -L/soft/epics/base-3.14.12.2/lib/linux-x86 \
+linux-g++-32 {
+  INCLUDEPATH += /soft/epics/base-3.14.12.2/include \
+    /soft/epics/base-3.14.12.2/include/os/Linux
+  LIBS += -L/soft/epics/base-3.14.12.2/lib/linux-x86 \
     -lca \
     -lCom
+}
+linux-g++-64 {
+  INCLUDEPATH += /soft/epics/base-3.14.12.2/include \
+    /soft/epics/base-3.14.12.2/include/os/Linux
+  LIBS += -L/soft/epics/base-3.14.12.2/lib/linux-x86_64 \
+    -lca \
+    -lCom
+}
 win32:INCLUDEPATH += nwModule \
     J:\epics\3.14\windows\base-3.14.12.2\include \
     J:\epics\3.14\windows\base-3.14.12.2\include\os\WIN32 \

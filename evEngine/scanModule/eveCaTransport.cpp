@@ -76,7 +76,7 @@ eveCaTransport::~eveCaTransport(){
 		else {
 			ca_clear_channel(chanChid);
 			caflush();
-			eveError::log(DEBUG, QString("all channels done, destroy CA Context %1").arg((int)caThreadContext));
+//			eveError::log(DEBUG, QString("all channels done, destroy CA Context %1").arg((int)caThreadContext));
 			if (caThreadContext == ca_current_context()){
 				ca_context_destroy();
 				contextCounter.remove(caThreadContext);

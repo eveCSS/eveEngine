@@ -15,6 +15,7 @@
 #include "eveAsciiFileWriter.h"
 #include "eveFileTest.h"
 #include "eveSimplePV.h"
+#include "eveError.h"
 
 
 /**
@@ -248,13 +249,17 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QStri
 }
 
 eveDataCollector::~eveDataCollector() {
-	if (fileWriter){
-		int status = fileWriter->close();
-		manager->sendError(status, 0, QString("FileWriter: close message: %1").arg(fileWriter->errorText()));
+  eveError::log(DEBUG, QString("eveDataCollector::~eveDataCollector"));
+  if (fileWriter){
+    eveError::log(DEBUG, QString("eveDataCollector::~eveDataCollector closing and deleting fileWriter"));
+    int status = fileWriter->close();
+    eveError::log(DEBUG, QString("eveDataCollector::~eveDataCollector closed done; deleting fileWriter"));
+    manager->sendError(status, 0, QString("FileWriter: close message: %1").arg(fileWriter->errorText()));
 		delete fileWriter;
-	}
-    delete flushTimer;
-    if (!keepFile) QFile(fileName).remove();
+    eveError::log(DEBUG, QString("eveDataCollector::~eveDataCollector fileWriter deleted"));
+  }
+  delete flushTimer;
+  if (!keepFile) QFile(fileName).remove();
 	deviceList.clear();
 }
 

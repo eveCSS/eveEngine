@@ -125,13 +125,22 @@ SOURCES += scanModule/eveDeviceDefinitions.cpp \
 INCLUDEPATH += nwModule \
     scanModule \
     storageModule \
-    /soft/epics/base-3.14.12.1/include \
-    /soft/epics/base-3.14.12.1/include/os/Linux \
     eventModule \
     mathModule
-unix:LIBS += -L/soft/epics/base-3.14.12.1/lib/linux-x86 \
+linux-g++-32 {
+  INCLUDEPATH += /soft/epics/base-3.14.12.2/include \
+    /soft/epics/base-3.14.12.2/include/os/Linux
+  LIBS += -L/soft/epics/base-3.14.12.2/lib/linux-x86 \
     -lca \
     -lCom
+}
+linux-g++-64 {
+  INCLUDEPATH += /soft/epics/base-3.14.12.2/include \
+    /soft/epics/base-3.14.12.2/include/os/Linux
+  LIBS += -L/soft/epics/base-3.14.12.2/lib/linux-x86_64 \
+    -lca \
+    -lCom
+}
 win32 { 
     INCLUDEPATH += J:\epics\3.14\windows\base-3.14.12.1\include \
         J:\epics\3.14\windows\base-3.14.12.1\include\os\WIN32
