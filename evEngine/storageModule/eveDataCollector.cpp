@@ -32,7 +32,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QStri
     fileType = paraHash.value("format", emptyString);
     QString suffix = paraHash.value("suffix", emptyString);
     pluginName = paraHash.value("pluginname", emptyString);
-    pluginPath = paraHash.value("location", emptyString);
+    QString sharelibName = paraHash.value("location", emptyString);
     comment = paraHash.value("comment", emptyString);
     bool saveXML = paraHash.value("savescandescription", emptyString).startsWith("true");
     manager = sman;
@@ -122,20 +122,20 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QStri
 		if (fileType.isEmpty() || (fileType == "ASCII")){
 			fileWriter = new eveAsciiFileWriter();
 		}
-		else if (fileType == "HDF5") {
-			// TODO
-			sman->sendError(MINOR, 0, "eveDataCollector::configStorage: please configure hdf5plugin for File Type HDF5");
-			if (pluginName.isEmpty()) pluginName = "hdf5plugin";
-		}
-		else if (fileType == "HDF4"){
-			// TODO
-			sman->sendError(ERROR,0,QString("eveDataCollector::configStorage: use plugin for File Type %1").arg(fileType));
-		}
 		else {
 			sman->sendError(ERROR,0,QString("eveDataCollector::configStorage: unknown file type: %1").arg(fileType));
 		}
 	}
 	else {
+
+    if (sharelibName.length() == 0) {
+      sman->sendError(ERROR, 0, QString("Please provide a valid location tag for save plugin %1").arg(pluginName));
+      return;
+    }
+    // check if sharelibName has a directory path, move it it sharelibPath
+    QFileInfo finfo(sharelibName);
+    QString sharelibPath = finfo.absolutePath();
+    sharelibName = finfo.fileName();
 
 #if defined(Q_OS_WIN)
 		QString osLibExt = ".dll";
@@ -149,61 +149,41 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QStri
 		QString osLibPrep = "lib";
 #endif
 
-		if (!pluginName.endsWith(osLibExt))
-				pluginName += osLibExt;
-		if (!pluginName.startsWith(osLibPrep))
-			pluginName = osLibPrep + pluginName;
+		if (!sharelibName.endsWith(osLibExt))
+				sharelibName += osLibExt;
+		if (!sharelibName.startsWith(osLibPrep))
+			sharelibName = osLibPrep + sharelibName;
 
-		QString fullname;
-		QString libname = pluginPath;;
-		// if location ends with "/", we append the lowercase plugin-name extended
-		// with os-specific library-extension to the path
-		// if location does not end with "/", we assume it is the fully-qualified
-		// library name (which still may be a relative path)
-		if (pluginPath.endsWith("/")) {
-			libname = pluginPath+pluginName;
-		}
-		else {
-			libname = pluginPath;
-		}
-		QFileInfo info(libname);
-		if (info.isAbsolute()){
-			// try a plugin with version number first
-			QString pluginVersion = libname.left(libname.lastIndexOf(osLibExt)) + "." +
-							eveParameter::getParameter("version") + osLibExt;
-			QFileInfo infoVersion(pluginVersion);
-			if (infoVersion.exists())
-				fullname = infoVersion.absoluteFilePath();
-			else if (info.exists())
-		    	fullname = info.absoluteFilePath();
-		}
-		else {
-		    info.setFile(QDir::currentPath() + libname);
-		    if (info.exists())
-		    	fullname = info.absoluteFilePath();
-		    else {
-		    	QString pluginpath;
-		    	QStringList envList = QProcess::systemEnvironment();
-		    	foreach (QString env, envList){
-		    		if (env.startsWith("EVE_PLUGINPATH")){
-		    			pluginpath = env.remove("EVE_PLUGINPATH=");
-		    			break;
-		    		}
-		    	}
-		    	// check if we have a search list
-		    	QStringList pathdirs = pluginpath.split(":");
-		    	foreach (QString path, pathdirs){
-		    		info.setFile(path + libname);
-		    		if (info.exists()) {
-		    			fullname = info.absoluteFilePath();
-						break;
-		    		}
-		    	}
-		    }
-		}
+    QString sharelibNameVersion = sharelibName.left(sharelibName.lastIndexOf(osLibExt)) + "." +
+                                  eveParameter::getParameter("version") + osLibExt;
+
+    QString pluginpath;
+    QString fullname;
+    foreach (QString env, QProcess::systemEnvironment()){
+      if (env.startsWith("EVE_PLUGINPATH")){
+        pluginpath = env.remove("EVE_PLUGINPATH=");
+        break;
+      }
+    }
+    QStringList dirSearchList = pluginpath.split(":");
+    if (sharelibPath.length() > 0) dirSearchList.prepend(sharelibPath);
+    foreach (QString path, dirSearchList){
+      if (path.length() == 0) continue;
+      if (!path.endsWith("/")) path += "/";
+      QFileInfo infoVersion(path + sharelibNameVersion);
+      if (infoVersion.exists()) {
+        fullname = infoVersion.absoluteFilePath();
+        break;
+      }
+      QFileInfo info(path + sharelibName);
+      if (info.exists()) {
+        fullname = info.absoluteFilePath();
+        break;
+      }
+    }
+
 		if (fullname.isEmpty()){
-			sman->sendError(INFO, 0, QString("eveDataCollector: unable to resolve plugin path, using system defaults").arg(libname));
-			fullname = libname;
+			sman->sendError(ERROR, 0, QString("eveDataCollector: unable to resolve plugin plath, specify path or define EVE_PLUGINPATH"));
 		}
 		sman->sendError(DEBUG, 0, QString("eveDataCollector: loading plugin %1").arg(fullname));
 		QPluginLoader pluginLoader(fullname);

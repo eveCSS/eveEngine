@@ -51,7 +51,7 @@ private:
     QString comment;
     QString fileType;
     QString pluginName;
-    QString pluginPath;
+//    QString pluginPath;
     QStringList deviceList;
     eveStorageManager* manager;
     eveFileWriter* fileWriter;

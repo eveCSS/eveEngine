@@ -97,48 +97,52 @@ QList<eveMessage * > * eveMessageFilter::getCache()
 void eveMessageFilter::queueMessage(eveMessage *message)
 {
 
-	switch (message->getType()) {
-		case EVEMESSAGETYPE_ERROR:
-			if (((eveErrorMessage*) message)->getErrorType() == EVEERRORMESSAGETYPE_FILENAME){
-				if (filenameCache) delete filenameCache;
-				filenameCache = (eveErrorMessage*) message;
-			}
-            else if (((eveErrorMessage*) message)->getErrorType() == EVEERRORMESSAGETYPE_TOTALCOUNT){
-                if (maxPosCountCache) delete maxPosCountCache;
-                maxPosCountCache = (eveErrorMessage*) message;
-            }
-            else {
-				// we keep the last few errors
-				errorMessageCacheList.append(message);
-				while (errorMessageCacheList.count() > EVEMESSAGEFILTER_QUEUELENGTH) {
-					eveMessage *delMessage = errorMessageCacheList.takeFirst();
-					delete delMessage;
-				}
-			}
-			break;
-		case EVEMESSAGETYPE_ENGINESTATUS:
-			// we keep the last status
-			if (engineStatusCache) delete engineStatusCache;
-			engineStatusCache = (eveEngineStatusMessage*) message;
-			break;
-		case EVEMESSAGETYPE_CHAINSTATUS:
-			if (chainStatusCache) delete chainStatusCache;
-			chainStatusCache = (eveChainStatusMessage*) message;
-			break;
-		case EVEMESSAGETYPE_CURRENTXML:
-			if (currentXmlCache) delete currentXmlCache;
-			currentXmlCache = (eveCurrentXmlMessage*) message;
-			break;
-		case EVEMESSAGETYPE_PLAYLIST:
-			if (playlistCache) delete playlistCache;
-			playlistCache = (evePlayListMessage*) message;
-			break;
-		case EVEMESSAGETYPE_DATA:
-			// no data caching yet
-		default:
-			delete message;
-			break;
-	}
+  try {
+    switch (message->getType()) {
+    case EVEMESSAGETYPE_ERROR:
+      if (((eveErrorMessage*) message)->getErrorType() == EVEERRORMESSAGETYPE_FILENAME){
+        if (filenameCache) delete filenameCache;
+        filenameCache = (eveErrorMessage*) message;
+      }
+      else if (((eveErrorMessage*) message)->getErrorType() == EVEERRORMESSAGETYPE_TOTALCOUNT){
+        if (maxPosCountCache) delete maxPosCountCache;
+        maxPosCountCache = (eveErrorMessage*) message;
+      }
+      else {
+        // we keep the last few errors
+        errorMessageCacheList.append(message);
+        while (errorMessageCacheList.count() > EVEMESSAGEFILTER_QUEUELENGTH) {
+          eveMessage *delMessage = errorMessageCacheList.takeFirst();
+          delete delMessage;
+        }
+      }
+      break;
+    case EVEMESSAGETYPE_ENGINESTATUS:
+      // delete cache if scan is done
+      if (engineStatusCache) delete engineStatusCache;
+      engineStatusCache = (eveEngineStatusMessage*) message;
+      break;
+    case EVEMESSAGETYPE_CHAINSTATUS:
+      if (chainStatusCache) delete chainStatusCache;
+      chainStatusCache = (eveChainStatusMessage*) message;
+      break;
+    case EVEMESSAGETYPE_CURRENTXML:
+      if (currentXmlCache) delete currentXmlCache;
+      currentXmlCache = (eveCurrentXmlMessage*) message;
+      break;
+    case EVEMESSAGETYPE_PLAYLIST:
+      if (playlistCache) delete playlistCache;
+      playlistCache = (evePlayListMessage*) message;
+      break;
+    case EVEMESSAGETYPE_DATA:
+      // no data caching yet
+    default:
+      delete message;
+      break;
+    }
+  } catch (...) {
+    eveError::log(ERROR, QString("eveMessageFilter: error queueing message"));
+  }
 }
 
 /**
@@ -169,14 +173,21 @@ void eveMessageFilter::timeout()
  */
 void eveMessageFilter::clearCache(){
 
-	while (!errorMessageCacheList.isEmpty())
-		delete errorMessageCacheList.takeFirst();
-	if (engineStatusCache) delete engineStatusCache;
-	engineStatusCache = NULL;
-	if (chainStatusCache) delete chainStatusCache;
-	chainStatusCache = NULL;
-	if (currentXmlCache) delete currentXmlCache;
-	currentXmlCache = NULL;
-	if (filenameCache) delete filenameCache;
-	filenameCache = NULL;
+  try {
+    if (engineStatusCache) delete engineStatusCache;
+    if (chainStatusCache) delete chainStatusCache;
+    if (currentXmlCache) delete currentXmlCache;
+    if (filenameCache) delete filenameCache;
+    if (maxPosCountCache) delete maxPosCountCache;
+    foreach(eveMessage* mess, errorMessageCacheList) delete mess;
+  } catch (...) {
+    eveError::log(ERROR, QString("eveMessageFilter: error while deleting cache"));
+  }
+  engineStatusCache = NULL;
+  chainStatusCache = NULL;
+  currentXmlCache = NULL;
+  filenameCache = NULL;
+  maxPosCountCache = NULL;
+  errorMessageCacheList.clear();
+
 }
