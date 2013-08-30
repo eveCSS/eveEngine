@@ -91,83 +91,83 @@ bool eveXMLReader::read(QByteArray xmldata)
 
     QDomElement scanElem = root.firstChildElement("scan");
     if (!scanElem.isNull()){
-        QDomElement repeatcount = scanElem.firstChildElement("repeatcount");
-        if (repeatcount.isNull()){
-    		sendError(ERROR,0,QString("eveXMLReader::read: no repeatcount tag found"));
+      QDomElement repeatcount = scanElem.firstChildElement("repeatcount");
+      if (repeatcount.isNull()){
+        sendError(ERROR,0,QString("eveXMLReader::read: no repeatcount tag found"));
+        return false;
+      }
+      bool ok = true;
+      repeatCount = repeatcount.text().toInt(&ok);
+      if (!ok) repeatCount=0;
+
+      // build indices
+      // one Hash with DomElement / chain-id
+      // one Hash with DomElement / sm-id for every chain
+      // one Hash with previousHash /chain-id
+      QDomElement domElem = scanElem.firstChildElement("chain");
+      while (!domElem.isNull()) {
+        if (domElem.hasAttribute("id")) {
+          QString typeString = domElem.attribute("id");
+          int chainNo = typeString.toInt();
+          if (chainIdList.contains(chainNo)){
+            sendError(ERROR,0,QString("duplicate chainId %1").arg(chainNo));
+          }
+          else {
+            chainIdList.append(chainNo);
+          }
+          chainDomIdHash.insert(chainNo, domElem);
+          smIdHash.insert(chainNo, new QHash<int, QDomElement> );
+          QDomElement domSM = domElem.firstChildElement("scanmodules");
+          domSM = domSM.firstChildElement("scanmodule");
+          while (!domSM.isNull()) {
+            if (domSM.hasAttribute("id")) {
+              unsigned int smNo = QString(domSM.attribute("id")).toUInt();
+              QDomElement domParent = domSM.firstChildElement("parent");
+              if (!domParent.isNull()) {
+                int parentNumber = domParent.text().toInt(&ok);
+                // if parent == 0 insert in root-list
+                if (ok && (parentNumber == 0)) rootSMHash.insert(chainNo,smNo);
+                // ignore all SMs with parent < 0
+                if (ok && (parentNumber >= 0)) (smIdHash.value(chainNo))->insert(smNo, domSM);
+              }
+            }
+            domSM = domSM.nextSiblingElement("scanmodule");
+          }
+          if (!rootSMHash.contains(chainNo)){
+            sendError(ERROR,0,QString("no root scanmodule found for chain %1").arg(chainNo));
             return false;
-        }
-        bool ok = true;
-        repeatCount = repeatcount.text().toInt(&ok);
-        if (!ok) repeatCount=0;
+          }
 
-		// build indices
-		// one Hash with DomElement / chain-id
-		// one Hash with DomElement / sm-id for every chain
-		// one Hash with previousHash /chain-id
-		QDomElement domElem = scanElem.firstChildElement("chain");
-		while (!domElem.isNull()) {
-			if (domElem.hasAttribute("id")) {
-				QString typeString = domElem.attribute("id");
-				int chainNo = typeString.toInt();
-				if (chainIdList.contains(chainNo)){
-					sendError(ERROR,0,QString("duplicate chainId %1").arg(chainNo));
-				}
-				else {
-					chainIdList.append(chainNo);
-				}
-				chainDomIdHash.insert(chainNo, domElem);
-				smIdHash.insert(chainNo, new QHash<int, QDomElement> );
-				QDomElement domSM = domElem.firstChildElement("scanmodules");
-				domSM = domSM.firstChildElement("scanmodule");
-				while (!domSM.isNull()) {
-					if (domSM.hasAttribute("id")) {
-						unsigned int smNo = QString(domSM.attribute("id")).toUInt();
-						QDomElement domParent = domSM.firstChildElement("parent");
-						if (!domParent.isNull()) {
-							int parentNumber = domParent.text().toInt(&ok);
-							// if parent == 0 insert in root-list
-							if (ok && (parentNumber == 0)) rootSMHash.insert(chainNo,smNo);
-							// ignore all SMs with parent < 0
-							if (ok && (parentNumber >= 0)) (smIdHash.value(chainNo))->insert(smNo, domSM);
-						}
-					}
-					domSM = domSM.nextSiblingElement("scanmodule");
-				}
-                if (!rootSMHash.contains(chainNo)){
-					sendError(ERROR,0,QString("no root scanmodule found for chain %1").arg(chainNo));
-                    return false;
+          // check if we have a save plugin with location parameter nosave
+          QDomElement domSavPlugin = domElem.firstChildElement("saveplugin");
+          if (!domSavPlugin.isNull()) {
+            QDomElement pluginParam = domSavPlugin.firstChildElement("parameter");
+            while (!pluginParam.isNull()) {
+              if (pluginParam.hasAttribute("name")) {
+                if (pluginParam.attribute("name") == "location"){
+                  if (pluginParam.text().toLower().trimmed() == "nosave") noSaveCidList.append(chainNo);
                 }
-
-				// check if we have a save plugin with location parameter nosave
-				QDomElement domSavPlugin = domElem.firstChildElement("saveplugin");
-				if (!domSavPlugin.isNull()) {
-					QDomElement pluginParam = domSavPlugin.firstChildElement("parameter");
-					while (!pluginParam.isNull()) {
-						if (pluginParam.hasAttribute("name")) {
-							if (pluginParam.attribute("name") == "location"){
-								if (pluginParam.text().toLower().trimmed() == "nosave") noSaveCidList.append(chainNo);
-							}
-						}
-						pluginParam = pluginParam.nextSiblingElement("parameter");
-					}
-				}
-			}
-			domElem = domElem.nextSiblingElement("chain");
-		}
-		// get the list of ids which should be monitored
-		domElem = scanElem.firstChildElement("monitoroptions");
-		if (!domElem.isNull()) {
-			QDomElement domId = domElem.firstChildElement("id");
-			while (!domId.isNull()) {
-				if (domId.text().length() > 0) monitorList.append(domId.text());
-				domId = domId.nextSiblingElement("id");
-			}
-		}
+              }
+              pluginParam = pluginParam.nextSiblingElement("parameter");
+            }
+          }
+        }
+        domElem = domElem.nextSiblingElement("chain");
+      }
+      // get the list of ids which should be monitored
+      domElem = scanElem.firstChildElement("monitoroptions");
+      if (!domElem.isNull()) {
+        QDomElement domId = domElem.firstChildElement("id");
+        while (!domId.isNull()) {
+          if (domId.text().length() > 0) monitorList.append(domId.text());
+          domId = domId.nextSiblingElement("id");
+        }
+      }
     }
 
     QDomElement domElem = root.firstChildElement("detectors");
-	QDomNodeList detectorNodeList = domElem.childNodes();
-	for (unsigned int i=0; i < detectorNodeList.length(); ++i) createDetectorDefinition(detectorNodeList.item(i));
+    QDomNodeList detectorNodeList = domElem.childNodes();
+    for (unsigned int i=0; i < detectorNodeList.length(); ++i) createDetectorDefinition(detectorNodeList.item(i));
 
 	domElem = root.firstChildElement("motors");
 	QDomNodeList motorNodeList = domElem.childNodes();
