@@ -157,8 +157,11 @@ bool eveXMLReader::read(QByteArray xmldata)
       // get the list of ids which should be monitored
       domElem = scanElem.firstChildElement("monitoroptions");
       if (!domElem.isNull()) {
+        bool doMonitorList = true;
+        if (domElem.hasAttribute("type") && (domElem.attribute("type") == "none")) doMonitorList = false;
+
         QDomElement domId = domElem.firstChildElement("id");
-        while (!domId.isNull()) {
+        while (doMonitorList && !domId.isNull()) {
           if (domId.text().length() > 0) monitorList.append(domId.text());
           domId = domId.nextSiblingElement("id");
         }
