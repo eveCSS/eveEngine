@@ -41,27 +41,38 @@ INCLUDEPATH += \
     ../evEngine/nwModule \
     ../evEngine/scanModule \
 
+win32-g++ {
+   UNAME = $$system(uname -s)
+   WINVER = $$system(ver)
+   contains( UNAME, [lL]inux ){
+      message( Using Linux Mingw cross-compiler )
+      EPICS_BASE = /soft/epics/base-3.14.12.2
+   }
+   contains( WINVER, Windows ){
+      message( Using Windows Mingw compiler )
+      EPICS_BASE = J:/epics/3.14/windows/base-3.14.12.2
+   }
+   TARGET_ARCH = win32-x86-mingw
+   ARCH = WIN32
+}
+
 linux-g++-32 {
-  INCLUDEPATH += /soft/epics/base-3.14.12.2/include \
-    /soft/epics/base-3.14.12.2/include/os/Linux
-  LIBS += -L/soft/epics/base-3.14.12.2/lib/linux-x86 \
-    -lca \
-    -lCom
+   EPICS_BASE = /soft/epics/base-3.14.12.2
+   TARGET_ARCH = linux-x86
+   ARCH = Linux
 }
+
 linux-g++-64 {
-  INCLUDEPATH += /soft/epics/base-3.14.12.2/include \
-    /soft/epics/base-3.14.12.2/include/os/Linux
-  LIBS += -L/soft/epics/base-3.14.12.2/lib/linux-x86_64 \
+   EPICS_BASE = /soft/epics/base-3.14.12.2
+   TARGET_ARCH = linux-x86_64
+   ARCH = Linux
+}
+
+INCLUDEPATH += $$EPICS_BASE/include \
+    $$EPICS_BASE/include/os/$$ARCH
+LIBS += -L $$EPICS_BASE/lib/$$TARGET_ARCH \
     -lca \
     -lCom
-}
-win32:INCLUDEPATH += nwModule \
-    J:\epics\3.14\windows\base-3.14.12.2\include \
-    J:\epics\3.14\windows\base-3.14.12.2\include\os\WIN32 \
-    scanModule
-win32:LIBS += J:\epics\3.14\windows\base-3.14.12.2\lib\win32-x86-mingw\ca.lib \
-    J:\epics\3.14\windows\base-3.14.12.2\lib\win32-x86-mingw\Com.lib \
-    -lws2_32
 
 
 
