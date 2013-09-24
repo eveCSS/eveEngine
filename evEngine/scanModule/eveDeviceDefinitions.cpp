@@ -51,7 +51,7 @@ eveBaseDeviceDefinition::~eveBaseDeviceDefinition() {
 
 
 eveDeviceDefinition::eveDeviceDefinition(eveCommandDefinition *dUnit, eveCommandDefinition *dPv, QString dName, QString dId) :
-	eveBaseDeviceDefinition::eveBaseDeviceDefinition(dName, dId) {
+  eveBaseDeviceDefinition(dName, dId) {
 	valueCmd = dPv;
 	unit = dUnit;
 }
@@ -61,7 +61,7 @@ eveDeviceDefinition::~eveDeviceDefinition() {
 }
 
 eveChannelDefinition::eveChannelDefinition(eveDetectorDefinition* detectorDef, eveCommandDefinition *triggerdef, eveCommandDefinition *unitdef, eveCommandDefinition *valuedef, eveCommandDefinition *stopdef, QString channelname, QString channelid) :
-	eveDeviceDefinition::eveDeviceDefinition(unitdef, valuedef, channelname, channelid)
+  eveDeviceDefinition(unitdef, valuedef, channelname, channelid)
 {
 	detectorDefinition = detectorDef;
 	triggerCmd = triggerdef;
@@ -73,7 +73,7 @@ eveChannelDefinition::~eveChannelDefinition() {
 
 
 eveDetectorDefinition::eveDetectorDefinition(QString dName, QString dId, eveCommandDefinition* triggerDef, eveCommandDefinition* unitDef, eveCommandDefinition* stopDef) :
-	eveBaseDeviceDefinition::eveBaseDeviceDefinition(dName, dId)  {
+  eveBaseDeviceDefinition(dName, dId)  {
 	trigger = triggerDef;
 	unit = unitDef;
 	stop = stopDef;
@@ -86,7 +86,7 @@ eveDetectorDefinition::~eveDetectorDefinition() {
 
 
 eveAxisDefinition::eveAxisDefinition(eveMotorDefinition* motorDef, eveCommandDefinition *triggerCom, eveCommandDefinition *aUnit, eveCommandDefinition *gotoCom, eveCommandDefinition *stopCom, eveCommandDefinition *position, eveCommandDefinition *aStatus, eveCommandDefinition *aDeadbCom, QString aName, QString aId) :
-	eveDeviceDefinition::eveDeviceDefinition(aUnit, position, aName, aId) {
+  eveDeviceDefinition(aUnit, position, aName, aId) {
 
 	motorDefinition = motorDef;
 	triggerCmd = triggerCom;
@@ -108,7 +108,7 @@ eveAxisDefinition::~eveAxisDefinition() {
 
 
 eveMotorDefinition::eveMotorDefinition(QString dName, QString dId, eveCommandDefinition* triggerDef, eveCommandDefinition* unitDef) :
-	eveBaseDeviceDefinition::eveBaseDeviceDefinition(dName, dId)  {
+  eveBaseDeviceDefinition(dName, dId)  {
 
 	trigger = triggerDef;
 	unit = unitDef;

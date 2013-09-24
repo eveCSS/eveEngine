@@ -9,33 +9,47 @@ HEADERS = hdf5DataSet.h \
 SOURCES = hdf5DataSet.cpp \
     hdf5Plugin.cpp \
     ../../evEngine/scanModule/eveTime.cpp
-linux-g++-32 {
-  INCLUDEPATH += /soft/epics/base-3.14.12.2/include \
-    /soft/epics/base-3.14.12.2/include/os/Linux \
-#    /home/eden/src/hdf5/1.8.4/include/
-    /home/eden/src/hdf5/1.6.10-32bit/include/
 
-  LIBS += -L/soft/epics/base-3.14.12.2/lib/linux-x86 \
-    -L/home/eden/src/hdf5/1.6.10-32bit/lib \
-#   -L/home/eden/src/hdf5/1.8.4-32bit/lib-static/ \
-    -lhdf5_cpp \
-    -lhdf5 \
-    -lca \
-    -lCom
-  DESTDIR = ../lib
+win32-g++ {
+   UNAME = $$system(uname -s)
+   WINVER = $$system(ver)
+   contains( UNAME, [lL]inux ){
+      message( Using Linux Mingw cross-compiler )
+      EPICS_BASE = /soft/epics/base-3.14.12.2
+      HDF_BASE = /home/eden/prog/mxe/mxe_stable/usr/i686-pc-mingw32
+   }
+   contains( WINVER, Windows ){
+      message( Using Windows Mingw compiler )
+      EPICS_BASE = J:/epics/3.14/windows/base-3.14.12.2
+      HDF_BASE = J:/prog/hdf/hdf5-1.8.10_mxe
+   }
+   TARGET_ARCH = win32-x86-mingw
+   ARCH = WIN32
 }
+
+linux-g++-32 {
+   HDF_BASE = /home/eden/src/hdf5/1.6.10-32bit
+   EPICS_BASE = /soft/epics/base-3.14.12.2
+   TARGET_ARCH = linux-x86
+   ARCH = Linux
+}
+
 linux-g++-64 {
-  INCLUDEPATH += /soft/epics/base-3.14.12.2/include \
-    /soft/epics/base-3.14.12.2/include/os/Linux \
-#    /home/eden/src/hdf5/1.8.4/include/
-    /home/eden/src/hdf5/1.6.10_x86_64/include/
-  LIBS += -L/soft/epics/base-3.14.12.2/lib/linux-x86_64 \
-    -L/home/eden/src/hdf5/1.6.10_x86_64/lib64 \
-#   -L/home/eden/src/hdf5/1.8.4-32bit/lib-static/ \
+   HDF_BASE = /home/eden/src/hdf5/1.6.10_x86_64
+   EPICS_BASE = /soft/epics/base-3.14.12.2
+   TARGET_ARCH = linux-x86_64
+   ARCH = Linux
+}
+
+INCLUDEPATH += $$EPICS_BASE/include \
+    $$EPICS_BASE/include/os/$$ARCH \
+    $$HDF_BASE/include
+
+LIBS += -L $$EPICS_BASE/lib/$$TARGET_ARCH \
+    -L $$HDF_BASE/lib \
     -lhdf5_cpp \
     -lhdf5 \
     -lca \
     -lCom
-  DESTDIR = ../lib64
-}
+
 TARGET = $$qtLibraryTarget(hdf5plugin)

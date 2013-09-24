@@ -209,8 +209,12 @@ int eveAsciiFileWriter::flush() {
     if (fileOpen) {
         filePtr->flush();
         if (filePtr->handle() > 0) {
-            fdatasync(filePtr->handle());
-            errorString = QString("AsciiFileWriter: flushed File %1").arg(fileName);
+#if defined(Q_OS_WIN)
+          errorString = QString("AsciiFileWriter: flushing File %1 is not supported").arg(fileName);
+#else
+          fdatasync(filePtr->handle());
+          errorString = QString("AsciiFileWriter: flushed File %1").arg(fileName);
+#endif
         }
     }
     return DEBUG;

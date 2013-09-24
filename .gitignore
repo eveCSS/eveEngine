@@ -11,6 +11,8 @@ testfiles$
 Makefile$
 Makefile.Debug$
 Makefile.Release$
+^evTestClient/evTestClient.pro.user
+^evEngine.pro.user
 \.project$
 \.cproject$
 .*\.hd5$

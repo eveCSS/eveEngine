@@ -254,12 +254,26 @@ QString evePlayListManager::getTempPath(){
 
     QString user = "unknown";
     QString tmpdir = "/tmp";
+    bool usernamefound=false;
+    bool tmpdirfound=false;
 
     QStringList environment = QProcess::systemEnvironment();
     foreach (QString line, environment){
-        if (line.startsWith("USER=")) user=line.remove(0,5);
-        if (line.startsWith("TMPDIR=")) tmpdir=line.remove(0,7);
+        if (line.startsWith("USER=")) {
+          user=line.remove(0,5);
+          usernamefound = true;
+        }
+        if (line.startsWith("TMPDIR=")) {
+          tmpdir=line.remove(0,7);
+          tmpdirfound = true;
+        }
     }
+    foreach (QString line, environment){
+        if (!usernamefound && line.startsWith("USERNAME=")) user=line.remove(0,9);
+        if (!tmpdirfound && line.startsWith("TMP=")) tmpdir=line.remove(0,4);
+        if (!tmpdirfound && line.startsWith("TEMP=")) tmpdir=line.remove(0,5);
+    }
+
     QFileInfo path = QFileInfo(tmpdir + "/eve-" + user);
     return path.absoluteFilePath();
 }

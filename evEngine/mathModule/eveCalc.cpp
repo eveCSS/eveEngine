@@ -9,6 +9,7 @@
 #include <cmath>
 #include <exception>
 #include <values.h>
+#include <float.h>
 #include "eveError.h"
 
 #define MATH EVEMESSAGEFACILITY_MATH

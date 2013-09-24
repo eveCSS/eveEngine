@@ -22,7 +22,7 @@
 #include "eveSMMotor.h"
 
 #define EVE_XML_VERSION        2
-#define EVE_XML_REVISION       2
+#define EVE_XML_REVISION       3
 
 eveXMLReader::eveXMLReader(eveManager *parentObject){
 	parent = parentObject;
@@ -64,7 +64,7 @@ bool eveXMLReader::read(QByteArray xmldata)
     }
 
     QDomElement root = domDocument->documentElement();
-	eveError::log(DEBUG, QString("ScanModule-File root %1").arg(root.tagName()).toAscii().data());
+    eveError::log(DEBUG, QString("ScanModule-File root %1").arg(root.tagName()).toAscii().data());
     if (root.tagName() != "scml") {
 		sendError(ERROR,0,QString("eveXMLReader::read: file is not a scml file, it is %1").arg(root.tagName()));
         return false;
@@ -157,11 +157,11 @@ bool eveXMLReader::read(QByteArray xmldata)
       // get the list of ids which should be monitored
       domElem = scanElem.firstChildElement("monitoroptions");
       if (!domElem.isNull()) {
-        bool doMonitorList = true;
-        if (domElem.hasAttribute("type") && (domElem.attribute("type") == "none")) doMonitorList = false;
-
         QDomElement domId = domElem.firstChildElement("id");
-        while (doMonitorList && !domId.isNull()) {
+//        bool doMonitorList = true;
+//        if (domElem.hasAttribute("type") && (domElem.attribute("type") == "none")) doMonitorList = false;
+//        while (doMonitorList && !domId.isNull()) {
+        while (!domId.isNull()) {
           if (domId.text().length() > 0) monitorList.append(domId.text());
           domId = domId.nextSiblingElement("id");
         }
