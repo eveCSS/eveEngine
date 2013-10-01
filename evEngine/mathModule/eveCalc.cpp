@@ -85,7 +85,7 @@ void eveCalc::reset(){
     position = -1;
     count = -1;
     curveMin.ry() = DBL_MAX;
-    curveMax.ry() = DBL_MIN;
+    curveMax.ry() = -1.0*DBL_MAX;
     ydata = NAN;
     curvePeak = curveCenter = curveEdge = QPointF();
     curveStdDev = QPointF();
@@ -445,7 +445,7 @@ QVector<QPointF> eveCalc::getDerivative(const QVector<QPointF>& curve){
  */
 eveCalc::Calcresult eveCalc::getPeak(const QVector<QPointF>& curve){
 
-    QPointF max(0.0, DBL_MIN);
+    QPointF max(0.0, -1.0*DBL_MAX);
     QPointF min(0.0, DBL_MAX);
     QPointF Peak;
     int pindex = 0;

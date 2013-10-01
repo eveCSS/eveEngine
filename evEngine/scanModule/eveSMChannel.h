@@ -61,7 +61,7 @@ public slots:
 	void newEvent(eveEventProperty*);
 
 signals:
-	virtual void channelDone();
+  void channelDone();
 
 private:
 	virtual void signalReady();

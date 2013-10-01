@@ -611,16 +611,16 @@ eveDevInfoMessage* eveSMChannel::getDeviceInfo(bool normalizeInfo){
 
     sl->prepend(QString("Name:%1").arg(name));
     sl->prepend(QString("XML-ID:%1").arg(xmlId));
-    sl->append(QString("unit:%1").arg(unit));
+    sl->append(QString("Unit:%1").arg(unit));
     sl->append(QString("DeviceType:Channel"));
     if (valueRawMsg != NULL){
         sl->append(QString("Value:%1").arg(valueRawMsg->toVariant().toString()));
     }
     if (averageCount > 1) {
-        sl->append(QString("AverageCount:%1").arg(averageCount));
-        sl->append(QString("maxAttempts:%1").arg(maxAttempts));
-        sl->append(QString("maxDeviation:%1").arg(maxDeviation));
-        sl->append(QString("minimum:%1").arg(minimum));
+        sl->append(QString("SelectedAverageCount:%1").arg(averageCount));
+        sl->append(QString("MaxAttempts:%1").arg(maxAttempts));
+        sl->append(QString("MaxDeviation:%1").arg(maxDeviation));
+        sl->append(QString("Minimum:%1").arg(minimum));
     }
     if (normalizeChannel && normalizeInfo){
         sl->append(QString("NormalizeChannelID:%1").arg(normalizeChannel->getXmlId()));

@@ -46,7 +46,7 @@ INCLUDEPATH += $$EPICS_BASE/include \
     $$HDF_BASE/include
 
 LIBS += -L $$EPICS_BASE/lib/$$TARGET_ARCH \
-    -L $$HDF_BASE/lib \
+    -L$$HDF_BASE/lib \
     -lhdf5_cpp \
     -lhdf5 \
     -lca \
