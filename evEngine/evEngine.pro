@@ -161,3 +161,10 @@ INCLUDEPATH += $$EPICS_BASE/include \
 LIBS += -L $$EPICS_BASE/lib/$$TARGET_ARCH \
     -lca \
     -lCom
+
+win32-g++ {
+   contains( WINVER, Windows ){
+      LIBS += -L C:\MinGW\lib
+      LIBS += -lws2_32 -ladvapi32 -lshell32 -luser32 -lkernel32
+    }
+}
