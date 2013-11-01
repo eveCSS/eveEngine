@@ -27,7 +27,7 @@
 // loglevel 5: send FATAL,ERROR,MINOR,INFO,DEBUG errors
 #define DEFAULT_LOGLEVEL 3
 
-#define EVE_VERSION "1.15"
+#define EVE_VERSION "1.16"
 #define SAVEPLUGIN_VERSION "1.3" // only plugins with exactly this version string will be loaded
 
 int main(int argc, char *argv[])
