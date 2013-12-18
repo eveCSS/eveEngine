@@ -18,15 +18,23 @@ eveMathManager::eveMathManager(int chainId, int schannel, QList<eveMathConfig*>*
 	storageChannel=schannel;
 	// create a hash with math objects delete mathConfigList
 
+    int lowestPlotWindowId = 0xfffffff;
+    eveMath* preferedMath = NULL;
+
 	while (!mathConfigList->isEmpty()){
 		eveMathConfig *mathConfig = mathConfigList->takeFirst();
 		eveMath* math = new eveMath(*mathConfig, this);
-		delete mathConfig;
+        if (mathConfig->getPlotWindowId() < lowestPlotWindowId) {
+            lowestPlotWindowId = mathConfig->getPlotWindowId();
+            preferedMath = math;
+        }
+        delete mathConfig;
 		foreach (int scanmoduleId, math->getAllScanModuleIds()){
 			mathHash.insert(scanmoduleId, math);
 		}
 	}
 	delete mathConfigList;
+    if (preferedMath != NULL) preferedMath->setPrefered(true);
 
 	// register with messageHub
 	channelId = eveMessageHub::getmHub()->registerChannel(this, EVECHANNEL_MATH);
@@ -48,11 +56,9 @@ void eveMathManager::handleMessage(eveMessage *message){
 		return;
 	}
 
-	//eveError::log(4, "eveMathManager: message arrived");
 	switch (message->getType()) {
 		case EVEMESSAGETYPE_DATA:
 		{
-			//sendError(DEBUG, 0 ,"eveMathManager::handleMessage: data message arrived");
 			eveDataMessage* datamessage = (eveDataMessage*)message;
             if (datamessage->getDataMod() == DMTunmodified){
 				eveVariant data = datamessage->toVariant();
@@ -61,7 +67,6 @@ void eveMathManager::handleMessage(eveMessage *message){
 				}
 			}
             else if (datamessage->getDataMod() == DMTnormalized){
-                // TODO get normalized values
                 eveVariant data = datamessage->toVariant();
                 foreach(eveMath* math, mathHash.values(datamessage->getSmId())){
                     // feed math with normalized values, if it doesn't computes them by itself
@@ -83,9 +88,10 @@ void eveMathManager::handleMessage(eveMessage *message){
 					int smid = ((eveChainStatusMessage*)message)->getSmId();
 					foreach (eveMath* math, mathHash.values(smid)){
 						foreach (MathAlgorithm algorithm, eveMath::getAlgorithms()){
-							foreach (eveDataMessage* sendmessage, math->getResultMessage(algorithm, chid, smid, storageChannel)){
+                            foreach (eveDataMessage* sendmessage, math->getResultMessage(algorithm, chid, smid)){
 								sendError(DEBUG, 0, QString("MathManager sending math data: %1/%2").arg(chid).arg(smid));
-								addMessage(sendmessage);
+                                sendmessage->addDestinationFacility(EVECHANNEL_NET);
+                                addMessage(sendmessage);
 							}
 						}
 					}
@@ -110,6 +116,7 @@ void eveMathManager::handleMessage(eveMessage *message){
 			}
             else
                 sendError(ERROR,0,QString("received chainstatus message for chain %1 my id: %2").arg(((eveChainStatusMessage*)message)->getChainId()).arg(chid));
+
             // forward message
             message->setDestinationChannel(0);
             message->setDestinationFacility(EVECHANNEL_STORAGE | EVECHANNEL_NET | EVECHANNEL_MANAGER);
@@ -186,12 +193,16 @@ void eveMathManager::sendError(int severity, int facility, int errorType,  QStri
  *
  * @param message message to be sent
  */
-void eveMathManager::sendMessage(eveDataMessage* message){
-	message->setChainId(chid);
-    message->setDestinationChannel(storageChannel);
-    message->addDestinationFacility(EVECHANNEL_STORAGE);
-    message->addDestinationFacility(EVECHANNEL_NET);
+void eveMathManager::sendMessage(eveMessage* message){
+    if (message->getType() == EVEMESSAGETYPE_DATA){
+        ((eveDataMessage*)message)->setChainId(chid);
+        ((eveDataMessage*)message)->setDestinationChannel(storageChannel);
+        if (((eveDataMessage*)message)->getDataMod() == DMTnormalized)
+            sendError(DEBUG,0,QString("sending normalized DataMessage: %1").arg(((eveDataMessage*)message)->getName()));
+    }
+    else if (message->getType() == EVEMESSAGETYPE_METADATA) {
+        ((eveMessageTextList*)message)->setChainId(chid);
+        ((eveMessageTextList*)message)->setDestinationFacility(EVECHANNEL_STORAGE);
+    }
     addMessage(message);
-	if (message->getDataMod() == DMTnormalized)
-		sendError(DEBUG,0,QString("sending normalized DataMessage: %1").arg(message->getName()));
 }

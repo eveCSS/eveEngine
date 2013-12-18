@@ -23,6 +23,7 @@ public:
 
 private:
 	bool allDone;
+    bool doCheck;
 	int averageCount;
 	int maxAttempt;
         int attempt;

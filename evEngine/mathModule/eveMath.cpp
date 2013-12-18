@@ -19,7 +19,9 @@
 eveMath::eveMath(eveMathConfig mathConfig, eveMathManager* manag) : eveCalc(mathConfig, manag){
 	smidlist = QList<int>(mathConfig.getAllScanModuleIds());
 	initBeforeStart = mathConfig.hasInit();
-	manager = manag;    
+    prefered = false;
+    manager = manag;
+    plotWindow = mathConfig.getPlotWindowId();
 }
 
 eveMath::~eveMath() {
@@ -33,6 +35,15 @@ eveMath::~eveMath() {
  * @param dataVar add value to list of values for calculations
  */
 void eveMath::addValue(QString deviceId, int smid, int pos, eveVariant dataVar){
+    if (prefered) {
+        prefered = false;
+        QStringList slist;
+        if (normalizeId.size() > 0)  slist << "PreferedNormalization" << normalizeId;
+        slist << "PreferedYAxis" << detectorId << "PreferedXAxis" << xAxisId;
+        eveMessageTextList* metaDataMessage = new eveMessageTextList(EVEMESSAGETYPE_METADATA, slist);
+        metaDataMessage->setDestinationFacility(EVECHANNEL_STORAGE);
+        manager->sendMessage(metaDataMessage);
+    }
 	if (((eveCalc*)this)->addValue(deviceId, pos, dataVar)) {
         eveDataMessage *normalizedMessage = new eveDataMessage(detectorId, QString(),
 				eveDataStatus(), DMTnormalized, eveTime::getCurrent(), QVector<double>(1,ydata));
@@ -41,11 +52,12 @@ void eveMath::addValue(QString deviceId, int smid, int pos, eveVariant dataVar){
         normalizedMessage->setNormalizeId(normalizeId);
 		normalizedMessage->setPositionCount(ypos);
 		normalizedMessage->setSmId(smid);
+        normalizedMessage->setDestinationFacility(EVECHANNEL_NET);
         manager->sendMessage(normalizedMessage);
 	}
 }
 
-QList<eveDataMessage*> eveMath::getResultMessage(MathAlgorithm algo, int chid, int smid, int storageCh){
+QList<eveDataMessage*> eveMath::getResultMessage(MathAlgorithm algo, int chid, int smid){
     QList<eveDataMessage*> messageList;
 
     messageList.clear();
@@ -61,10 +73,7 @@ QList<eveDataMessage*> eveMath::getResultMessage(MathAlgorithm algo, int chid, i
         if (!normalizeId.isEmpty())message->setNormalizeId(normalizeId);
         message->setChainId(chid);
         message->setSmId(smid);
-        message->setPositionCount(position);
-        message->setDestinationChannel(storageCh);
-        message->addDestinationFacility(EVECHANNEL_STORAGE);
-        message->addDestinationFacility(EVECHANNEL_NET);
+        message->setPositionCount(plotWindow);
         messageList.append(message);
     }
 

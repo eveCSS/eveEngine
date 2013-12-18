@@ -22,11 +22,12 @@
  * @param maxDeviation in percent
  */
  eveAverage::eveAverage(int average, int maxAttempt, double lowLimit, double maxDeviation) {
-        averageCount = abs(average);
-        this->maxAttempt = abs(maxAttempt);
-        this->lowLimit = fabs(lowLimit);
+    averageCount = abs(average);
+    this->maxAttempt = abs(maxAttempt);
+    this->lowLimit = fabs(lowLimit);
 	this->deviation = fabs(maxDeviation);
-	reset();
+    doCheck = true;
+    reset();
 }
 
 eveAverage::~eveAverage() {
@@ -44,6 +45,10 @@ void eveAverage::reset(){
 }
 
 /**
+ * check values:
+ * if deviation > 0.0 enable deviationCheck
+ * if limit > 0.0 and first value is below limit => disable deviationCheck
+ * deviationCheck: start average measurement with the two values whith a value difference < deviation
  *
  * @param dataVar add value to list of values for calculations if it passes the tests
  */
@@ -51,19 +56,24 @@ bool eveAverage::addValue(double value){
 
     if (allDone) return true;
 
+    if (value != value) return false; // NAN
+
     if ((attempt < maxAttempt) && (deviation > 0.0)){
         if ((lowLimit != 0.0) && (dataArray.size() == 0) && (fabs(value) < lowLimit)) {
-            ++attempt;
-            return false;
+            doCheck = false;
         }
-        if ((dataArray.size() == 1) && (fabs(dataArray.at(0)*deviation/100.0) < fabs(dataArray.at(0)-value))) {
+        if (doCheck && (dataArray.size() == 1) && (fabs(dataArray.at(0)*deviation/100.0) < fabs(dataArray.at(0)-value))) {
+            dataArray.replace(0, value);
             ++attempt;
             return false;
         }
     }
     dataArray.append(value);
 
-    if ((dataArray.size() >= averageCount) || (attempt > maxAttempt)) allDone = true;
+    if ((dataArray.size() >= averageCount) || (attempt > maxAttempt)) {
+        allDone = true;
+        doCheck = true;
+    }
     return true;
 }
 

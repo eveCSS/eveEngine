@@ -6,6 +6,7 @@
  */
 
 #include <stdio.h>
+#include <cmath>
 #include "eveSMChannel.h"
 #include "eveEventRegisterMessage.h"
 #include "eveError.h"
@@ -265,18 +266,15 @@ void eveSMChannel::initAll() {
         delete normalizeChannel;
         normalizeChannel = NULL;
     }
-    //TODO check if all are done
+
     if (haveValue) channelOK = true;
 
-    // we do average calculations if averageCount > 0
     if (averageCount > 1){
+        averageRaw = new eveAverage(averageCount, maxAttempts, minimum, maxDeviation);
         if (normalizeChannel){
-            averageNormCalc = new eveAverage(averageCount, maxAttempts, minimum, maxDeviation);
-            averageRaw = new eveAverage(averageCount, 0, 0.0, 0.0);
             averageNormRaw = new eveAverage(averageCount, 0, 0.0, 0.0);
+            averageNormCalc = new eveAverage(averageCount, 0, 0.0, 0.0);
         }
-        else
-            averageRaw = new eveAverage(averageCount, maxAttempts, minimum, maxDeviation);
     }
 }
 
@@ -311,7 +309,6 @@ void eveSMChannel::transportReady(int status) {
                 sendError(ERROR, 0, "unable to read unit");
             else {
                 unit = unitData->toVariant().toString();
-                // TODO for now we delete the position message and extended information
                 delete unitData;
             }
         }
@@ -547,15 +544,15 @@ bool eveSMChannel::retrieveData(){
 
     valueRawMsg = valueTrans->getData();
     if (valueRawMsg == NULL) {
-        sendError(ERROR,0,QString("unable to retrieve value of Channel %1").append(xmlId));
+        sendError(ERROR,0,QString("unable to retrieve value of Channel %1").arg(xmlId));
         return true;
     }
     if ((averageCount > 1) && (valueRawMsg->getArraySize() > 1)) {
-        sendError(ERROR,0,QString("unable to do average calculations with array data: %1").append(xmlId));
+        sendError(ERROR,0,QString("unable to do average calculations with array data: %1").arg(xmlId));
         averageCount = 1;
     }
     if ((normalizeChannel) && (valueRawMsg->getArraySize() > 1)) {
-        sendError(ERROR,0,QString("unable to do normalisation with array data: %1").append(xmlId));
+        sendError(ERROR,0,QString("unable to do normalisation with array data: %1").arg(xmlId));
         delete normalizeChannel;
         normalizeChannel=NULL;
     }
@@ -565,31 +562,29 @@ bool eveSMChannel::retrieveData(){
 
     if (normalizeChannel){
         normRaw = 1.0;
-        normCalc = valueRaw;
+        normCalc = NAN;
 
         normRawMsg = normalizeChannel->getValueMessage();
         if (normRawMsg == NULL){
             sendError(ERROR,0,QString("unable to retrieve value of normalized Channel %1").arg(normalizeChannel->getXmlId()));
-            return true;
         }
-        if (normRawMsg->getArraySize() > 1){
+        else if (normRawMsg->getArraySize() > 1){
             sendError(ERROR,0,QString("normalize Channel may not have array data%1").arg(normalizeChannel->getXmlId()));
-            return true;
         }
-        bool ok = true;
-        normRaw = normRawMsg->toVariant().toDouble(&ok);
-        if (!ok){
-            sendError(ERROR,0,QString("normalize Channel data to type double %1").arg(normalizeChannel->getXmlId()));
-            return true;
+        else {
+            bool ok = true;
+            normRaw = normRawMsg->toVariant().toDouble(&ok);
+            if (!ok){
+                sendError(ERROR,0,QString("error converting normalize Channel to type double %1").arg(normalizeChannel->getXmlId()));
+            }
+            else if (normRaw == 0.0) {
+                sendError(ERROR,0,QString("normalize Channel has value zero %1").arg(normalizeChannel->getXmlId()));
+            }
+            else
+               normCalc =  valueRaw/normRaw;
         }
-        if (normRaw == 0.0)
-            sendError(ERROR,0,QString("normalize Channel has value zero %1").arg(normalizeChannel->getXmlId()));
-        else
-           normCalc =  valueRaw/normRaw;
-
         sendError(DEBUG, 0, QString("Normalize Channel %1, Raw Value %2").arg(normalizeChannel->getXmlId()).arg(normRaw));
         sendError(DEBUG, 0, QString("Channel %1, Normalized Value %2").arg(xmlId).arg(normCalc));
-
     }
     return true;
 }

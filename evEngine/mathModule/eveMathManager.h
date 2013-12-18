@@ -24,8 +24,8 @@ public:
 	eveMathManager(int , int, QList<eveMathConfig*>* );
 	virtual ~eveMathManager();
 	void sendError(int, int, int, QString);
-	void sendMessage(eveDataMessage* message);
-	void sendError(int, int, QString);
+    void sendMessage(eveMessage* message);
+    void sendError(int, int, QString);
 	void shutdown();
         int getChainId(){return chid;};
 

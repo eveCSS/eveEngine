@@ -21,14 +21,17 @@ public:
 	eveMath(eveMathConfig mathConfig, eveMathManager *);
 	virtual ~eveMath();
 	void addValue(QString, int smid, int pos, eveVariant);
-	QList<eveDataMessage*> getResultMessage(MathAlgorithm, int, int, int);
+    QList<eveDataMessage*> getResultMessage(MathAlgorithm, int, int);
 	QList<int> getAllScanModuleIds(){return smidlist;};
 	bool hasInit(){return initBeforeStart;};
+    void setPrefered(bool pref){prefered = pref;};
 
 private:
 	QList<int> smidlist;
 	bool initBeforeStart;
+    bool prefered;
 	eveMathManager* manager;
+    int plotWindow;
 }
 ;
 

@@ -456,11 +456,9 @@ protected:
 /**
  * \brief message containing measured compound data
  */
-// TODO ident is name ?? ==> redundant!
 class eveDataMessage : public eveBaseDataMessage
 {
 public:
-//	eveDataMessage(QString, eveDataStatus, int prio=0, int dest=0);
 	eveDataMessage(QString, QString, eveDataStatus, eveDataModType, eveTime, QVector<int>, int prio=0, int dest=0 );
 	eveDataMessage(QString, QString, eveDataStatus, eveDataModType, eveTime, QVector<short>, int prio=0, int dest=0 );
 	eveDataMessage(QString, QString, eveDataStatus, eveDataModType, eveTime, QVector<signed char>, int prio=0, int dest=0 );

@@ -14,11 +14,6 @@
 QHash<struct ca_client_context *, int> eveCaTransport::contextCounter = QHash<struct ca_client_context *, int>();
 QReadWriteLock eveCaTransport::contextLock;
 
-//TODO
-// improve monitor, with monitor on, monitor off etc.
-//TODO
-// allow or disallow monitoring and get or put
-
 /**
  * \brief init connection to EPICS PV
  * \param transdef definition of EPICS PV related properties
@@ -353,8 +348,10 @@ void eveCaTransport::getTimeout() {
 }
 /** \brief write data without waiting
  *
- * TODO
- * the call parameters may change
+ * \param datatype datatype of data
+ * \param elemCount no of data elements
+ * \param data ptr to data
+ * \param execute flush if true
  */
 bool eveCaTransport::putCB(eveType datatype, int elemCount, void* data, bool execute){
 
@@ -489,6 +486,8 @@ int eveCaTransport::readData(bool queue){
 }
 
 /**
+ * \brief send a single value
+ *
  * @param queue true, if request should be queued (needs execQueue() to actually start writing)
  * @return 0 if ok
  *
@@ -499,16 +498,14 @@ int eveCaTransport::writeData(eveVariant writedata, bool queue){
 	bool retstat;
 	char *strPtr;
 
-	if (writeDataPtr == NULL) {
-		// TODO
-		// this can be more specific, enhance for arrays
+    if (writeDataPtr == NULL) {
 		writeDataPtr = malloc(MAX_STRING_SIZE+1);
 		if (!writeDataPtr) {
 			sendError(ERROR,0,QString("eveCaTransport::writeData Unable to allocate memory"));
 			return 1;
 		}
 	}
-	if (writedata.getType() != dataType){
+    if (writedata.getType() != dataType){
 		sendError(ERROR, 0, QString("eveCaTransport: datatype mismatch, %1 <-> %2").arg((int)writedata.getType()).arg((int)dataType));
 		// TODO try to convert and proceed
 		return 1;
@@ -526,8 +523,6 @@ int eveCaTransport::writeData(eveVariant writedata, bool queue){
 		strPtr[MAX_STRING_SIZE] = 0;
 	}
 
-	// TODO
-	// by now, no array data is allowed (elemCount = 1)
 	if ((method == evePUT) || (method == eveGETPUT)){
 		retstat = put(dataType, 1, writeDataPtr, !queue);
 		// we signal immediately

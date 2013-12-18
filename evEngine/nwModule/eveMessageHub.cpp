@@ -276,8 +276,8 @@ void eveMessageHub::newMessage(int messageSource)
             }
             if (message != NULL) delete message;
             message = NULL;
-        }
             break;
+        }
         case EVEMESSAGETYPE_AUTOPLAY:
         case EVEMESSAGETYPE_REORDERPLAYLIST:
         case EVEMESSAGETYPE_ADDTOPLAYLIST:
