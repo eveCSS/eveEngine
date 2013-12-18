@@ -18,6 +18,7 @@
 #include "eveMessageHub.h"
 #include "eveError.h"
 #include "eveParameter.h"
+#include "version.h"
 
 // loglevel 0: send no error messages
 // loglevel 1: send FATAL errors
@@ -26,9 +27,6 @@
 // loglevel 4: send FATAL,ERROR,MINOR,INFO errors
 // loglevel 5: send FATAL,ERROR,MINOR,INFO,DEBUG errors
 #define DEFAULT_LOGLEVEL 3
-
-#define EVE_VERSION "1.16"
-#define SAVEPLUGIN_VERSION "1.3" // only plugins with exactly this version string will be loaded
 
 int main(int argc, char *argv[])
 {

@@ -62,7 +62,8 @@ HEADERS += scanModule/eveDeviceDefinitions.h \
     nwModule/eveNwThread.h \
     nwModule/evePlayListManager.h \
     mathModule/eveMath.h \
-    mathModule/eveMathConfig.h
+    mathModule/eveMathConfig.h \
+    version.h
 SOURCES += scanModule/eveDeviceDefinitions.cpp \
     scanModule/eveSMMotor.cpp \
     scanModule/eveSMDetector.cpp \
