@@ -24,12 +24,12 @@ public:
     QList<eveDataMessage*> getResultMessage(MathAlgorithm, int, int);
 	QList<int> getAllScanModuleIds(){return smidlist;};
 	bool hasInit(){return initBeforeStart;};
-    void setPrefered(bool pref){prefered = pref;};
+    void setPreferred(bool pref){preferred = pref;};
 
 private:
 	QList<int> smidlist;
 	bool initBeforeStart;
-    bool prefered;
+    bool preferred;
 	eveMathManager* manager;
     int plotWindow;
 }

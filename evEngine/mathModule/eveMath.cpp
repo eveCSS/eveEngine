@@ -19,7 +19,7 @@
 eveMath::eveMath(eveMathConfig mathConfig, eveMathManager* manag) : eveCalc(mathConfig, manag){
 	smidlist = QList<int>(mathConfig.getAllScanModuleIds());
 	initBeforeStart = mathConfig.hasInit();
-    prefered = false;
+    preferred = false;
     manager = manag;
     plotWindow = mathConfig.getPlotWindowId();
 }
@@ -35,11 +35,11 @@ eveMath::~eveMath() {
  * @param dataVar add value to list of values for calculations
  */
 void eveMath::addValue(QString deviceId, int smid, int pos, eveVariant dataVar){
-    if (prefered) {
-        prefered = false;
+    if (preferred) {
+        preferred = false;
         QStringList slist;
-        if (normalizeId.size() > 0)  slist << "PreferedNormalization" << normalizeId;
-        slist << "PreferedYAxis" << detectorId << "PreferedXAxis" << xAxisId;
+        if (normalizeId.size() > 0)  slist << "PreferredNormalizationChannel" << normalizeId;
+        slist << "preferredChannel" << detectorId << "preferredAxis" << xAxisId;
         eveMessageTextList* metaDataMessage = new eveMessageTextList(EVEMESSAGETYPE_METADATA, slist);
         metaDataMessage->setDestinationFacility(EVECHANNEL_STORAGE);
         manager->sendMessage(metaDataMessage);

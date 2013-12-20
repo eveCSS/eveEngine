@@ -19,14 +19,14 @@ eveMathManager::eveMathManager(int chainId, int schannel, QList<eveMathConfig*>*
 	// create a hash with math objects delete mathConfigList
 
     int lowestPlotWindowId = 0xfffffff;
-    eveMath* preferedMath = NULL;
+    eveMath* preferredMath = NULL;
 
 	while (!mathConfigList->isEmpty()){
 		eveMathConfig *mathConfig = mathConfigList->takeFirst();
 		eveMath* math = new eveMath(*mathConfig, this);
         if (mathConfig->getPlotWindowId() < lowestPlotWindowId) {
             lowestPlotWindowId = mathConfig->getPlotWindowId();
-            preferedMath = math;
+            preferredMath = math;
         }
         delete mathConfig;
 		foreach (int scanmoduleId, math->getAllScanModuleIds()){
@@ -34,7 +34,7 @@ eveMathManager::eveMathManager(int chainId, int schannel, QList<eveMathConfig*>*
 		}
 	}
 	delete mathConfigList;
-    if (preferedMath != NULL) preferedMath->setPrefered(true);
+    if (preferredMath != NULL) preferredMath->setPreferred(true);
 
 	// register with messageHub
 	channelId = eveMessageHub::getmHub()->registerChannel(this, EVECHANNEL_MATH);
