@@ -580,10 +580,10 @@ void eveSMAxis::setTimer(QDateTime start) {
 
 	if (!isTimer)  return;
 
-	if (posCalc->isAbs() && (posCalc->getType() == eveINT)){
+    if (posCalc->isAbs() && ((posCalc->getType() == eveINT) || (posCalc->getType() == eveDOUBLE))){
 		// for absolute msec timer reset start time to current time
 		((eveTimer*)gotoTrans)->setStartTime(start);
-		sendError(DEBUG, 0, QString("setTimer set StartTime for absolute int timers to %1").arg(start.toString()));
+        sendError(DEBUG, 0, QString("setTimer set StartTime for absolute int/double timers to %1").arg(start.toString()));
 	}
 	else if (!posCalc->isAbs() && !isSetStartTime){
 		// for all relative timers set start time only once

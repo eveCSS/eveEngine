@@ -11,30 +11,30 @@
 
 eveTimer::eveTimer(eveSMBaseDevice *parent, QString xmlid, QString name, eveTransportDefinition* transdef) : eveBaseTransport(parent, xmlid, name), timer(parent){
 
-	baseDev = parent;
-	transStatus = eveUNDEFINED;
-	currentAction = eveIDLE;
-	haveMonitor = false;
-	newData = NULL;
-	accessname = transdef->getName();
-	datatype = transdef->getDataType();
-	//method = transdef->getMethod();
-	timer.setSingleShot(true);
-	timerId = timer.timerId();
-	startInitialized = false;
+    baseDev = parent;
+    transStatus = eveUNDEFINED;
+    currentAction = eveIDLE;
+    haveMonitor = false;
+    newData = NULL;
+    accessname = transdef->getName();
+    datatype = transdef->getDataType();
+    //method = transdef->getMethod();
+    timer.setSingleShot(true);
+    timerId = timer.timerId();
+    startInitialized = false;
 }
 
 eveTimer::~eveTimer() {
-	// TODO Auto-generated destructor stub
+    // TODO Auto-generated destructor stub
 }
 
 int eveTimer::connectTrans(){
-	emit done(0);
-	return 0;
+    emit done(0);
+    return 0;
 }
 
 int eveTimer::monitorTrans(){
-	return 0;
+    return 0;
 }
 
 /**
@@ -42,9 +42,9 @@ int eveTimer::monitorTrans(){
  * @return eveDataMessage or NULL
  */
 eveDataMessage* eveTimer::getData(){
-	eveDataMessage *return_data = newData;
-	newData = NULL;
-	return return_data;
+    eveDataMessage *return_data = newData;
+    newData = NULL;
+    return return_data;
 };
 
 /**
@@ -56,45 +56,45 @@ eveDataMessage* eveTimer::getData(){
  */
 int eveTimer::readData(bool queue){
 
-	eveTime currentTime = eveTime::getCurrent();
-	// TODO
-	// for some reason the first conversion doesn't work (mSecs are always 0)
-	//QDateTime now = QDateTime(currentTime.getDateTime());
-	//eveTime testTime = eveTime::eveTimeFromDateTime(now);
-	// for now we do this
-	QDateTime now = QDateTime::currentDateTime();
+    eveTime currentTime = eveTime::getCurrent();
+    // TODO
+    // for some reason the first conversion doesn't work (mSecs are always 0)
+    //QDateTime now = QDateTime(currentTime.getDateTime());
+    //eveTime testTime = eveTime::eveTimeFromDateTime(now);
+    // for now we do this
+    QDateTime now = QDateTime::currentDateTime();
 
-	if (datatype == eveDateTimeT){
-		// absolute time
-		newData = new eveDataMessage(xmlId, name, eveDataStatus(), DMTunmodified, currentTime, now);
-	}
-	else if (datatype == eveINT){
-		// not absolute time
-		QVector<int> iArray;
-		if (startInitialized){
-			iArray.append(getMSecsUntil(now));
-		}
-		else {
-			iArray.append(0);
-		}
-		newData = new eveDataMessage(xmlId, name, eveDataStatus(), DMTunmodified, currentTime, iArray);
-	}
-	else if (datatype == eveDOUBLE){
-		// not absolute time
-		QVector<double> dArray;
-		if (startInitialized){
-			dArray.append(((double)getMSecsUntil(now))/1000.0);
-		}
-		else {
-			dArray.append(0.0);
-		}
-		newData = new eveDataMessage(xmlId, name, eveDataStatus(), DMTunmodified, currentTime, dArray);
-	}
-	else {
-		sendError(MINOR, 0, QString("unknown datatype (%1) for Timer").arg((int)datatype));
-	}
-	emit done(0);
-	return 0;
+    if (datatype == eveDateTimeT){
+        // absolute time
+        newData = new eveDataMessage(xmlId, name, eveDataStatus(), DMTunmodified, currentTime, now);
+    }
+    else if (datatype == eveINT){
+        // not absolute time
+        QVector<int> iArray;
+        if (startInitialized){
+            iArray.append(getMSecsUntil(now));
+        }
+        else {
+            iArray.append(0);
+        }
+        newData = new eveDataMessage(xmlId, name, eveDataStatus(), DMTunmodified, currentTime, iArray);
+    }
+    else if (datatype == eveDOUBLE){
+        // not absolute time
+        QVector<double> dArray;
+        if (startInitialized){
+            dArray.append(((double)getMSecsUntil(now))/1000.0);
+        }
+        else {
+            dArray.append(0.0);
+        }
+        newData = new eveDataMessage(xmlId, name, eveDataStatus(), DMTunmodified, currentTime, dArray);
+    }
+    else {
+        sendError(MINOR, 0, QString("unknown datatype (%1) for Timer").arg((int)datatype));
+    }
+    emit done(0);
+    return 0;
 }
 /**
  * @param queue true, if request should be queued (needs execQueue() to actually start writing)
@@ -104,67 +104,67 @@ int eveTimer::readData(bool queue){
  */
 int eveTimer::writeData(eveVariant writedata, bool queue){
 
-	QDateTime currentDT = QDateTime::currentDateTime();
+    QDateTime currentDT = QDateTime::currentDateTime();
 
-	if (writedata.getType() == eveDateTimeT){
+    if (writedata.getType() == eveDateTimeT){
 
-		QDateTime writeDT = writedata.toDateTime();
+        QDateTime writeDT = writedata.toDateTime();
 
-		sendError(DEBUG, 0, QString("eveTimer: now: %1 goto: %2").arg(currentDT.toString("dd.MM.yyyy hh:mm:ss.zzz")).arg(writeDT.toString("dd.MM.yyyy hh:mm:ss.zzz")));
-		if (currentDT >= writeDT){
-			waitDone();
-		}
-		else {
-			int msecsOffset = currentDT.date().daysTo(writeDT.date()) * 24 * 3600 * 1000;
-			msecsOffset += currentDT.time().msecsTo(writeDT.time());
-			sendError(DEBUG, 0, QString("eveTimer: load timer with %1 msecs").arg(msecsOffset));
-			QTimer::singleShot (msecsOffset, this, SLOT (waitDone()));
-		}
-	}
-	else if (writedata.getType() == eveInt32T){
-		bool ok = true;
-		int mSecs=writedata.toInt(&ok);
-		if (!ok){
-			sendError(DEBUG, 0, QString("Error converting data to integer (msecs)"));
-		}
-		else {
-			mSecs -= getMSecsUntil(currentDT);
-			if (mSecs < 0 ) mSecs=0;
-			sendError(DEBUG, 0, QString("eveTimer: load timer with %1 msecs").arg(mSecs));
-			QTimer::singleShot (mSecs, this, SLOT (waitDone()));
-		}
-	}
-	else if (writedata.getType() == eveFloat64T){
-		bool ok = true;
-		double mSecsD=writedata.toDouble(&ok);
-		if (!ok){
-			sendError(DEBUG, 0, QString("Error converting data to double (msecs)"));
-		}
-		else {
-			int mSecs = (int)(mSecsD * 1000.0);
-			mSecs -= getMSecsUntil(currentDT);
-			if (mSecs < 0 ) mSecs=0;
-			sendError(DEBUG, 0, QString("eveTimer: load timer with %1 msecs").arg(mSecs));
-			QTimer::singleShot (mSecs, this, SLOT (waitDone()));
-		}
-	}
-	else {
-		sendError(MINOR, 0, QString("eveTimer: datatype %1 is not DateTime").arg((int)writedata.getType()));
-	}
+        sendError(DEBUG, 0, QString("eveTimer: now: %1 goto: %2").arg(currentDT.toString("dd.MM.yyyy hh:mm:ss.zzz")).arg(writeDT.toString("dd.MM.yyyy hh:mm:ss.zzz")));
+        if (currentDT >= writeDT){
+            waitDone();
+        }
+        else {
+            int msecsOffset = currentDT.date().daysTo(writeDT.date()) * 24 * 3600 * 1000;
+            msecsOffset += currentDT.time().msecsTo(writeDT.time());
+            sendError(DEBUG, 0, QString("eveTimer: load DateTime timer with %1 msecs").arg(msecsOffset));
+            QTimer::singleShot (msecsOffset, this, SLOT (waitDone()));
+        }
+    }
+    else if (writedata.getType() == eveInt32T){
+        bool ok = true;
+        int mSecs=writedata.toInt(&ok);
+        if (!ok){
+            sendError(DEBUG, 0, QString("Error converting data to integer (msecs)"));
+        }
+        else {
+            mSecs -= getMSecsUntil(currentDT);
+            if (mSecs < 0 ) mSecs=0;
+            sendError(DEBUG, 0, QString("eveTimer: load int timer with %1 msecs").arg(mSecs));
+            QTimer::singleShot (mSecs, this, SLOT (waitDone()));
+        }
+    }
+    else if (writedata.getType() == eveFloat64T){
+        bool ok = true;
+        double mSecsD=writedata.toDouble(&ok);
+        if (!ok){
+            sendError(DEBUG, 0, QString("Error converting data to double (msecs)"));
+        }
+        else {
+            int mSecs = (int)(mSecsD * 1000.0);
+            mSecs -= getMSecsUntil(currentDT);
+            if (mSecs < 0 ) mSecs=0;
+            sendError(DEBUG, 0, QString("eveTimer: load double timer with %1 msecs").arg(mSecs));
+            QTimer::singleShot (mSecs, this, SLOT (waitDone()));
+        }
+    }
+    else {
+        sendError(MINOR, 0, QString("eveTimer: datatype %1 is not DateTime").arg((int)writedata.getType()));
+    }
 
 
-	return 0;
+    return 0;
 }
 
 void eveTimer::waitDone() {
 
-	emit done(0);
+    emit done(0);
 }
 
 void eveTimer::sendError(int severity, int errorType,  QString message){
 
-	baseDev->sendError(severity, EVEMESSAGEFACILITY_LOCALTIMER, errorType,
-							QString("Timer %1: %2").arg(name).arg(message));
+    baseDev->sendError(severity, EVEMESSAGEFACILITY_LOCALTIMER, errorType,
+                       QString("Timer %1: %2").arg(name).arg(message));
 }
 
 /**
@@ -172,29 +172,29 @@ void eveTimer::sendError(int severity, int errorType,  QString message){
  * @return a QStringList pointer which contains info
  */
 QStringList* eveTimer::getInfo(){
-	QStringList *sl = new QStringList();
-	sl->append(QString("Access:local:%1").arg(accessname));
-	if (datatype == eveINT)
-		sl->append(QString("Unit:mSecs"));
-	else if (datatype == eveDOUBLE)
-		sl->append(QString("Unit:secs"));
+    QStringList *sl = new QStringList();
+    sl->append(QString("Access:local:%1").arg(accessname));
+    if (datatype == eveINT)
+        sl->append(QString("Unit:mSecs"));
+    else if (datatype == eveDOUBLE)
+        sl->append(QString("Unit:secs"));
 
-	return sl;
+    return sl;
 }
 
 int eveTimer::getMSecsUntil(QDateTime now){
-	qint64 delta = startTime.daysTo(now) * 86400000;
-	delta += startTime.time().msecsTo(now.time());
+    qint64 delta = startTime.daysTo(now) * 86400000;
+    delta += startTime.time().msecsTo(now.time());
 
-	if (delta > INT_MAX){
-		sendError(ERROR, 0, QString("integer overflow (%1) for Timer").arg(delta));
-		return INT_MAX;
-	}
-	else if (delta <= INT_MIN){
-		sendError(ERROR, 0, QString("integer overflow (%1) for Timer").arg(delta));
-		return INT_MIN;
-	}
+    if (delta > INT_MAX){
+        sendError(ERROR, 0, QString("integer overflow (%1) for Timer").arg(delta));
+        return INT_MAX;
+    }
+    else if (delta <= INT_MIN){
+        sendError(ERROR, 0, QString("integer overflow (%1) for Timer").arg(delta));
+        return INT_MIN;
+    }
 
-	return (int) delta;
+    return (int) delta;
 
 }

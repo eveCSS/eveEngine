@@ -35,8 +35,8 @@ public:
 	eveDataMessage *getData();
 	QStringList* getInfo();
 	void sendError(int, int,  QString);
-	void setStartTime(QDateTime start){startTime = start;startInitialized =true;};
-	QDateTime getStartTime(){return startTime;};
+    void setStartTime(QDateTime start){startTime = start;startInitialized =true;};
+    QDateTime getStartTime(){return startTime;};
 	int execQueue();
 
 public slots:
@@ -44,14 +44,14 @@ public slots:
 
 
 private:
-	int getMSecsUntil(QDateTime);
+    int getMSecsUntil(QDateTime);
 	eveSMBaseDevice* baseDev;
 	bool haveMonitor;
 	bool startInitialized;
 	eveType datatype;
 	QTimer timer;
 	int timerId;
-	QDateTime startTime;
+    QDateTime startTime;
 	QString accessname;
 	QDateTime targetTime;
 	eveTransStatusT transStatus;
