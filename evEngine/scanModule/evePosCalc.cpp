@@ -610,31 +610,52 @@ void evePosCalc::checkValues()
 
         if (startPos.isNull() || endPos.isNull() || stepWidth.isNull()) return;
 
-        if ((startPos.getType() == eveINT) || (startPos.getType() == eveDOUBLE)){
+        if (startPos.getType() == eveINT) {
             if (((startPos > endPos) && (stepWidth > 0)) || ((startPos < endPos) && (stepWidth < 0))){
                 sendError(ERROR, "sign of stepwidth does not match startpos/endpos-values, using -1* stepwidth");
                 stepWidth = stepWidth * eveVariant(-1);
             }
-            if (startPos.getType() == eveINT) {
-                int stepw = abs(stepWidth.toInt(&ok1));
-                if (ok1 && (stepw > 0)){
-                    int distance = abs(endPos.toInt(&ok1)-startPos.toInt(&ok2));
-                    if (ok1 && ok2){
-                        // add one for converting steps to positions
-                        expectedPositions = distance/stepw +1;
-                        if ((distance%stepw) != 0) ++expectedPositions;
-                    }
+            int stepw = abs(stepWidth.toInt(&ok1));
+            if (ok1 && (stepw > 0)){
+                int distance = abs(endPos.toInt(&ok1)-startPos.toInt(&ok2));
+                if (ok1 && ok2){
+                    // add one for converting steps to positions
+                    expectedPositions = distance/stepw +1;
+                    if ((distance%stepw) != 0) ++expectedPositions;
                 }
             }
-            else if (startPos.getType() == eveDOUBLE) {
-                double stepw = fabs(stepWidth.toDouble(&ok1));
-                if (ok1 && (stepw > 0.0)){
-                    double distance = fabs(endPos.toDouble(&ok1)-startPos.toDouble(&ok2));
-                    if (ok1 && ok2){
-                        expectedPositions = (int) (distance/stepw);
-                        if ((((double)expectedPositions) * stepw - distance) < -1e-12) ++expectedPositions;
-                        ++expectedPositions;   // add one for converting steps to positions
-                    }
+        }
+        else if (startPos.getType() == eveDOUBLE) {
+            if (((startPos > endPos) && (stepWidth > 0)) || ((startPos < endPos) && (stepWidth < 0))){
+                sendError(ERROR, "sign of stepwidth does not match startpos/endpos-values, using -1* stepwidth");
+                stepWidth = stepWidth * eveVariant(-1);
+            }
+            double stepw = fabs(stepWidth.toDouble(&ok1));
+            if (ok1 && (stepw > 0.0)){
+                double distance = fabs(endPos.toDouble(&ok1)-startPos.toDouble(&ok2));
+                if (ok1 && ok2){
+                    expectedPositions = (int) (distance/stepw);
+                    if ((((double)expectedPositions) * stepw - distance) < -1e-12) ++expectedPositions;
+                    ++expectedPositions;   // add one for converting steps to positions
+                }
+            }
+        }
+        else if (startPos.getType() == eveDateTimeT) {
+            // this is absolute DateTime
+            if (startPos > endPos){
+                eveVariant tmp = startPos;
+                startPos = endPos;
+                endPos = tmp;
+                sendError(ERROR, "using absolute time and start > end, Exchanging start and end");
+                if (stepWidth.toDouble(&ok1) < 0.0) stepWidth = stepWidth * eveVariant(-1);
+            }
+            double stepw = fabs(stepWidth.toDouble(&ok1));
+            if (ok1 && (stepw > 0.0)){
+                double distance = fabs((double)(startPos.toDateTime().msecsTo(endPos.toDateTime())))/1000.0;
+                if (ok1 && distance > 0.0){
+                    expectedPositions = (int) (distance/stepw);
+                    if ((((double)expectedPositions) * stepw - distance) < -1e-12) ++expectedPositions;
+                    ++expectedPositions;   // add one for converting steps to positions
                 }
             }
         }
