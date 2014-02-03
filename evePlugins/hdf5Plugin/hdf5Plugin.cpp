@@ -20,7 +20,7 @@ hdf5Plugin::hdf5Plugin() {
 	isFileOpen = false;
 	dataFile = NULL;
 	groupList.append("/");		// HDF root group always exists
-	modificationHash.insert(DMTnormalized,"normalized");
+    modificationHash.insert(DMTnormalized,"normalized");
 	modificationHash.insert(DMTcenter,"center");
 	modificationHash.insert(DMTedge,"edge");
 	modificationHash.insert(DMTmin,"minimum");
@@ -76,7 +76,7 @@ int hdf5Plugin::init(QString filename, QString format, QHash<QString, QString>& 
 		return MINOR;
 	}
 	if (format != "HDF5"){
-		errorString = QString("HDF5Plugin: unable to handle any other format than HDF5; not: %1").arg(filename);
+        errorString = QString("HDF5Plugin: unable to handle any other format than HDF5; not: %1").arg(format);
 		return ERROR;
 	}
 	if (parameter.contains("extent")){
@@ -106,7 +106,11 @@ int hdf5Plugin::init(QString filename, QString format, QHash<QString, QString>& 
 	return DEBUG;
 }
 
-
+/**
+ * @brief hdf5Plugin::setXMLData stores the xml data in a separate file with the same file name plus extension ".scml"
+ * @param xmldata
+ * @return error severity
+ */
 int hdf5Plugin::setXMLData(QByteArray* xmldata){
 	int retval = DEBUG;
 	if (isFileOpen) {
@@ -131,74 +135,41 @@ int hdf5Plugin::setXMLData(QByteArray* xmldata){
 }
 
 /**
- * @brief			create and label a column
- * @param pathId 	chainId
- * @param colid		xml-id of detectorchannel / axis
- * @param name		name of column
- * @param info		stringlist with additional info
- * @return			error severity
+ * @brief hdf5Plugin::addColumn add a device to the data file
+ * @param message device info
+ * @return error severity
  */
-//int hdf5Plugin::setCols(int pathId, QString colid, QString name, QStringList info){
-//
-//	errorString.clear();
-//	eveDataModType dataModifier = DMTunmodified;
-//	QString otherChannel="";
-//	foreach(QString attributeline, info){
-//		if (attributeline.startsWith("NormalizeChannelID")) {
-//			dataModifier = DMTnormalized;
-//			otherChannel = attributeline.remove(0, attributeline.indexOf(":"));
-//			break;
-//		}
-//	}
-//	QString dsname = getDSName(pathId, colid, dataModifier, otherChannel);
-//
-//	if (!isFileOpen) {
-//		errorString = QString("HDF5Plugin:setCols: data file has not been opened");
-//		return ERROR;
-//	}
-//
-//	if (dsNameHash.contains(dsname)){
-//		errorString = QString("HDF5Plugin: Data Set with name %1, is already initialized").arg(dsname);
-//		return INFO;
-//	}
-//	createGroup(pathId, dataModifier);
-//	hdf5DataSet *ds = new hdf5DataSet(dsname, colid, name, info, dataFile);
-//	ds->setSizeIncrement(defaultSizeIncrement);
-//	dsNameHash.insert(dsname, ds);
-//	return DEBUG;
-//}
-
 int hdf5Plugin::addColumn(eveDevInfoMessage* message){
 
-	QString dsname = getDSName(message->getChainId(),message->getXmlId(), message->getDataMod(), message->getAuxString(), message->getNormalizeId());
+    if (message->getStorageHint().toLower() == "none") {
+        errorString = QString("HDF5Plugin::addColumn: skip data with storage \"none\"");
+        return DEBUG;
+    }
+
+    QString dsname = getDSName(message->getChainId(), message->getXmlId(), message->getStorageHint(), message->getDataMod(), message->getAuxString(), message->getNormalizeId());
 
 	if (!isFileOpen) {
-		errorString = QString("HDF5Plugin:setCols: data file has not been opened");
+        errorString = QString("HDF5Plugin::addColumn: data file has not been opened");
 		return ERROR;
 	}
 
 	if (dsNameHash.contains(dsname)){
-		errorString = QString("HDF5Plugin: Data Set with name %1, is already initialized").arg(dsname);
+        errorString = QString("HDF5Plugin::addColumn Data Set with name %1, is already initialized").arg(dsname);
 		return INFO;
 	}
 	createGroup(dsname);
 
 	hdf5DataSet *ds = new hdf5DataSet(dsname, message->getXmlId(), message->getName(), *(message->getText()), dataFile);
-//	foreach(QString string, *(message->getText())){
-//		std::cout << qPrintable(QString("info Attribute: %1").arg(string));
-//	}
-//	hdf5DataSet *ds = new hdf5DataSet(dsname, message->getXmlId(), message->getName(), QStringList(), dataFile);
 	ds->setSizeIncrement(defaultSizeIncrement);
 	dsNameHash.insert(dsname, ds);
-	errorString = QString("HDF5Plugin: Successfully added device info for %1").arg(dsname);
+    errorString = QString("HDF5Plugin::addColumn Successfully added device info for %1").arg(dsname);
 	return DEBUG;
-
 }
 
 /**
  * \brief create the datasets, since we now know the datatype
  *
- * @param pathId		dataset-identification (chain-id)
+ * @param pathId	dataset-identification (chain-id)
  * @param data		data to write to file
  * @return			error severity
  */
@@ -207,12 +178,16 @@ int hdf5Plugin::addData(int pathId, eveDataMessage* data)
 	int status;
 	hdf5DataSet *ds;
 
-	if (!isFileOpen) {
+    if (data->getStorageHint().toLower() == "none") {
+        errorString = QString("HDF5Plugin::addColumn: skip data with storage \"none\"");
+        return DEBUG;
+    }
+    if (!isFileOpen) {
 		errorString = "HDF5Plugin:addData: data file has not been opened";
 		return ERROR;
 	}
 
-	QString dsname = getDSName(pathId, data->getXmlId(), data->getDataMod(), data->getAuxString(), data->getNormalizeId());
+    QString dsname = getDSName(pathId, data->getXmlId(), data->getStorageHint(), data->getDataMod(), data->getAuxString(), data->getNormalizeId());
 	errorString = QString("HDF5Plugin: add Data to %1").arg(dsname);
 
 	if (dsNameHash.contains(dsname)) {
@@ -226,12 +201,15 @@ int hdf5Plugin::addData(int pathId, eveDataMessage* data)
 	}
 	status = ds->addData(data);
 	errorString += ds->getError();
-	return status;
+    return status;
 }
 
-
 /**
- * @brief add a metadata (e.g. comment) to be written to file
+ * @brief hdf5Plugin::addMetaData add metadata (e.g. comment) as attribute to a HDF group
+ * @param pathId    chain id or zero
+ * @param attribute attribut name
+ * @param stringVal attribut value
+ * @return error severity
  */
 int hdf5Plugin::addMetaData(int pathId, QString attribute, QString stringVal){
 	if (!isFileOpen) {
@@ -244,7 +222,7 @@ int hdf5Plugin::addMetaData(int pathId, QString attribute, QString stringVal){
 		hsize_t stringDim = 1;
 		QString groupname = getGroupName(pathId);
 
-		Group targetGroup = dataFile->openGroup(qPrintable(createGroup(groupname)));
+        Group targetGroup = dataFile->openGroup(qPrintable(createGroup(groupname)));
 		unsigned int index = 0;
 		// check if we already have this attribute
 		QString compare = QString(attribute);
@@ -334,21 +312,39 @@ int hdf5Plugin::close()
     return status;
 }
 
-QString hdf5Plugin::getDSName(int id, QString name, eveDataModType modified, QString other, QString normalizeId){
+
+/**
+ * @brief hdf5Plugin::getDSName create a dataset name from various data parameters
+ * @param id    chain id or 0
+ * @param name  xml_id
+ * @param storage   default or alternate storage location
+ * @param modified  raw or modified data
+ * @param other     aux info
+ * @param normalizeId id of normalizce channel if present
+ * @return full qualified name of dataset
+ */
+QString hdf5Plugin::getDSName(int id, QString name, QString storage, eveDataModType modified, QString other, QString normalizeId){
 
 	QString groupname = getGroupName(id);
 	QString newname = name;
 
+    if ((id != 0) && (storage.length() > 0)) groupname += QString("%1/").arg(storage);
+
 	if (modified != DMTunmodified){
 		groupname += QString("%1/").arg(modificationHash.value(modified));
-		if (!normalizeId.isEmpty())
+        if ((modified == DMTnormalized) && !normalizeId.isEmpty())
 			newname = QString("%1__%2").arg(newname).arg(normalizeId);
 		if (!other.isEmpty())
 			newname = QString("%1__%2").arg(newname).arg(other);
 	}
-	return groupname+newname;
+    return groupname.append(newname);
 }
 
+/**
+ * @brief hdf5Plugin::createGroup create all HDF groups mentioned in name
+ * @param name desired dataset name, all characters after the last "/" will be removed
+ * @return full path i.e. all group names concatenated with "/"
+ */
 QString hdf5Plugin::createGroup( QString name ){
 
 	QString groupname = "/";
@@ -376,6 +372,11 @@ QString hdf5Plugin::createGroup( QString name ){
 	return groupname;
 }
 
+/**
+ * @brief hdf5Plugin::getGroupName returns path for path id or root group
+ * @param pathId chain id or zero
+ * @return full path for pathId
+ */
 QString hdf5Plugin::getGroupName(int pathId){
 	if (pathId == 0)
 		return QString("/");

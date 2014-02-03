@@ -31,87 +31,87 @@ enum eveChannelStatusT {eveCHANNELINIT, eveCHANNELIDLE, eveCHANNELTRIGGERREAD, e
  */
 class eveSMChannel : public eveSMBaseDevice {
 
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	eveSMChannel(eveScanModule*, eveSMDetector*, eveChannelDefinition*, QHash<QString, QString>, QList<eveEventProperty* >*, eveSMChannel*);
-	virtual ~eveSMChannel();
-	void init();
-	void triggerRead(bool);
-	void stop();
-	bool isDone(){return ready;};
-	bool isOK(){return channelOK;};
-        bool isDeferred(){return deferredTrigger;};
-        QString getUnit(){return unit;};
-        virtual eveDevInfoMessage* getDeviceInfo(bool);
-	eveDataMessage* getValueMessage();
-	eveDataMessage* getNormValueMessage();
-        eveDataMessage* getNormRawValueMessage();
-        void sendError(int, int, int, QString);
-	void addPositioner(eveCalc* pos){positionerList.append(pos);};
-	void loadPositioner(int pc);
-	void setTimer(QDateTime start);
-	bool readAtInit(){return timeoutShort;};
-	eveSMDetector* getDetector(){return detector;};
-	eveSMChannel* getNormalizeChannel(){return normalizeChannel;};
+    eveSMChannel(eveScanModule*, eveSMDetector*, eveChannelDefinition*, QHash<QString, QString>, QList<eveEventProperty* >*, eveSMChannel*);
+    virtual ~eveSMChannel();
+    void init();
+    void triggerRead(bool);
+    void stop();
+    bool isDone(){return ready;};
+    bool isOK(){return channelOK;};
+    bool isDeferred(){return deferredTrigger;};
+    QString getUnit(){return unit;};
+    virtual eveDevInfoMessage* getDeviceInfo(bool);
+    eveDataMessage* getValueMessage();
+    eveDataMessage* getNormValueMessage();
+    eveDataMessage* getNormRawValueMessage();
+    void sendError(int, int, int, QString);
+    void addPositioner(eveCalc* pos){positionerList.append(pos);};
+    void loadPositioner(int pc);
+    void setTimer(QDateTime start);
+    bool readAtInit(){return timeoutShort;};
+    eveSMDetector* getDetector(){return detector;};
+    eveSMChannel* getNormalizeChannel(){return normalizeChannel;};
 
 public slots:
-	void transportReady(int);
-	void normalizeChannelReady();
-	void newEvent(eveEventProperty*);
+    void transportReady(int);
+    void normalizeChannelReady();
+    void newEvent(eveEventProperty*);
 
 signals:
-  void channelDone();
+    void channelDone();
 
 private:
-	virtual void signalReady();
-	void sendError(int, int, QString);
-	bool ready;
-	bool delayedTrigger;
-	void initAll();
-	void read(bool);
-	bool retrieveData();
-	eveSMChannel* normalizeChannel;
-	bool timeoutShort;
-	bool isTimer;
-	bool redo;
-	bool haveValue;
-	bool haveStop;
-	bool haveTrigger;
-	bool haveUnit;
-	bool channelOK;
-        bool deferredTrigger;
-	int signalCounter;
-	QList<eveCalc *> positionerList;
-	QList<eveTransportT> transportList;
-	QList<eveEventProperty* >* eventList;
-	eveChannelStatusT channelStatus;
-	QString unit;
-	bool sendreadyevent;
-	eveType channelType;
-//	eveVariant currentValue;
-//        eveVariant normalizedValue;
-        eveAverage* averageRaw;
-        eveAverage* averageNormCalc;
-        eveAverage* averageNormRaw;
-        eveDataMessage* valueRawMsg;
-        eveDataMessage* normRawMsg;
-        eveDataMessage* normCalcMsg;
-        double valueRaw;
-        double normCalc;
-        double normRaw;
-        eveScanModule* scanModule;
-	eveBaseTransport* valueTrans;
-	eveBaseTransport* stopTrans;
-	eveBaseTransport* triggerTrans;
-	eveBaseTransport* unitTrans;
-	eveVariant triggerValue;
-	eveVariant stopValue;
-	int averageCount, maxAttempts;
-	double maxDeviation, minimum;
-	bool isDetectorTrigger;
-	bool isDetectorUnit;
-	eveSMDetector* detector;
+    virtual void signalReady();
+    void sendError(int, int, QString);
+    bool ready;
+    bool delayedTrigger;
+    void initAll();
+    void read(bool);
+    bool retrieveData();
+    eveSMChannel* normalizeChannel;
+    bool timeoutShort;
+    bool isTimer;
+    bool redo;
+    bool haveValue;
+    bool haveStop;
+    bool haveTrigger;
+    bool haveUnit;
+    bool channelOK;
+    bool deferredTrigger;
+    int signalCounter;
+    QList<eveCalc *> positionerList;
+    QList<eveTransportT> transportList;
+    QList<eveEventProperty* >* eventList;
+    eveChannelStatusT channelStatus;
+    QString unit;
+    bool sendreadyevent;
+    eveType channelType;
+    //	eveVariant currentValue;
+    //        eveVariant normalizedValue;
+    eveAverage* averageRaw;
+    eveAverage* averageNormCalc;
+    eveAverage* averageNormRaw;
+    eveDataMessage* valueRawMsg;
+    eveDataMessage* normRawMsg;
+    eveDataMessage* normCalcMsg;
+    double valueRaw;
+    double normCalc;
+    double normRaw;
+    eveScanModule* scanModule;
+    eveBaseTransport* valueTrans;
+    eveBaseTransport* stopTrans;
+    eveBaseTransport* triggerTrans;
+    eveBaseTransport* unitTrans;
+    eveVariant triggerValue;
+    eveVariant stopValue;
+    int averageCount, maxAttempts;
+    double maxDeviation, minimum;
+    bool isDetectorTrigger;
+    bool isDetectorUnit;
+    eveSMDetector* detector;
 
 };
 

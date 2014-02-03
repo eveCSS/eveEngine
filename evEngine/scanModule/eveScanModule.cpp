@@ -46,7 +46,11 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     manualTrigger  = parser->getSMTagBool(chainId, smId, "triggerconfirmaxis", false);
     manDetTrigger = parser->getSMTagBool(chainId, smId, "triggerconfirmchannel", false);
     QString scanType = parser->getSMTag(chainId, smId, "type");
-    if (scanType != "classic") sendError(ERROR,0,QString("unknown smtype: %1").arg(scanType));
+    storageHint = parser->getSMTag(chainId, smId, "storage");
+    if (storageHint.length() == 0) storageHint = "default";
+    // TODO Workaround until storageHint is implemented in viewer
+    if ((scanType == "save_axis_positions") || (scanType == "save_channel_values"))
+        storageHint = "alternate";
 
     stageHash.insert(eveStgINIT, &eveScanModule::stgInit);
     stageHash.insert(eveStgREADPOS, &eveScanModule::stgReadPos);
@@ -589,7 +593,7 @@ void eveScanModule::stgTrigRead() {
             signalCounter = 0;
             foreach (eveSMChannel *channel, *channelList){
                 if (!channel->isDeferred()) {
-                    sendError(INFO,0,QString("triggering detector channel %1").arg(channel->getName()));
+                    sendError(INFO,0,QString("trigger detector channel %1").arg(channel->getName()));
                     channel->triggerRead(true);
                     ++signalCounter;
                 }
@@ -615,7 +619,7 @@ void eveScanModule::stgTrigRead() {
         }
         else if (doRedo && myStatus.redoStatus()){
             // redo occcured, go back to previous step
-            sendError(DEBUG,0,"stgTrigRead redo occured, proceed with previous step");
+            sendError(INFO,0,"got redo event, repeating trigger stage");
             currentStageCounter=0;
             emit sigExecStage();
         }
@@ -643,7 +647,7 @@ void eveScanModule::stgTrigRead() {
         }
         else if (doRedo && myStatus.redoStatus()){
             // redo occcured, go back to previous step
-            sendError(DEBUG,0,"stgTrigRead redo occured, proceed with previous step");
+            sendError(INFO,0,"got redo event, repeating deferred trigger stage");
             currentStageCounter=1;
             emit sigExecStage();
         }
@@ -1158,7 +1162,7 @@ void eveScanModule::sendMessage(eveMessage* message){
 				(message->getType() == EVEMESSAGETYPE_DATA)){
 			((eveBaseDataMessage*)message)->setChainId(chainId);
 			((eveBaseDataMessage*)message)->setSmId(smId);
-
+            ((eveBaseDataMessage*)message)->setStorageHint(storageHint);
 		}
 		manager->sendMessage(message);
 	}

@@ -423,8 +423,8 @@ public:
 	eveBaseDataMessage(int, int, int, QString, QString, QString, eveDataModType mod=DMTunmodified, int msecs=-1, int prio=0, int dest=0);
 	eveBaseDataMessage(int, int, int, QString, QString, int prio=0, int dest=0);
 	virtual ~eveBaseDataMessage();
-	virtual eveBaseDataMessage* clone();
-	virtual bool compare(eveMessage *);
+    virtual eveBaseDataMessage* clone()=0;
+    virtual bool compare(eveMessage *)=0;
 	int getChainId(){return chainId;};
 	void setChainId(int id){chainId = id;};
 	int getSmId(){return smId;};
@@ -437,7 +437,9 @@ public:
 	QString getAuxString(){return auxInfo;};
 	void setNormalizeId(QString nId){normalizeId = nId;};
 	QString getNormalizeId(){return normalizeId;};
-	eveDataModType getDataMod(){return dataModifier;};
+    void setStorageHint(QString hint){storageHint = hint;};
+    QString getStorageHint(){return storageHint;};
+    eveDataModType getDataMod(){return dataModifier;};
 	void setDataMod(eveDataModType mod){dataModifier=mod;};
 	int getMSecsSinceStart(){return mSecsSinceStart;};
 
@@ -450,7 +452,8 @@ protected:
 	QString xmlId;
 	QString auxInfo;
 	QString normalizeId;
-	int mSecsSinceStart;
+    QString storageHint;
+    int mSecsSinceStart;
 };
 
 /**

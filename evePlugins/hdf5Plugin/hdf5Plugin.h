@@ -24,7 +24,7 @@
      using namespace std;
 
 #define SAVEPLUGIN_VERSION "1.3"
-#define EVEH5_VERSION "1.0"
+#define EVEH5_VERSION "2.0"
 
 class hdf5Plugin : public QObject, eveFileWriter{
 
@@ -35,7 +35,6 @@ public:
 	hdf5Plugin();
 	virtual ~hdf5Plugin();
 	int init(QString, QString, QHash<QString, QString>&);
-//	int setCols(int, QString, QString, QStringList);
 	QString getVersionString(){return SAVEPLUGIN_VERSION;};
 	int addColumn(eveDevInfoMessage* message);
 	int open();
@@ -50,7 +49,7 @@ private:
 	static void compareNames(H5Object&, std::string, void*);
 	int addSingleData(int, eveDataMessage*);
 	int addArrayData(int, eveDataMessage*);
-	QString getDSName(int, QString, eveDataModType, QString, QString);
+    QString getDSName(int, QString, QString, eveDataModType, QString, QString);
 	// QString createGroup(int pathId);
 	QString createGroup(QString);
 	QString getGroupName(int pathId);

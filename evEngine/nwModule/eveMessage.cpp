@@ -549,21 +549,6 @@ eveBaseDataMessage::~eveBaseDataMessage()
 {
 }
 
-/**
- * \brief return a copy of this message object
- */
-eveBaseDataMessage* eveBaseDataMessage::clone(){
-
-	return new eveBaseDataMessage(EVEMESSAGETYPE_BASEDATA, chainId, smId, xmlId, name, auxInfo, dataModifier, mSecsSinceStart, priority, destination);
-}
-
-/**
- * \brief compare is not implemented (nor used)
- */
-bool eveBaseDataMessage::compare(eveMessage* with){
-	return false;
-}
-
 /*
  * Class eveDataMessage
  */
@@ -739,12 +724,11 @@ eveDataMessage* eveDataMessage::clone(){
 	}
 	message->setChainId(chainId);
 	message->setSmId(smId);
-	message->setXmlId(xmlId);
-	message->setName(name);
 	message->setPositionCount(posCount);
 	message->setAuxString(auxInfo);
 	message->setNormalizeId(normalizeId);
-	message->setMSecsSinceStart(mSecsSinceStart);
+    message->setStorageHint(storageHint);
+    message->setMSecsSinceStart(mSecsSinceStart);
 	return message;
 }
 /**
@@ -836,8 +820,9 @@ eveDevInfoMessage::~eveDevInfoMessage() {
 
 eveDevInfoMessage* eveDevInfoMessage::clone() {
 	eveDevInfoMessage* message = new eveDevInfoMessage(chainId, smId, xmlId, name, dataType, isarray, dataModifier, auxInfo, infoList, priority, destination);
-	message->setAuxString(auxInfo);
-	message->setNormalizeId(normalizeId);
+    message->setNormalizeId(normalizeId);
+    message->setStorageHint(storageHint);
+    message->setMSecsSinceStart(mSecsSinceStart);
 	return message;
 }
 
@@ -957,7 +942,7 @@ bool eveStorageMessage::compare(eveMessage *message)
 
 /**
  * \brief clone a messages
- * \return identical eveStorageMessage Pointer
+ * \return pointer to a copy of this eveStorageMessage
  */
 eveStorageMessage* eveStorageMessage::clone()
 {

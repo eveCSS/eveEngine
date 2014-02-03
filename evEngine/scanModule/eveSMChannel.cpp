@@ -341,7 +341,11 @@ void eveSMChannel::transportReady(int status) {
                     averageRaw->reset();
                     if (averageNormCalc) averageNormCalc->reset();
                     if (averageNormRaw) averageNormRaw->reset();
+                    sendError(INFO, 0, QString("Channel %1 (%2), got redo event, beginning a new average measurement").arg(name).arg(xmlId));
                 }
+                else
+                    sendError(INFO, 0, QString("Channel %1 (%2), got redo event, beginning a new measurement").arg(name).arg(xmlId));
+
                 triggerRead(false);
             }
             else if (valueRawMsg == NULL){
@@ -352,12 +356,17 @@ void eveSMChannel::transportReady(int status) {
             else if (averageCount > 1){
                 // we need to do average measurements
                 if (normalizeChannel){
-                    if (averageNormCalc->addValue(normCalc)){
-                        averageRaw->addValue(valueRaw);
+                    if (averageRaw->addValue(valueRaw)){
+                        averageNormCalc->addValue(normCalc);
                         averageNormRaw->addValue(normRaw);
                     }
-                } else
-                    averageRaw->addValue(valueRaw);
+                    else
+                        sendError(INFO, 0, QString("Channel %1 (%2), missed deviation test").arg(name).arg(xmlId));
+                }
+                else {
+                    if (!averageRaw->addValue(valueRaw))
+                        sendError(INFO, 0, QString("Channel %1 (%2), missed deviation test").arg(name).arg(xmlId));
+                }
 
                 if(averageRaw->isDone()){
                     // ready with average measurements
@@ -581,7 +590,7 @@ bool eveSMChannel::retrieveData(){
                 sendError(ERROR,0,QString("normalize Channel has value zero %1").arg(normalizeChannel->getXmlId()));
             }
             else
-               normCalc =  valueRaw/normRaw;
+                normCalc =  valueRaw/normRaw;
         }
         sendError(DEBUG, 0, QString("Normalize Channel %1, Raw Value %2").arg(normalizeChannel->getXmlId()).arg(normRaw));
         sendError(DEBUG, 0, QString("Channel %1, Normalized Value %2").arg(xmlId).arg(normCalc));

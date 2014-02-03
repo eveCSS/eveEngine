@@ -31,6 +31,8 @@ typedef struct {
 	double yval;
 } modSpace_t;
 
+enum h5storageType {SingleValOneCol, SingleValTwoCol, Array};
+
 class hdf5DataSet {
 public:
 	hdf5DataSet(QString, QString, QString, QStringList, H5File*);
@@ -41,7 +43,7 @@ public:
 	QString getError(){return errorString;};
 
 private:
-	static CompType createDataType(QString, QString, eveType, int);
+    static CompType createDataType(QString, QString, eveType, int);
 	static CompType createModDataType(QString namePC, QString nameX, QString nameY);
 	static PredType convertToHdf5Type(eveType);
 	void* getDataBufferAddress(eveDataMessage*);
