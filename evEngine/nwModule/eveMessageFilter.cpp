@@ -123,8 +123,11 @@ void eveMessageFilter::queueMessage(eveMessage *message)
       engineStatusCache = (eveEngineStatusMessage*) message;
       break;
     case EVEMESSAGETYPE_CHAINSTATUS:
-      if (chainStatusCache) delete chainStatusCache;
-      chainStatusCache = (eveChainStatusMessage*) message;
+      // chainStatus message with smid == 0 are remainingTime messages, don't cache them
+      if (((eveChainStatusMessage*) message)->getSmId() != 0) {
+        if (chainStatusCache) delete chainStatusCache;
+        chainStatusCache = (eveChainStatusMessage*) message;
+      }
       break;
     case EVEMESSAGETYPE_CURRENTXML:
       if (currentXmlCache) delete currentXmlCache;
