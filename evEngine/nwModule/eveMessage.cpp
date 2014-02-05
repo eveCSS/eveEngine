@@ -678,7 +678,7 @@ eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, 
 	posCount = 0;
 
 	if (datetime.isValid())
-		dataStrings = QStringList(datetime.toString("hh:mm:ss.zzz"));
+        dataStrings = QStringList(datetime.toString("yyyy-MM-dd hh:mm:ss.zzz"));
 	else
 		dataStrings = QStringList("");
 
