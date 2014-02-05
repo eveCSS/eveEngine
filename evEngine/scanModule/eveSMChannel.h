@@ -47,6 +47,8 @@ public:
     eveDataMessage* getValueMessage();
     eveDataMessage* getNormValueMessage();
     eveDataMessage* getNormRawValueMessage();
+    eveDataMessage* getAverageMessage();
+    eveDataMessage* getLimitMessage();
     void sendError(int, int, int, QString);
     void addPositioner(eveCalc* pos){positionerList.append(pos);};
     void loadPositioner(int pc);
@@ -97,6 +99,8 @@ private:
     eveDataMessage* valueRawMsg;
     eveDataMessage* normRawMsg;
     eveDataMessage* normCalcMsg;
+    eveDataMessage* averageMsg;
+    eveDataMessage* limitMsg;
     double valueRaw;
     double normCalc;
     double normRaw;

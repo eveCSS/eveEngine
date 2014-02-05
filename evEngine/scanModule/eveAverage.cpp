@@ -21,17 +21,16 @@
  * @param lowLimit minimum of first value to be used if maxDeviation != 0
  * @param maxDeviation in percent
  */
- eveAverage::eveAverage(int average, int maxAttempt, double lowLimit, double maxDeviation) {
+eveAverage::eveAverage(int average, int maxAttempt, double lowLimit, double maxDeviation) {
     averageCount = abs(average);
     this->maxAttempt = abs(maxAttempt);
     this->lowLimit = fabs(lowLimit);
-	this->deviation = fabs(maxDeviation);
-    doCheck = true;
+    this->deviation = fabs(maxDeviation);
     reset();
 }
 
 eveAverage::~eveAverage() {
-	// Auto-generated destructor stub
+    // Auto-generated destructor stub
 }
 
 /**
@@ -39,9 +38,9 @@ eveAverage::~eveAverage() {
  *
  */
 void eveAverage::reset(){
-        dataArray.clear();
-        attempt = 0;
-	allDone = false;
+    dataArray.clear();
+    attempt = 0;
+    allDone = false;
 }
 
 /**
@@ -50,7 +49,8 @@ void eveAverage::reset(){
  * if limit > 0.0 and first value is below limit => disable deviationCheck
  * deviationCheck: start average measurement with the two values whith a value difference < deviation
  *
- * @param dataVar add value to list of values for calculations if it passes the tests
+ * @param value add value to list of values for calculations if it passes the tests
+ * @return false if value missed deviation test or value is NAN
  */
 bool eveAverage::addValue(double value){
 
@@ -60,9 +60,10 @@ bool eveAverage::addValue(double value){
 
     if ((attempt < maxAttempt) && (deviation > 0.0)){
         if ((lowLimit != 0.0) && (dataArray.size() == 0) && (fabs(value) < lowLimit)) {
-            doCheck = false;
+            deviation = 0.0;
+            lowLimit = 0.0;
         }
-        if (doCheck && (dataArray.size() == 1) && (fabs(dataArray.at(0)*deviation/100.0) < fabs(dataArray.at(0)-value))) {
+        if ((deviation > 0.0 ) && (dataArray.size() == 1) && (fabs(dataArray.at(0)*deviation/100.0) < fabs(dataArray.at(0)-value))) {
             dataArray.replace(0, value);
             ++attempt;
             return false;
@@ -70,10 +71,8 @@ bool eveAverage::addValue(double value){
     }
     dataArray.append(value);
 
-    if ((dataArray.size() >= averageCount) || (attempt > maxAttempt)) {
-        allDone = true;
-        doCheck = true;
-    }
+    if (dataArray.size() >= averageCount) allDone = true;
+
     return true;
 }
 

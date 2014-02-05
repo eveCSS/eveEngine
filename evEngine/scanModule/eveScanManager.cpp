@@ -271,8 +271,10 @@ void eveScanManager::sendMessage(eveMessage *message){
     else if (message->getType() == EVEMESSAGETYPE_DATA) {
         message->setDestinationChannel(storageChannel);
         message->setDestinationFacility(EVECHANNEL_STORAGE);
-        message->addDestinationFacility(EVECHANNEL_MATH);
-        if (((eveDataMessage*)message)->getPositionCount() == 0) ((eveDataMessage*)message)->setPositionCount(posCounter);
+        if (((eveDataMessage*)message)->getDataMod() != DMTaverageParams)
+            message->addDestinationFacility(EVECHANNEL_MATH);
+        if (((eveDataMessage*)message)->getPositionCount() == 0)
+            ((eveDataMessage*)message)->setPositionCount(posCounter);
     }
     addMessage(message);
 }

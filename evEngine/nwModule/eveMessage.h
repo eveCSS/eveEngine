@@ -113,7 +113,7 @@ struct evePlayListEntry {
         QString author;
 };
 
-enum eveDataModType {DMTunmodified, DMTcenter, DMTedge, DMTmin, DMTmax, DMTfwhm, DMTmean, DMTstandarddev, DMTsum, DMTnormalized, DMTpeak, DMTdeviceData,  DMTmetaData, DMTunknown};
+enum eveDataModType {DMTunmodified, DMTcenter, DMTedge, DMTmin, DMTmax, DMTfwhm, DMTmean, DMTstandarddev, DMTsum, DMTnormalized, DMTpeak, DMTdeviceData, DMTaverageParams, DMTmetaData, DMTunknown};
 
 /**
  * \brief base class for errorMessage, engineStatus, chainStatus, dataMessage ...

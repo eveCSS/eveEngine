@@ -43,6 +43,8 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveSMDetector* smdetector,
     valueRawMsg = NULL;
     normCalcMsg = NULL;
     normRawMsg = NULL;
+    averageMsg = NULL;
+    limitMsg = NULL;
     channelStatus = eveCHANNELINIT;
     channelType=definition->getChannelType();
     eventList = eventlist;
@@ -361,11 +363,11 @@ void eveSMChannel::transportReady(int status) {
                         averageNormRaw->addValue(normRaw);
                     }
                     else
-                        sendError(INFO, 0, QString("Channel %1 (%2), missed deviation test").arg(name).arg(xmlId));
+                        sendError(MINOR, 0, QString("Channel %1 (%2), missed deviation test").arg(name).arg(xmlId));
                 }
                 else {
                     if (!averageRaw->addValue(valueRaw))
-                        sendError(INFO, 0, QString("Channel %1 (%2), missed deviation test").arg(name).arg(xmlId));
+                        sendError(MINOR, 0, QString("Channel %1 (%2), missed deviation test").arg(name).arg(xmlId));
                 }
 
                 if(averageRaw->isDone()){
@@ -373,6 +375,19 @@ void eveSMChannel::transportReady(int status) {
                     valueRawMsg = averageRaw->getResultMessage();
                     valueRawMsg->setXmlId(xmlId);
                     valueRawMsg->setName(name);
+
+                    QVector<int> averageArr(2);
+                    averageArr[0] = averageCount;
+                    averageArr[1] = averageRaw->getAttempts();
+                    averageMsg = new eveDataMessage(xmlId, "Attempts", eveDataStatus(), DMTaverageParams, eveTime::getCurrent(), averageArr);
+                    averageMsg->setAuxString("AverageCount");
+                    if (maxDeviation > 0.0) {
+                        QVector<double> deviationArr(2);
+                        deviationArr[0] = minimum;
+                        deviationArr[1] = maxDeviation;
+                        limitMsg = new eveDataMessage(xmlId, "maxDeviation", eveDataStatus(), DMTaverageParams, eveTime::getCurrent(), deviationArr);
+                        limitMsg->setAuxString("Limit");
+                    }
                     valueRaw = valueRawMsg->toVariant().toDouble();
                     if (normalizeChannel){
                         normCalcMsg = averageNormCalc->getResultMessage();
@@ -528,11 +543,30 @@ eveDataMessage* eveSMChannel::getNormValueMessage(){
 
 /**
  *
- * @return value of raw value of channel used for normalization or NULL
+ * @return raw value of channel used for normalization or NULL
  */
 eveDataMessage* eveSMChannel::getNormRawValueMessage(){
     eveDataMessage* return_data = normRawMsg;
     normRawMsg = NULL;
+    return return_data;
+}
+
+/**
+ *
+ * @return average count and attempt
+ */
+eveDataMessage* eveSMChannel::getAverageMessage(){
+    eveDataMessage* return_data = averageMsg;
+    averageMsg = NULL;
+    return return_data;
+}
+/**
+ *
+ * @return limit and deviation
+ */
+eveDataMessage* eveSMChannel::getLimitMessage(){
+    eveDataMessage* return_data = limitMsg;
+    limitMsg = NULL;
     return return_data;
 }
 

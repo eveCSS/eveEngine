@@ -660,6 +660,8 @@ void eveScanModule::stgTrigRead() {
                     eveDataMessage* normMsg = channel->getNormValueMessage();
                     eveDataMessage* normRawMsg = channel->getNormRawValueMessage();
                     eveDataMessage* dataMsg = channel->getValueMessage();
+                    eveDataMessage* averageMsg = channel->getAverageMessage();
+                    eveDataMessage* limitMsg = channel->getLimitMessage();
                     if (normMsg != NULL){
                         normMsg->setPositionCount(triggerPosCount);
                         bool ok = false;
@@ -693,6 +695,18 @@ void eveScanModule::stgTrigRead() {
                     }
                     else {
                         sendError(ERROR, 0, QString(" no data available for channel %1").arg(channel->getName()));
+                    }
+                    if (averageMsg != NULL){
+                        averageMsg->setPositionCount(triggerPosCount);
+                        QVector<int> intArr = averageMsg->getIntArray();
+                        sendError(DEBUG, 0, QString("%1: average count: %2, attempts: %3").arg(channel->getName()).arg(intArr[0]).arg(intArr[1]));
+                        sendMessage(averageMsg);
+                    }
+                    if (limitMsg != NULL){
+                        limitMsg->setPositionCount(triggerPosCount);
+                        QVector<double> dblArr = limitMsg->getDoubleArray();
+                        sendError(DEBUG, 0, QString("%1: limit: %2, max deviation: %3").arg(channel->getName()).arg(dblArr[0]).arg(dblArr[1]));
+                        sendMessage(limitMsg);
                     }
                 }
                 sendError(DEBUG, 0, "stgTrigRead Done");

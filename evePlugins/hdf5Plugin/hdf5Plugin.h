@@ -21,7 +21,7 @@
 #ifndef H5_NO_NAMESPACE
      using namespace H5;
 #endif
-     using namespace std;
+using namespace std;
 
 #define SAVEPLUGIN_VERSION "1.3"
 #define EVEH5_VERSION "2.0"
@@ -50,11 +50,9 @@ private:
 	int addSingleData(int, eveDataMessage*);
 	int addArrayData(int, eveDataMessage*);
     QString getDSName(int, QString, QString, eveDataModType, QString, QString);
-	// QString createGroup(int pathId);
 	QString createGroup(QString);
 	QString getGroupName(int pathId);
 	bool isFileOpen;
-	char string_buffer[201];
 	QStringList groupList;
 	QString fileName;
 	QString fileFormat;
@@ -62,7 +60,6 @@ private:
 	H5File* dataFile;
 	int defaultSizeIncrement;
 	QHash<QString, hdf5DataSet* > dsNameHash;
-	QStringList linkNames;
 	QHash<eveDataModType, QString>modificationHash;
 };
 

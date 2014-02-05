@@ -14,22 +14,26 @@
 
 class eveAverage {
 public:
-	eveAverage(int, int, double, double);
-	virtual ~eveAverage();
-	void reset();
-	bool isDone(){return allDone;};
-        bool addValue(double);
-	eveDataMessage* getResultMessage();
+    eveAverage(int, int, double, double);
+    virtual ~eveAverage();
+    void reset();
+    bool isDone(){return allDone;};
+    bool addValue(double);
+    eveDataMessage* getResultMessage();
+    bool limitMissed();
+    int getAttempts(){return attempt + 1;};
+    int getDataCount(){return dataArray.size();};
+    double getUsedLimit(){return lowLimit;};
+    double getUsedDeviation(){return deviation;};
 
 private:
-	bool allDone;
-    bool doCheck;
-	int averageCount;
-	int maxAttempt;
-        int attempt;
-	double lowLimit;
-	double deviation;
-	QVector<double> dataArray;	
+    bool allDone;
+    int averageCount;
+    int maxAttempt;
+    int attempt;
+    double lowLimit;
+    double deviation;
+    QVector<double> dataArray;
 };
 
 #endif /* EVEAVERAGE_H_ */

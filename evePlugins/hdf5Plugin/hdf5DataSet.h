@@ -9,6 +9,7 @@
 #define HDF5DATASET_H_
 
 #include <QString>
+#include <QStringList>
 #include "eveTypes.h"
 #include "eveMessage.h"
 #include "H5Cpp.h"
@@ -18,20 +19,12 @@ using namespace std;
 
 #define STANDARD_STRINGSIZE 40
 #define STANDARD_ENUM_STRINGSIZE 16
-#define DATETIME_STRINGSIZE 40
+#define DATETIME_STRINGSIZE 23
 
 typedef struct {
 	qint32 positionCount;
 	void *aPtr;
 } memSpace_t;
-
-typedef struct {
-	qint32 positionCount;
-	double xval;
-	double yval;
-} modSpace_t;
-
-enum h5storageType {SingleValOneCol, SingleValTwoCol, Array};
 
 class hdf5DataSet {
 public:
@@ -43,17 +36,19 @@ public:
 	QString getError(){return errorString;};
 
 private:
-    static CompType createDataType(QString, QString, eveType, int);
-	static CompType createModDataType(QString namePC, QString nameX, QString nameY);
-	static PredType convertToHdf5Type(eveType);
+    enum h5storageType {Unknown, PosCountValues, PosCountNamedArray};
+    static CompType createDataType(QStringList, eveType);
+    static CompType createDataTypeOld(QString, QString, eveType, int);
+    static CompType createModDataType(QString, QString, QString, eveType);
+    static AtomType convertToHdf5Type(eveType);
 	void* getDataBufferAddress(eveDataMessage*);
 	int getMinimumDataBufferLength(eveDataMessage*, int);
-	void init(eveDataMessage*);
+    void init(eveDataMessage*);
 	void addParamAttributes(H5Object*);
 	void addDataAttribute(H5Object*, QString, QString);
 	void addLink(QString, QString, QString);
 	bool isInit;
-	bool isCalcResult;
+    h5storageType storageType;
 	int arraySize;
 	int posCounter;
 	int status;
@@ -61,7 +56,6 @@ private:
 	QString errorString;
 	eveType dataType;
 	memSpace_t *memBuffer;
-	modSpace_t modBuffer;
 	QString dspath;			// e.g. /1/XMLID
 	QString name;
 	QString basename;
@@ -79,7 +73,6 @@ private:
 	DSetCreatPropList createProps;
 	bool dsetOpen;
 	int sizeIncrement;
-
 };
 
 #endif /* HDF5DATASET_H_ */
