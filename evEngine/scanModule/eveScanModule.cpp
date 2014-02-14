@@ -46,11 +46,8 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     manualTrigger  = parser->getSMTagBool(chainId, smId, "triggerconfirmaxis", false);
     manDetTrigger = parser->getSMTagBool(chainId, smId, "triggerconfirmchannel", false);
     QString scanType = parser->getSMTag(chainId, smId, "type");
-    storageHint = parser->getSMTag(chainId, smId, "storage");
+    storageHint = parser->getSMTag(chainId, smId, "smstorage");
     if (storageHint.length() == 0) storageHint = "default";
-    // TODO Workaround until storageHint is implemented in viewer
-    if ((scanType == "save_axis_positions") || (scanType == "save_channel_values"))
-        storageHint = "alternate";
 
     stageHash.insert(eveStgINIT, &eveScanModule::stgInit);
     stageHash.insert(eveStgREADPOS, &eveScanModule::stgReadPos);
