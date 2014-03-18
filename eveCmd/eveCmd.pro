@@ -73,6 +73,7 @@ INCLUDEPATH += $$EPICS_BASE/include \
 LIBS += -L $$EPICS_BASE/lib/$$TARGET_ARCH \
     -lca \
     -lCom
+QMAKE_RPATHDIR += $$EPICS_BASE/lib/$$TARGET_ARCH
 
 
 

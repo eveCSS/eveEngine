@@ -46,7 +46,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     manualTrigger  = parser->getSMTagBool(chainId, smId, "triggerconfirmaxis", false);
     manDetTrigger = parser->getSMTagBool(chainId, smId, "triggerconfirmchannel", false);
     QString scanType = parser->getSMTag(chainId, smId, "type");
-    storageHint = parser->getSMTag(chainId, smId, "smstorage");
+    storageHint = parser->getSMTag(chainId, smId, "storage");
     if (storageHint.length() == 0) storageHint = "default";
 
     stageHash.insert(eveStgINIT, &eveScanModule::stgInit);

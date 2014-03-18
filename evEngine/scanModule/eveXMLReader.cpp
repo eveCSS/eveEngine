@@ -21,8 +21,8 @@
 #include "eveSMDetector.h"
 #include "eveSMMotor.h"
 
-#define EVE_XML_VERSION        2
-#define EVE_XML_REVISION       3
+#define EVE_XML_VERSION        3
+#define EVE_XML_REVISION       0
 
 eveXMLReader::eveXMLReader(eveManager *parentObject){
 	parent = parentObject;
