@@ -12,13 +12,22 @@
 #include <QFileInfo>
 #include <QFile>
 #include <QTextStream>
+#include <QBuffer>
+#include <QXmlSchema>
+#include <QXmlSchemaValidator>
+#include <QUrl>
 #include "evePlayListManager.h"
+#include "eveManager.h"
+#include "eveParameter.h"
 #include "eveError.h"
+#include "evevalidationhandler.h"
 
-evePlayListManager::evePlayListManager() {
+
+evePlayListManager::evePlayListManager(eveManager* pmanager) {
     lastId = 0;
     modified = false;
     haveCurrent = false;
+    manager = pmanager;
     playlistPath = QDir(getTempPath());
     dirFileName = playlistPath.absoluteFilePath("eveCacheDir.db");
     if (!playlistPath.exists()){
@@ -80,60 +89,66 @@ evePlayListManager::~evePlayListManager() {
  */
 void evePlayListManager::addEntry(QString name, QString author, QByteArray data) {
 
-        evePlayListEntry ple;
-        evePlayListData* pld = new evePlayListData;
-        bool saved = false;
+    evePlayListEntry ple;
+    evePlayListData* pld;
+    bool saved = false;
 
-	if (playlist.count() > PLAYLISTMAXENTRIES) {
-		eveError::log(ERROR, "evePlayListManager::addEntry: Too many playlist entries");
-		return;
-	}
-        if (lastId > 2000000000)
-                lastId=1;
-	else
-		++lastId;
+    if (playlist.count() > PLAYLISTMAXENTRIES) {
+        eveError::log(ERROR, "evePlayListManager::addEntry: Too many playlist entries");
+        return;
+    }
+    if (lastId > 2000000000)
+        lastId=1;
+    else
+        ++lastId;
 
-	if (data.length() < 10){
-		eveError::log(ERROR, "evePlayListManager::addEntry: XML-Data is empty");
-		return;
-	}
+    if (data.length() < 10){
+        eveError::log(ERROR, "evePlayListManager::addEntry: XML-Data is empty");
+        return;
+    }
 
-        ple.pid = lastId;
-        ple.name = name;
-        ple.author = author;
-        if (ple.name.length() < 1) ple.name = "none";
-        if (ple.author.length() < 1) ple.author = "none";
+    if (!xmlPassedVerification(data)) {
+        sendError(ERROR, 0, QString("SCML Validation unsuccessful, Skip entry %1").arg(name));
+        return;
+    }
 
-        // always save to temporary file
-        QString filename = QUuid::createUuid().toString();
-        filename = playlistPath.absolutePath() + "/" + filename.mid(1, filename.length()-2);
-        QFile file(filename);
-        if (file.open(QIODevice::WriteOnly | QIODevice::Text)){
-            QTextStream out(&file);
-            out << data;
-            file.close();
-            saved = true;
-        }
-        else {
-            eveError::log(ERROR, QString("evePlayListManager: unable to open temporary file: %1").arg(filename));
-        }
+    ple.pid = lastId;
+    ple.name = name;
+    ple.author = author;
+    if (ple.name.length() < 1) ple.name = "none";
+    if (ple.author.length() < 1) ple.author = "none";
 
-        // fill dataentry
-        pld->filename = filename;
-        pld->author = author;
-        pld->name = name;
-        if (saved && (playlist.count() > MAX_XML_LOADED)) {
-            pld->isLoaded = false;
-        }
-        else {
-            pld->isLoaded = true;
-            pld->data = data;
-        }
-        datahash.insert(ple.pid, pld);
-        playlist.append(ple);
-        flushPlaylist();
+    // always save to temporary file
+    QString filename = QUuid::createUuid().toString();
+    filename = playlistPath.absolutePath() + "/" + filename.mid(1, filename.length()-2);
+    QFile file(filename);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Text)){
+        QTextStream out(&file);
+        out << data;
+        file.close();
+        saved = true;
+    }
+    else {
+        eveError::log(ERROR, QString("evePlayListManager: unable to open temporary file: %1").arg(filename));
+    }
 
-	return;
+    // fill dataentry
+    pld = new evePlayListData;
+    pld->filename = filename;
+    pld->author = author;
+    pld->name = name;
+    if (saved && (playlist.count() > MAX_XML_LOADED)) {
+        pld->isLoaded = false;
+    }
+    else {
+        pld->isLoaded = true;
+        pld->data = data;
+    }
+    datahash.insert(ple.pid, pld);
+    playlist.append(ple);
+    flushPlaylist();
+
+    return;
 }
 
 /**
@@ -297,4 +312,43 @@ void evePlayListManager::flushPlaylist(){
     }
     modified = false;
     return;
+}
+
+bool evePlayListManager::xmlPassedVerification(QByteArray &xmldata) {
+
+    QString schemaFile = QString("scml-%1.xsd").arg(eveParameter::getParameter("xmlparserversion"));
+
+    QString schemaPath = eveParameter::getParameter("schemapath");
+    QFileInfo schemaPathInfo = QFileInfo(schemaPath);
+    // note: the "/" will be translated to "\" on windows
+    if (!schemaPathInfo.completeBaseName().isEmpty()) schemaPath += "/";
+    QFileInfo schemaFileInfo(schemaPath + schemaFile);
+
+    if (!schemaFileInfo.exists()){
+        // warn and continue without validation
+        sendError(MINOR, 0, QString("Unable to find schema file: %1. Resuming without validation!").arg(schemaFileInfo.absoluteFilePath()));
+        return true;
+    }
+
+    QXmlSchema schema;
+    schema.load(QUrl(QString("file://%1").arg(schemaFileInfo.absoluteFilePath())));
+
+    bool retval = false;
+    if (schema.isValid()) {
+        QBuffer buffer(&xmldata);
+        buffer.open(QIODevice::ReadOnly);
+        QXmlSchemaValidator validator(schema);
+        eveValidationHandler* validationHandler = new eveValidationHandler(manager);
+        validator.setMessageHandler (validationHandler);
+        if (validator.validate(&buffer)) retval = true;
+        delete validationHandler;
+    }
+    else
+        sendError(ERROR, 0, QString("invalid schema file: %1").arg(schemaFileInfo.absoluteFilePath()));
+
+    return retval;
+}
+
+void evePlayListManager::sendError(int severity, int errorType,  QString errorString){
+    manager->sendError(severity, EVEMESSAGEFACILITY_PLAYLIST, errorType, errorString);
 }

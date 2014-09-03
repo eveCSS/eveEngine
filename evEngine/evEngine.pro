@@ -3,7 +3,9 @@ TARGET = evEngine
 QT += core \
     network \
     gui \
-    xml
+    xml \
+    xmlpatterns
+
 HEADERS += scanModule/eveDeviceDefinitions.h \
     scanModule/eveSMMotor.h \
     scanModule/eveSMDetector.h \
@@ -63,7 +65,8 @@ HEADERS += scanModule/eveDeviceDefinitions.h \
     nwModule/evePlayListManager.h \
     mathModule/eveMath.h \
     mathModule/eveMathConfig.h \
-    version.h
+    version.h \
+    nwModule/evevalidationhandler.h
 SOURCES += scanModule/eveDeviceDefinitions.cpp \
     scanModule/eveSMMotor.cpp \
     scanModule/eveSMDetector.cpp \
@@ -122,7 +125,8 @@ SOURCES += scanModule/eveDeviceDefinitions.cpp \
     main.cpp \
     nwModule/evePlayListManager.cpp \
     mathModule/eveMath.cpp \
-    mathModule/eveMathConfig.cpp
+    mathModule/eveMathConfig.cpp \
+    nwModule/evevalidationhandler.cpp
 INCLUDEPATH += nwModule \
     scanModule \
     storageModule \

@@ -30,15 +30,7 @@ struct evePlayListData {
     QString filename;
 };
 
-/**
- * \brief internal struct of class evePlayListManager
- *
- */
-//struct eveDataEntry {
-//	bool isLoaded;
-//	QByteArray data;
-//	QString filename;
-//};
+class eveManager;
 
 /**
  * \brief manages the playlist
@@ -52,7 +44,7 @@ class evePlayListManager : public QObject
     Q_OBJECT
 
 public:
-    evePlayListManager();
+    evePlayListManager(eveManager*);
     virtual ~evePlayListManager();
     void addEntry(QString, QString, QByteArray);
     void reorderEntry(int, int);
@@ -63,6 +55,7 @@ public:
     evePlayListMessage* getCurrentPlayList();
 
 private:
+    eveManager* manager;
     bool modified;
     bool haveCurrent;
     int lastId;
@@ -74,7 +67,8 @@ private:
     QDir playlistPath;
     QList<evePlayListEntry> playlist;
     QHash<int, evePlayListData*> datahash;
-
+    void sendError(int, int, QString);
+    bool xmlPassedVerification(QByteArray & );
 };
 
 #endif /* EVEPLAYLISTMANAGER_H_ */
