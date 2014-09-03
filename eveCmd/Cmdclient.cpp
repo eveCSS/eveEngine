@@ -16,6 +16,8 @@ Cmdclient::Cmdclient(QObject *parent) :
     outOfSync = false;
     messageInProgress = false;
     singleFile = false;
+    setRepeatCount = false;
+    allSent = false;
     playListCounter = 0;
     tcpSocket = new QTcpSocket(this);
     connect(tcpSocket, SIGNAL(error(QAbstractSocket::SocketError)),
@@ -157,27 +159,32 @@ void Cmdclient::addMessage(eveMessage* message){
     case EVEMESSAGETYPE_ERROR:
     {
         eveErrorMessage* emesg = (eveErrorMessage*)message;
-        eveError::log(emesg->getSeverity(), emesg->getErrorText(), emesg->getFacility());
+        if (emesg->getSeverity() > 0) eveError::log(emesg->getSeverity(), emesg->getErrorText(), emesg->getFacility());
     }
-    case EVEMESSAGETYPE_CURRENTXML:
+        break;
     case EVEMESSAGETYPE_ENGINESTATUS:
-        if (false){
-            ;
+    {
+        eveEngineStatusMessage* statusmsg = (eveEngineStatusMessage*)message;
+        if (setRepeatCount) {
+            unsigned int rc = statusmsg->getStatus() >> 16;
+            eveError::log(INFO,QString("RepeatCount %1").arg(rc));
+            if ((int)rc == eveParameter::getParameter("repeatCount").toInt()) setRepeatCount = false;
         }
-        else {
-            delete message;
-            message = NULL;
-        }
+    }
         break;
     case EVEMESSAGETYPE_PLAYLIST:
         ++playListCounter;
-        eveError::log(INFO,QString("Playlistcount is %1").arg(((evePlayListMessage*) message)->getCount()));
-        if (singleFile && (playListCounter > 1)) QTimer::singleShot(10, this, SLOT(disconnectSocket()));
+        eveError::log(DEBUG,QString("Playlistcount is %1").arg(((evePlayListMessage*) message)->getCount()));
+        if (singleFile && (playListCounter > 1)){
+            eveError::log(INFO,QString("Playlistcount is %1").arg(((evePlayListMessage*) message)->getCount()));
+            singleFile = false;
+        }
         break;
     }
-
+    if (allSent && !singleFile && !setRepeatCount) QTimer::singleShot(10, this, SLOT(disconnectSocket()));
     delete message;
 }
+
 void Cmdclient::addToPlayList(QString fileName){
 
     if (!tcpSocket->isWritable()) return;
@@ -213,7 +220,12 @@ void Cmdclient::socketConnected(){
         singleFile = true;
         addToPlayList(filename);
     }
-
+    int repCount = eveParameter::getParameter("repeatCount").toInt();
+    if (repCount >= 0) {
+        setRepeatCount = true;
+        sendMessage(new eveMessageInt(EVEMESSAGETYPE_REPEATCOUNT, repCount));
+    }
+    allSent = true;
     QTimer::singleShot(2000, this, SLOT(disconnectSocket()));
 }
 

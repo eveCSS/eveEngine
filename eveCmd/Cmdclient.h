@@ -31,6 +31,8 @@ private:
     bool messageInProgress;
     bool outOfSync;
     bool singleFile;
+    bool setRepeatCount;
+    bool allSent;
     int playListCounter;
     QByteArray startTag;
     QTimer* timeoutClock;

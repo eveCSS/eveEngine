@@ -33,9 +33,12 @@ int main(int argc, char *argv[])
     QString logFileName;
     QString hostName = "localhost";
     int portNumber = 12345;
+    int repeatCount = -1;
+    char* usage ="eveCmd -f <xml-File> [-d debuglevel] [-h <hostname> (default localhost)] [-r <repeatCount>] [-p <port> (default 12345)]";
+
 
     if (argc <= 1){
-        printf ("usage: eveCmd -f <xml-File> [-d debuglevel] [-h <hostname> (default localhost)] [-p <port> (default 12345)]\n");
+        printf ("usage: %s\n", usage);
         return (1);
     }
     // poor mans argument parsing
@@ -73,6 +76,15 @@ int main(int argc, char *argv[])
                     portNumber = parameter.toInt(&ok);
                     if (ok) continue;
             }
+            else if ( argument.startsWith("-r") ){
+                    parameter = argument.remove(0,2).trimmed();
+                    if (parameter.isEmpty()) {
+                            parameter = argumentNext.trimmed();
+                            skipOne = true;
+                    }
+                    repeatCount = parameter.toInt(&ok);
+                    if (ok) continue;
+            }
             else if ( argument.startsWith("-f") ){
                     xmlFileName = argument.remove(0,2).trimmed();
                     if (xmlFileName.isEmpty()) {
@@ -98,7 +110,7 @@ int main(int argc, char *argv[])
                     if (!logFileName.isEmpty()) continue;
             }
             printf ("\"%s\"?\n", argv[i]);
-            printf ("usage: eveCmd -f <xml-File> [-d debuglevel] [-h <hostname> (default localhost)] [-p <port> (default 12345)]\n");
+            printf ("usage: %s\n", usage);
             return (1);
     }
 
@@ -108,6 +120,7 @@ int main(int argc, char *argv[])
 
     eveParameter *paralist = new eveParameter();
     paralist->setParameter("port", QString().setNum(portNumber));
+    paralist->setParameter("repeatCount", QString().setNum(repeatCount));
     paralist->setParameter("host", hostName);
     paralist->setParameter("version", EVECMD_VERSION);
     paralist->setParameter("filename", xmlFileName);

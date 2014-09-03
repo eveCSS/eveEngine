@@ -35,7 +35,8 @@ eveMessage::eveMessage(int mtype, int prio, int dest)
 			(type == EVEMESSAGETYPE_STOP) ||
 			(type == EVEMESSAGETYPE_PAUSE) ||
 			(type == EVEMESSAGETYPE_AUTOPLAY) ||
-			(type == EVEMESSAGETYPE_ENDPROGRAM) ||
+            (type == EVEMESSAGETYPE_REPEATCOUNT) ||
+            (type == EVEMESSAGETYPE_ENDPROGRAM) ||
 			(type == EVEMESSAGETYPE_DEVINFO) ||
 			(type == EVEMESSAGETYPE_EVENTREGISTER) ||
 			(type == EVEMESSAGETYPE_LIVEDESCRIPTION) ||
@@ -139,9 +140,10 @@ eveMessageInt::eveMessageInt(int iType, int ival, int prio, int dest) :
 {
 	value = ival;
 	// check the allowed types
-	assert ((type == EVEMESSAGETYPE_AUTOPLAY) ||
-			(type == EVEMESSAGETYPE_STORAGEDONE) ||
-			(type == EVEMESSAGETYPE_REMOVEFROMPLAYLIST));
+    assert ((type == EVEMESSAGETYPE_AUTOPLAY) ||
+            (type == EVEMESSAGETYPE_REPEATCOUNT) ||
+            (type == EVEMESSAGETYPE_STORAGEDONE) ||
+            (type == EVEMESSAGETYPE_REMOVEFROMPLAYLIST));
 }
 /**
  * \brief compare two messages

@@ -55,6 +55,7 @@ int main(int argc, char *argv[])
 	QString logFileName;
 	QString interfaces("all");
 	QString eveRoot;
+    QString schemaPath("/messung/eve/xml/schema");
 	int loglevel=-1;
 	int debuglevel=DEFAULT_LOGLEVEL;
 	int portNumber = 12345;
@@ -79,7 +80,7 @@ int main(int argc, char *argv[])
 			useGui = true;
 			continue;
 		}
-		else if ( argument.startsWith("-n" )){
+        else if ( argument.startsWith("-n" )){
 			useNet = false;
 			continue;
 		}
@@ -165,8 +166,8 @@ int main(int argc, char *argv[])
 	}
 
 	// check if environment variable EVE_ROOT is set
-	if (eveRoot.isEmpty()) {
-		QStringList envList = QProcess::systemEnvironment();
+    QStringList envList = QProcess::systemEnvironment();
+    if (eveRoot.isEmpty()) {
 		foreach (QString env, envList){
 			if (env.startsWith("EVE_ROOT=")){
 				eveRoot = env.remove("EVE_ROOT=");
@@ -175,7 +176,15 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	// build parameter list
+    // check if environment variable EVE_SCHEMAPATH is set
+    foreach (QString env, envList){
+        if (env.startsWith("EVE_SCHEMAPATH=")){
+            schemaPath = env.remove("EVE_SCHEMAPATH=");
+            break;
+        }
+    }
+
+    // build parameter list
 	eveParameter *paralist = new eveParameter();
 	if (useNet)
 		paralist->setParameter("use_network", "yes");
@@ -187,10 +196,12 @@ int main(int argc, char *argv[])
 
 	paralist->setParameter("port", QString().setNum(portNumber));
 	paralist->setParameter("version", EVE_VERSION);
-	paralist->setParameter("savepluginversion", SAVEPLUGIN_VERSION);
+    paralist->setParameter("xmlparserversion", SCML_VERSION);
+    paralist->setParameter("savepluginversion", SAVEPLUGIN_VERSION);
 	paralist->setParameter("interfaces", interfaces);
-	if (!eveRoot.isEmpty()) paralist->setParameter("eveRoot", eveRoot);
-	if (!xmlFileName.isEmpty()) paralist->setParameter("startFile",xmlFileName );
+    paralist->setParameter("schemapath", schemaPath);
+    if (!eveRoot.isEmpty()) paralist->setParameter("eveRoot", eveRoot);
+    if (!xmlFileName.isEmpty()) paralist->setParameter("startFile",xmlFileName );
 
 	eveError *error = new eveError(textDisplay, debuglevel);
 	eveMessageHub *mHub = new eveMessageHub(useGui, useNet);
@@ -200,7 +211,7 @@ int main(int argc, char *argv[])
 		mainWin->connect(mHub, SIGNAL(closeParent()), mainWin, SLOT(close()), Qt::QueuedConnection);
 	}
 	mHub->init();
-        error->log(DEBUG,QString("engine version %1, (saveplugin %2)").arg(EVE_VERSION).arg(SAVEPLUGIN_VERSION));
+        error->log(DEBUG,QString("engine version: %1, scml: %2, saveplugin: %2").arg(EVE_VERSION).arg(SCML_VERSION).arg(SAVEPLUGIN_VERSION));
 
     int retval = app.exec();
     // make sure all has been logged

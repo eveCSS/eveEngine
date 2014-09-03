@@ -279,6 +279,7 @@ void eveMessageHub::newMessage(int messageSource)
             break;
         }
         case EVEMESSAGETYPE_AUTOPLAY:
+        case EVEMESSAGETYPE_REPEATCOUNT:
         case EVEMESSAGETYPE_REORDERPLAYLIST:
         case EVEMESSAGETYPE_ADDTOPLAYLIST:
         case EVEMESSAGETYPE_REMOVEFROMPLAYLIST:

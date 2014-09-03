@@ -55,22 +55,12 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 		}
 		break;
 		case EVEMESSAGETYPE_START:
-			message = new eveMessage(EVEMESSAGETYPE_START);
-		break;
 		case EVEMESSAGETYPE_HALT:
-			message = new eveMessage(EVEMESSAGETYPE_HALT);
-		break;
 		case EVEMESSAGETYPE_BREAK:
-			message = new eveMessage(EVEMESSAGETYPE_BREAK);
-		break;
 		case EVEMESSAGETYPE_STOP:
-			message = new eveMessage(EVEMESSAGETYPE_STOP);
-		break;
 		case EVEMESSAGETYPE_PAUSE:
-			message = new eveMessage(EVEMESSAGETYPE_PAUSE);
-		break;
 		case EVEMESSAGETYPE_ENDPROGRAM:
-			message = new eveMessage(EVEMESSAGETYPE_ENDPROGRAM);
+            message = new eveMessage(type);
 		break;
 		case EVEMESSAGETYPE_LIVEDESCRIPTION:
 		{
@@ -80,14 +70,12 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 		}
 		break;
 		case EVEMESSAGETYPE_AUTOPLAY:
-		case EVEMESSAGETYPE_REMOVEFROMPLAYLIST:
+        case EVEMESSAGETYPE_REPEATCOUNT:
+        case EVEMESSAGETYPE_REMOVEFROMPLAYLIST:
 		{
 			int intValue;
 			inStream >> intValue;
-			if (type == EVEMESSAGETYPE_AUTOPLAY)
-				message = new eveMessageInt(EVEMESSAGETYPE_AUTOPLAY, intValue);
-			else
-				message = new eveMessageInt(EVEMESSAGETYPE_REMOVEFROMPLAYLIST, intValue);
+            message = new eveMessageInt(type, intValue);
 		}
 		break;
 		case EVEMESSAGETYPE_REORDERPLAYLIST:
@@ -375,7 +363,8 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 		}
 		break;
 		case EVEMESSAGETYPE_AUTOPLAY:
-		case EVEMESSAGETYPE_REMOVEFROMPLAYLIST:
+        case EVEMESSAGETYPE_REPEATCOUNT:
+        case EVEMESSAGETYPE_REMOVEFROMPLAYLIST:
 		{
 			qint32 ival  = ((eveMessageInt*)message)->getInt();
 			quint32 messageLength = 0;
