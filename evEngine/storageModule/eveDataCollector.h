@@ -31,7 +31,7 @@ public:
     void addDevice(eveDevInfoMessage *);
     void addMetaData(int, QString, QString&);
     void setKeepFile(bool keep){keepFile = keep;};
-    bool isConfirmSave(){return doConfirmSave;};
+    bool isConfirmSave(){return doConfirmSave && keepFile;};
 
 public slots:
     void flushData();

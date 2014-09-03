@@ -39,7 +39,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QStri
     fileWriter = NULL;
     fwInitDone = false;
     fwOpenDone = false;
-    keepFile = true;
+    keepFile = false;
     StartTimeDone = false;
     StartDateDone = false;
     bool fileTest = false;
@@ -254,6 +254,7 @@ void eveDataCollector::addData(eveDataMessage* message) {
 			int status = fileWriter->open();
 			if (status > ERROR) fwOpenDone = true;
 			manager->sendError(status, 0, QString("FileWriter: openFile: %1").arg(fileWriter->errorText()));
+            keepFile = true;
 		}
 		if (fwOpenDone){
 			int status = fileWriter->addData(message->getChainId(), message);
