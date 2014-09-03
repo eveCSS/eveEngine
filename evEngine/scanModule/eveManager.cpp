@@ -28,7 +28,7 @@
  */
 eveManager::eveManager() {
 	currentPlEntry = NULL;
-	playlist = new evePlayListManager();
+    playlist = new evePlayListManager(this);
 	eveMessageHub * mHub = eveMessageHub::getmHub();
 	channelId = mHub->registerChannel(this, EVECHANNEL_MANAGER);
 	engineStatus = new eveManagerStatusTracker();
@@ -86,6 +86,12 @@ void eveManager::handleMessage(eveMessage *message){
         if (engineStatus->setAutoStart(autostart)) addMessage(engineStatus->getEngineStatusMessage());
 
     }
+        break;
+    case EVEMESSAGETYPE_REPEATCOUNT:
+        if ((engineStatus->getEngineStatus() != eveEngIDLENOXML) && (engineStatus->getEngineStatus() != eveEngLOADINGXML)){
+           engineStatus->setRepeatCount(((eveMessageInt*)message)->getInt());
+           addMessage(engineStatus->getEngineStatusMessage());
+        }
         break;
     case EVEMESSAGETYPE_START:
         if (!sendStart()) sendError(INFO,0,"cannot process START command with current engine status");

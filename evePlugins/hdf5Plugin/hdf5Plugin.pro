@@ -29,6 +29,7 @@ win32-g++ {
 
 linux-g++-32 {
    HDF_BASE = /home/eden/src/hdf5/1.6.10-32bit
+   HDF_LIB = $$HDF_BASE/lib
    EPICS_BASE = /soft/epics/base-3.14.12.2
    TARGET_ARCH = linux-x86
    ARCH = Linux
@@ -36,6 +37,7 @@ linux-g++-32 {
 
 linux-g++-64 {
    HDF_BASE = /home/eden/src/hdf5/1.6.10_x86_64
+   HDF_LIB = $$HDF_BASE/lib64
    EPICS_BASE = /soft/epics/base-3.14.12.2
    TARGET_ARCH = linux-x86_64
    ARCH = Linux
@@ -46,7 +48,7 @@ INCLUDEPATH += $$EPICS_BASE/include \
     $$HDF_BASE/include
 
 LIBS += -L $$EPICS_BASE/lib/$$TARGET_ARCH \
-    -L$$HDF_BASE/lib \
+    -L$$HDF_LIB \
     -lhdf5_cpp \
     -lhdf5 \
     -lca \

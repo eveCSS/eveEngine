@@ -21,9 +21,6 @@
 #include "eveSMDetector.h"
 #include "eveSMMotor.h"
 
-#define EVE_XML_VERSION        3
-#define EVE_XML_REVISION       0
-
 eveXMLReader::eveXMLReader(eveManager *parentObject){
 	parent = parentObject;
 	domDocument = new QDomDocument();
@@ -56,6 +53,15 @@ bool eveXMLReader::read(QByteArray xmldata)
     QString errorStr;
     int errorLine;
     int errorColumn;
+    int parsVersion = 0;
+    int parsRevision = 0;
+
+    QString parserVersion = eveParameter::getParameter("xmlparserversion");
+    QStringList parserVersionStrings = parserVersion.split(".");
+    if (parserVersionStrings.count() == 2){
+        parsVersion = parserVersionStrings[0].toInt();
+        parsRevision = parserVersionStrings[1].toInt();
+    }
 
     if (!domDocument->setContent(xmldata, true, &errorStr, &errorLine, &errorColumn)) {
 		sendError(ERROR,0,QString("eveXMLReader::read: Parse error at line %1, column %2: Text: %3")
@@ -75,14 +81,14 @@ bool eveXMLReader::read(QByteArray xmldata)
         return false;
     }
     eveParameter::setParameter("xmlversion",version.text());
-    QString thisVersion = QString("%1.%2").arg((int)EVE_XML_VERSION).arg((int)EVE_XML_REVISION);
+
     QStringList versions = version.text().split(".");
-    if ((versions.count() > 1) && (versions[0].toInt() != EVE_XML_VERSION)) {
-		sendError(ERROR,0,QString("eveXMLReader::read: incompatible xml versions, file: %1, application: %2").arg(version.text()).arg(thisVersion));
+    if ((versions.count() > 1) && (versions[0].toInt() != parsVersion)) {
+        sendError(ERROR,0,QString("eveXMLReader::read: incompatible xml versions, file: %1, application: %2").arg(version.text()).arg(parserVersion));
         return false;
     }
-    if ((versions.count() > 1) && (versions[1].toInt() != EVE_XML_REVISION)) {
-		sendError(MINOR,0,QString("eveXMLReader::read: different xml revisions, file: %1, application: %2").arg(version.text()).arg(thisVersion));
+    if ((versions.count() > 1) && (versions[1].toInt() != parsRevision)) {
+        sendError(MINOR,0,QString("eveXMLReader::read: different xml revisions, file: %1, application: %2").arg(version.text()).arg(parserVersion));
     }
     QDomElement locationElem = root.firstChildElement("location");
     if (!locationElem.isNull()){

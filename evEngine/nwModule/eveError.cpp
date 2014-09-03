@@ -13,7 +13,7 @@ eveError::eveError(QTextEdit * textDispl, int loglvl)
 	textDisplay = textDispl;
 	facilityAbbr << "NONE " << "MFILT" << "CPARS" << "NETWK" << "MHUB "
 			<< "PLAYL" << "MANAG" << "XMLPR" << "SCANC" << "POSCA" << "SMDEV"
-			<< "CATRA" << "SCANM" << "STORG" << "EVENT" << "LOTIM" << "MATH";
+            << "CATRA" << "SCANM" << "STORG" << "EVENT" << "LOTIM" << "MATH" << "XMVAL";
 	connect (this, SIGNAL(newlogMessage()), this, SLOT(printLogMessage()), Qt::QueuedConnection);
 }
 
