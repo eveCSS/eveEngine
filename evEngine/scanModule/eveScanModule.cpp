@@ -96,11 +96,6 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
         if (axis->getExpectedPositions() > expectedPositions) expectedPositions = axis->getExpectedPositions();
     }
 
-    // get values per position
-    valuesPerPos = parser->getSMTagInteger(chainId, smId, "valuecount", 1);
-    expectedPositions *= valuesPerPos;
-    eveError::log(DEBUG, QString("Scan will have approx. %1 steps").arg(expectedPositions));
-
     // get all used detector channels and create a list of detectors
     // channels used as normalize channels are removed from this list
     channelList = parser->getChannelList(this, chainId, smId);
@@ -114,6 +109,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     eventList = parser->getSMEventList(chainId, smId);
 
     // get the postscan positioner plugins
+    bool hasPositioner = false;
     posPluginDataList = parser->getPositionerPluginList(chainId, smId);
     while (!posPluginDataList->isEmpty()){
             QHash<QString, QString>* positionerHash = posPluginDataList->takeFirst();
@@ -129,6 +125,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
                     foreach (eveSMAxis *axis, *axisList){
                             if (axis->getXmlId() == xAxisId) {
                                     axis->addPositioner(positioner);
+                                    hasPositioner = true;
                             }
                     }
                     foreach (eveSMChannel *channel, *channelList){
@@ -141,6 +138,12 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
 
     }
     delete posPluginDataList;
+
+    // get values per position
+    valuesPerPos = parser->getSMTagInteger(chainId, smId, "valuecount", 1);
+    expectedPositions *= valuesPerPos;
+    if (hasPositioner) ++expectedPositions;
+    eveError::log(DEBUG, QString("Scan will have approx. %1 steps").arg(expectedPositions));
 
     // connect signals
     connect (this, SIGNAL(sigExecStage()), this, SLOT(execStage()), Qt::QueuedConnection);
