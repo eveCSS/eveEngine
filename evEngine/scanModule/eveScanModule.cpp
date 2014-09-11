@@ -880,13 +880,19 @@ void eveScanModule::stgEndPos() {
             bool allDone = true;
             foreach (eveSMAxis *axis, *axisList) if (axis->havePositioner() && !axis->isDone()) allDone = false;
             if (allDone){
+                bool incrPosCount = true;
                 foreach (eveSMAxis *axis, *axisList){
                     if (axis->havePositioner()){
                         eveDataMessage* posMesg = axis->getPositionMessage();
                         if (posMesg != NULL){
+                            if (incrPosCount) {
+                                incrPosCount = false;
+                                sendNextPos();
+                            }
                             bool ok;
                             double dval = posMesg->toVariant().toDouble(&ok);
                             if (ok) sendError(INFO,0,QString("%1: at position %2").arg(axis->getName()).arg(dval));
+                            sendMessage(posMesg);
                         }
                         else
                             sendError(MINOR,0,QString("Positioning: %1: no position data available").arg(axis->getName()));
