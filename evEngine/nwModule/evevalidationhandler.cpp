@@ -15,7 +15,5 @@ void eveValidationHandler::handleMessage( QtMsgType type, const QString & descri
         severity = MINOR;
 
     QString message=QString("Validation Error Line: %1, Column: %2").arg(sourceLocation.line()).arg(sourceLocation.column());
-    // eveCSS doesn't know EVEMESSAGEFACILITY_XMLVALIDATOR yet
-    //manager->sendError(severity, EVEMESSAGEFACILITY_XMLVALIDATOR, 0, message);
-    manager->sendError(severity, EVEMESSAGEFACILITY_PLAYLIST, 0, message);
+    manager->sendError(severity, EVEMESSAGEFACILITY_XMLVALIDATOR, 0, message);
 }
