@@ -34,7 +34,7 @@ class eveSMAxis: public eveSMBaseDevice {
 public:
 	eveSMAxis(eveScanModule *, eveSMMotor*, eveAxisDefinition *, evePosCalc *);
 	virtual ~eveSMAxis();
-        void gotoStartPos(bool, bool, bool);
+    void gotoStartPos(bool);
 	void gotoNextPos(bool);
 	eveVariant getPos(){return currentPosition;};
 	eveVariant getTargetPos(){return targetPosition;};
@@ -42,7 +42,8 @@ public:
 	// bool isAtNextPos();
 	void stop();
 	bool isAtEndPos(){return posCalc->isAtEndPos();};
-	bool isOK(){return axisOK;};
+    bool isAbs(){return posCalc->isAbs();};
+    bool isOK(){return axisOK;};
 	//eveSetValue* getPos();
 	void execQueue();
 	void init();
@@ -50,14 +51,14 @@ public:
 	QString getUnit(){return unit;};
 	eveDevInfoMessage* getDeviceInfo();
 	eveDataMessage* getPositionMessage();
-	void sendError(int, int, int, QString);
-        int getExpectedPositions(){return posCalc->getExpectedPositions();};
-	void addPositioner(eveCalc* pos){positioner = pos;};
-	void loadPositioner(int pc){if(positioner)positioner->addValue(xmlId, pc, currentPosition);};
-	bool havePositioner(){if(positioner)return true; return false;};
-	bool execPositioner();
-	void setTimer(QDateTime start);
-	eveSMMotor* getMotor(){return motor;};
+    void sendError(int, int, int, QString);
+    int getExpectedPositions(){return posCalc->getExpectedPositions();};
+    void addPositioner(eveCalc* pos){positioner = pos;};
+    void loadPositioner(int pc){if(positioner)positioner->addValue(xmlId, pc, currentPosition);};
+    bool havePositioner(){if(positioner)return true; return false;};
+    bool execPositioner();
+    void setTimer(QDateTime start);
+    eveSMMotor* getMotor(){return motor;};
 
 public slots:
 	void transportReady(int);
@@ -76,7 +77,6 @@ private:
 	bool inDeadband;
 	bool axisStop;
 	bool queueTrigger;
-	bool isSetOffset;
 	bool isSetStartTime;
 	QString unit;
 	eveVariant currentPosition;

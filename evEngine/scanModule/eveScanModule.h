@@ -98,7 +98,6 @@ private:
     bool manDetTrigger;
     bool doRedo;
     bool doBreak;
-    bool setAxisOffset;
     int valuesPerPos;
     int perPosCount;
     //	bool catchedTrigger;

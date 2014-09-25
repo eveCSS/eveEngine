@@ -34,7 +34,6 @@ eveSMBaseDevice(sm){
 	inDeadband = true;
 	isTimer=false;
 	queueTrigger = false;
-	isSetOffset = false;
 	gotoTrans = NULL;
 	posTrans = NULL;
 	stopTrans = NULL;
@@ -390,21 +389,16 @@ void eveSMAxis::signalReady() {
  * @param overrideOffset is needed to keep an already set offset
  *        if calling this method twice during init
  */
-void eveSMAxis::gotoStartPos(bool queue, bool overrideOffset, bool ignoreTimer) {
+void eveSMAxis::gotoStartPos(bool queue) {
 
 	ready = false;
 	// offset for timers is done in setTimer()
-	if (!isTimer && (!isSetOffset || overrideOffset)){
+    if (!isTimer){
 		posCalc->setOffset(currentPosition);
-		isSetOffset = true;
 	}
 	posCalc->reset();
-        if (ignoreTimer && isTimer){
-                signalReady();
-        }
-        else {
-                gotoPos(posCalc->getStartPos(), queue);
-        }
+    gotoPos(posCalc->getStartPos(), queue);
+
 	sendError(INFO, 0, QString("SMAxis to Start Pos at %1").arg(QTime::currentTime().toString()));
 }
 

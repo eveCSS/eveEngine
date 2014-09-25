@@ -33,7 +33,6 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     eventTrigger = false;
     manualTrigger = false;
     manDetTrigger = false;
-    setAxisOffset = false;
     doRedo=false;
     doBreak=false;
     triggerRid = 0;
@@ -398,14 +397,34 @@ void eveScanModule::stgGotoStart() {
             positioner->reset();
         }
         foreach (eveSMAxis *axis, *axisList){
-            sendError(DEBUG, 0, QString("Moving axis %1").arg(axis->getName()));
-            axis->setTimer(QDateTime::currentDateTime());
-            // gotoStartPos but do not queue, don't set offset the first time, don't ignore timer
-            axis->gotoStartPos(false, setAxisOffset, false);
-            setAxisOffset = true;
-            ++signalCounter;
+            // read axis position for relative axes again, it may have changed since stgReadPos
+            if (!axis->isAbs()) {
+                axis->readPos(false);
+                ++signalCounter;
+            }
         }
         emit sigExecStage();
+    }
+    else if (currentStageCounter == 1){
+        if (signalCounter > 0){
+            --signalCounter;
+        }
+        else {
+            bool allDone = true;
+            foreach (eveSMAxis *axis, *axisList) if ((!axis->isAbs()) && (!axis->isDone())) allDone = false;
+            if (allDone){
+                currentStageCounter = 2;
+                signalCounter = 0;
+                foreach (eveSMAxis *axis, *axisList){
+                    sendError(DEBUG, 0, QString("Moving axis %1").arg(axis->getName()));
+                    axis->setTimer(QDateTime::currentDateTime());
+                    // gotoStartPos but do not queue, don't set offset the first time, don't ignore timer
+                    axis->gotoStartPos(false);
+                    ++signalCounter;
+                }
+                emit sigExecStage();
+            }
+        }
     }
     else {
         if (signalCounter > 0){
