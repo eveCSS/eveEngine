@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
 		mainWin->connect(mHub, SIGNAL(closeParent()), mainWin, SLOT(close()), Qt::QueuedConnection);
 	}
 	mHub->init();
-        error->log(DEBUG,QString("engine version: %1, scml: %2, saveplugin: %2").arg(EVE_VERSION).arg(SCML_VERSION).arg(SAVEPLUGIN_VERSION));
+        error->log(DEBUG,QString("engine version: %1, scml: %2, saveplugin: %3").arg(EVE_VERSION).arg(SCML_VERSION).arg(SAVEPLUGIN_VERSION));
 
     int retval = app.exec();
     // make sure all has been logged
