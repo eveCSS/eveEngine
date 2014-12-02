@@ -356,16 +356,14 @@ bool eveCalc::calculatePeakCenterFWHM(){
     if ((points.size() < 3) || (curveMin.ry() == curveMax.ry())) return false;
 
     newValues = false;
-    Calcresult mmresult = getPeak(points);
+    Calcresult mmresult = getPeakAndCenter(points);
     if (mmresult.peakIndex != 0) {
-        mmresult = getCenter(mmresult, points);
-        if (mmresult.peakIndex != 0) {
-            curvePeak = mmresult.peak;
-            curveFwhm.setY(mmresult.fwhm);
-            curveCenter.setX(mmresult.center);
-            return true;
-        }
+        curvePeak = mmresult.peak;
+        curveFwhm.setY(mmresult.fwhm);
+        curveCenter.setX(mmresult.center);
+        return true;
     }
+
     return false;
 }
 
@@ -374,12 +372,9 @@ QPointF eveCalc::getEdge(const QVector<QPointF>& curve){
     if (points.size() > 2) {
         QVector<QPointF> derivative = getDerivative(curve);
         if (derivative.size() > 2) {
-            Calcresult mmresult = getPeak(derivative);
-            if (mmresult.peakIndex != 0) {
-                Calcresult center = getCenter(mmresult, derivative);
-                if (center.peakIndex != 0) {
-                    return QPointF(center.center, 0.);
-                }
+            Calcresult center = getPeakAndCenter(derivative);
+            if (center.peakIndex != 0) {
+                return QPointF(center.center, 0.);
             }
         }
     }
@@ -439,24 +434,30 @@ QVector<QPointF> eveCalc::getDerivative(const QVector<QPointF>& curve){
 
     return derivative;
 }
+
 /**
  * @param curve
  * @return
  */
-eveCalc::Calcresult eveCalc::getPeak(const QVector<QPointF>& curve){
+eveCalc::Calcresult eveCalc::getPeakAndCenter(const QVector<QPointF>& curve){
 
     QPointF max(0.0, -1.0*DBL_MAX);
     QPointF min(0.0, DBL_MAX);
-    QPointF Peak;
-    int pindex = 0;
+    QPointF Peak(0.0, 0.0);
+    double center = 0.0;
+    double fwhm = 0.0;
+    int peakIndex = 0;
 
     if (curve.size() > 2){
 
         QPointF first = curve.first();
         QPointF last = curve.last();
         int index = 0, minindex = 0, maxindex = 0;
-        double sum = 0.0, mean;
-        double maxpeak = 0.0, minpeak = 0.0;
+        double halfMaxY;
+        double halfDistY;
+        bool haveMaxCenter = false, haveMinCenter = false;
+        int rightMaxIndex = 0, leftMaxIndex = 0;
+        int rightMinIndex = 0, leftMinIndex = 0;
 
         foreach (QPointF point, curve){
             if (point.ry() < min.ry()) {
@@ -467,76 +468,81 @@ eveCalc::Calcresult eveCalc::getPeak(const QVector<QPointF>& curve){
                 max = point;
                 maxindex = index;
             }
-            sum += point.ry();
             ++index;
         }
-        mean = sum / ((double) index);
 
+        halfMaxY = (max.ry() + min.ry())/2;
+        halfDistY = fabs((max.ry() - min.ry())/2.);
+
+        // check if curve goes down to 50% left and right from max
         if ((max.ry() > first.ry()) && (max.ry() > last.ry())){
-            maxpeak = fabs(max.ry() - mean);
-        }
-        if ((min.y() < first.ry()) && (min.y() < last.ry())){
-            minpeak = fabs(min.ry() - mean);
-        }
-        if (minpeak > maxpeak){
-            Peak = min;
-            pindex = minindex;
-        }
-        else if (minpeak < maxpeak) {
-            Peak = max;
-            pindex=maxindex;
-        }
-    }
-    return Calcresult(max, min, Peak, pindex, 0., 0.);
-}
-
-/**
- * @param curve
- * @return
- */
-eveCalc::Calcresult eveCalc::getCenter(eveCalc::Calcresult minmax, const QVector<QPointF>& curve){
-
-    // CENTER:
-    double halfMaxY = (minmax.maximum.ry()+minmax.minimum.ry())/2;
-    double halfDistY = fabs((minmax.maximum.ry()-minmax.minimum.ry())/2.);
-    int peakIndex = minmax.peakIndex;
-    int rightIndex = 0, leftIndex = 0;
-    QPointF Peak = minmax.peak;
-    Calcresult result = minmax;
-    result.center = 0.0;
-    result.fwhm = 0.0;
-    result.peakIndex = 0;
-
-    if (curve.size() > 2){
-
-        for (int i = peakIndex; i < curve.size(); ++i){
-            if (fabs(Peak.ry() - curve.at(i).y()) > halfDistY) {
-                rightIndex = i;
-                break;
+            for (int i = maxindex; i < curve.size(); ++i){
+                if (fabs(max.ry() - curve.at(i).y()) > halfDistY) {
+                    rightMaxIndex = i;
+                    break;
+                }
+            }
+            for (int i = maxindex; i >= 0; --i){
+                if (fabs(max.ry() - curve.at(i).y()) > halfDistY){
+                    leftMaxIndex = i;
+                    break;
+                }
             }
         }
-        for (int i = peakIndex; i >= 0; --i){
-            if (fabs(Peak.ry() - curve.at(i).y()) > halfDistY){
-                leftIndex = i;
-                break;
+        // check if curve goes up to 50% left and right from min
+        if ((min.ry() < first.ry()) && (min.ry() < last.ry())){
+            for (int i = minindex; i < curve.size(); ++i){
+                if (fabs(min.ry() - curve.at(i).y()) > halfDistY) {
+                    rightMinIndex = i;
+                    break;
+                }
+            }
+            for (int i = minindex; i >= 0; --i){
+                if (fabs(min.ry() - curve.at(i).y()) > halfDistY){
+                    leftMinIndex = i;
+                    break;
+                }
             }
         }
         // verify
-        if ((rightIndex != peakIndex) && (leftIndex != peakIndex)
-                && (rightIndex != 0) && (leftIndex != 0)) {
+        if ((rightMaxIndex != maxindex) && (leftMaxIndex != maxindex)
+                && (rightMaxIndex != 0) && (leftMaxIndex != 0)) haveMaxCenter = true;
+        if ((rightMinIndex != minindex) && (leftMinIndex != minindex)
+                && (rightMinIndex != 0) && (leftMinIndex != 0)) haveMinCenter = true;
 
+        int rightIndex = 0;
+        int leftIndex = 0;
+
+        // if we have two peaks use the max peak
+        // TODO find a better way to select a peak
+        if (haveMaxCenter && haveMinCenter) haveMinCenter = false;
+
+        // use max or min
+        if (haveMaxCenter) {
+            Peak = max;
+            peakIndex = maxindex;
+            rightIndex = rightMaxIndex;
+            leftIndex = leftMaxIndex;
+        }
+        if (haveMinCenter) {
+            Peak = min;
+            peakIndex = minindex;
+            rightIndex = rightMinIndex;
+            leftIndex = leftMinIndex;
+        }
+
+        if (haveMaxCenter || haveMinCenter) {
             // linear fit to find halfMaxX
             double halfMaxXright = (halfMaxY - curve.at(rightIndex).y()) * (curve.at(rightIndex-1).x() - curve.at(rightIndex).x()) /
                     (curve.at(rightIndex-1).y() - curve.at(rightIndex).y()) + curve.at(rightIndex).x();
             double halfMaxXleft = (halfMaxY - curve.at(leftIndex).y()) * (curve.at(leftIndex+1).x() - curve.at(leftIndex).x()) /
                     (curve.at(leftIndex+1).y() - curve.at(leftIndex).y()) + curve.at(leftIndex).x();
 
-            result.center = (halfMaxXright + halfMaxXleft) * 0.5;
-            result.fwhm = fabs(halfMaxXright - halfMaxXleft);
-            result.peakIndex = peakIndex;
+            center = (halfMaxXright + halfMaxXleft) * 0.5;
+            fwhm = fabs(halfMaxXright - halfMaxXleft);
         }
     }
-    return result;
+    return Calcresult(max, min, Peak, peakIndex, fwhm, center);
 }
 
 eveCalc::Calcresult::Calcresult(QPointF max, QPointF min, QPointF cpeak, int pindex, double fullwidthhm, double cent){

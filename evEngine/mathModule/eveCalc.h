@@ -65,8 +65,7 @@ private:
     void acceptPoint(double, double);
     bool calculatePeakCenterFWHM();
     QVector<QPointF> getDerivative(const QVector<QPointF>& curve);
-    Calcresult getPeak(const QVector<QPointF>& curve);
-    Calcresult getCenter(Calcresult, const QVector<QPointF>& curve);
+    Calcresult getPeakAndCenter(const QVector<QPointF>& curve);
     QVector<QPointF> points;
     QVector<QPointF> getGradients(QVector<QPointF>);
     void execValues();
