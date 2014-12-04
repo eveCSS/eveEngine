@@ -164,15 +164,17 @@ void evePlayListManager::removeEntry(int id){
             break;
         }
     }
-    evePlayListData* entry = datahash.take(id);
-    QFile tmpfile(entry->filename);
-    if (tmpfile.exists() && entry->filename.startsWith(playlistPath.absolutePath()))
-        tmpfile.remove();
-    else
-        eveError::log(ERROR, QString("evePlayListManager: cannot find file: %1").arg(entry->filename));
+    if (datahash.contains(id)){
+        evePlayListData* entry = datahash.take(id);
+        QFile tmpfile(entry->filename);
+        if (tmpfile.exists() && entry->filename.startsWith(playlistPath.absolutePath()))
+            tmpfile.remove();
+        else
+            eveError::log(ERROR, QString("evePlayListManager: cannot find file: %1").arg(entry->filename));
 
-    delete entry;
-    if (modified) flushPlaylist();
+        delete entry;
+        if (modified) flushPlaylist();
+    }
 }
 
 /**
