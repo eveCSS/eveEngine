@@ -137,10 +137,8 @@ bool eveCalc::addValue(QString deviceId, int pos, eveVariant dataVar){
                 return retval;
 
             if (((xpos == ypos ) && doNormalize && (xpos == zpos)) || ((xpos == ypos ) && !doNormalize )) {
-                if (xpos == position){
-                    manager->sendError(MINOR, MATH, 0, QString("position  %1 has already been done").arg(position));
-                    return retval;
-                }
+                // position has already been done
+                if (xpos == position) return false;
 
                 ++position;
                 if (xpos != position){
