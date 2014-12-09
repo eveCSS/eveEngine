@@ -672,7 +672,12 @@ eveDevInfoMessage* eveSMChannel::getDeviceInfo(bool normalizeInfo){
 void eveSMChannel::loadPositioner(int pc){
     foreach (eveCalc* positioner, positionerList){
         positioner->addValue(xmlId, pc, eveVariant(valueRaw));
-        if (normalizeChannel) positioner->addValue(normalizeChannel->getXmlId(), pc, eveVariant(normCalc));
+        if (normalizeChannel) {
+            if (positioner->getNormalizeExternal())
+                positioner->addValue(normalizeChannel->getXmlId(), pc, eveVariant(normCalc));
+            else
+                positioner->addValue(normalizeChannel->getXmlId(), pc, eveVariant(normRaw));
+        }
     }
 }
 
@@ -704,6 +709,7 @@ void eveSMChannel::setTimer(QDateTime start) {
     if (isTimer){
         ((eveTimer*)valueTrans)->setStartTime(start);
     }
+    if (normalizeChannel) normalizeChannel->setTimer(start);
 }
 
 void eveSMChannel::normalizeChannelReady(){

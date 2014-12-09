@@ -132,9 +132,12 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
                                     (channel->getXmlId() == normalizeId)) {
                                             channel->addPositioner(positioner);
                             }
+                            if (channel->getNormalizeChannel() != NULL){
+                                if ((channel->getNormalizeChannel()->getXmlId() == channelId))
+                                    channel->addPositioner(positioner);
+                            }
                     }
             }
-
     }
     delete posPluginDataList;
 
@@ -606,7 +609,13 @@ void eveScanModule::stgTrigRead() {
 
     if (currentStageCounter == 0){
         sendError(DEBUG,0,"stgTrigRead start");
-        if (!(doRedo && myStatus.isRedo())) {
+        bool channelBusy = false;
+        if (myStatus.redoStatus()){
+            // we may have been called from redo event, but channels are not ready yet
+            // this may happen, if redo on and off is triggered during a long measurement (average)
+            foreach (eveSMChannel *channel, *channelList) if (!channel->isDone()) channelBusy = true;
+        }
+        if (!((doRedo && myStatus.isRedo()) || channelBusy)) {
             if (doRedo) myStatus.redoStart();
             currentStageCounter=1;
             signalCounter = 0;

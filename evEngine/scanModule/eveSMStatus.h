@@ -22,7 +22,7 @@ public:
 	bool setStatus(smStatusT);
 	bool isExecuting();
 	bool isDone();
-	bool isRedo(){return (chainRedo || redo);};
+    bool isRedo(){return (chainRedo || redo);};
     bool isPaused(){return (chainPause || pause || masterPause);};
 	smStatusT getStatus(){return status;};
     int getPause();
