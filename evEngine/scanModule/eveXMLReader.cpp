@@ -1207,7 +1207,7 @@ eveEventProperty* eveXMLReader::getEvent(eveEventProperty::actionTypeT action, Q
 
 		int chid=0, smid=0;
 		bool cok, sok;
-		sendError(ERROR, 0, QString("get Detector Event: all: %1 chid %2, smid: %3 det: %4").arg(regex.capturedTexts().at(0)).arg(regex.capturedTexts().at(1)).arg(regex.capturedTexts().at(2)).arg(regex.capturedTexts().at(3)));
+        sendError(DEBUG, 0, QString("get Detector Event: all: %1 chid %2, smid: %3 det: %4").arg(regex.capturedTexts().at(0)).arg(regex.capturedTexts().at(1)).arg(regex.capturedTexts().at(2)).arg(regex.capturedTexts().at(3)));
 		chid = regex.capturedTexts().at(1).toInt(&cok);
 		smid = regex.capturedTexts().at(2).toInt(&sok);
 		if (!cok || !sok){
