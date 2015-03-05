@@ -890,6 +890,7 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 
 	QList<eveSMAxis *> *axislist = new QList<eveSMAxis *>;
 	QHash<QString, eveSMMotor *> motorHash;
+    QHash<QString, evePosCalc *> posCalcHash;
 
 	try
 	{
@@ -897,14 +898,15 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 	QDomElement domElement = smIdHash.value(chain)->value(smid);
 	domElement = domElement.firstChildElement("smaxis");
 	while (!domElement.isNull()) {
-		bool prependElement=true;
-		eveAxisDefinition* axisDefinition = NULL;
+        bool prependElement=true;
+        eveAxisDefinition* axisDefinition = NULL;
 		eveSMMotor* motor = NULL;
 		eveVariant startvalue;
 		QString stepfunction = "none";
 		QDomElement domId = domElement.firstChildElement("axisid");
+        QString axisId=domId.text();
 
-		axisDefinition = deviceList.getAxisDef(domId.text());
+        axisDefinition = deviceList.getAxisDef(axisId);
 		if (axisDefinition == NULL){
 			sendError(ERROR,0,QString("no axisdefinition found for %1").arg(domId.text()));
                         domElement = domElement.nextSiblingElement("smaxis");
@@ -946,8 +948,8 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 			poscalc->setPositionList(domElement.firstChildElement("positionlist").text());
 		}
 		else if (!domElement.firstChildElement("plugin").isNull()) {
-			prependElement=false;
-			QHash<QString, QString> paraHash;
+            prependElement=false;
+            QHash<QString, QString> paraHash;
 			QDomElement domPlugin = domElement.firstChildElement("plugin");
 			getPluginData(domPlugin, paraHash);
 			if (domPlugin.attribute("name").trimmed().length() > 1)
@@ -958,15 +960,24 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
 		else
 			sendError(ERROR,0,"No values found in XML to calculate motor positions");
 
-		// order is important, since we must make sure all axes with step plugins
-		// which might use reference axes must be called after their reference axes
-		if (prependElement)
-			axislist->prepend(new eveSMAxis(scanmodule, motor, axisDefinition, poscalc));
-		else
-			axislist->append(new eveSMAxis(scanmodule, motor, axisDefinition, poscalc));
+        // order is important, since we must make sure all axes with step plugins
+        // which might use reference axes must be called after their reference axes
+        if (prependElement)
+            axislist->prepend(new eveSMAxis(scanmodule, motor, axisDefinition, poscalc));
+        else
+            axislist->append(new eveSMAxis(scanmodule, motor, axisDefinition, poscalc));
 
-		domElement = domElement.nextSiblingElement("smaxis");
+        posCalcHash.insert(axisId, poscalc);
+        domElement = domElement.nextSiblingElement("smaxis");
 	}
+    // walk through the axis list and fill in posCalcs of reference axes
+    foreach (evePosCalc *posCalc, posCalcHash.values()) {
+        QString referenceAxis = posCalc->getRefAxisName();
+        if (!referenceAxis.isEmpty()) {
+            if (posCalcHash.contains(referenceAxis))
+                posCalc->setRefAxisPosCalc(posCalcHash.value(referenceAxis));
+        }
+    }
 	}
 	catch (std::exception& e)
 	{

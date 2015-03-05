@@ -35,6 +35,8 @@ public:
 	void setStepWidth(QString);
 	void setStepFile(QString);
 	void setStepPlugin(QString, QHash<QString, QString>& );
+    QString getRefAxisName(){return refAxisName;};
+    void setRefAxisPosCalc(evePosCalc* poscalc){referencePosCalc = poscalc;};
 	void setPositionList(QString);
 	void reset();
 	eveVariant& getNextPos();
@@ -49,24 +51,26 @@ public:
 
 private:
 	enum {NONE, STARTSTOP, MULTIPLY, FILE, PLUGIN, LIST} stepmode;
-	void stepfuncAdd();
-	void stepfuncMultiply();
-	void stepfuncList();
-	void stepfuncDummy();
-	void stepfuncReferenceMultiply();
-	void stepfuncMotionDisabled();
+    eveVariant stepfuncAdd();
+    eveVariant stepfuncMultiply();
+    eveVariant stepfuncList();
+    eveVariant stepfuncDummy();
+    eveVariant stepfuncReferenceMultiply();
+    eveVariant stepfuncReferenceAdd();
+    eveVariant stepfuncMotionDisabled();
 	bool donefuncAdd();
 	bool donefuncMultiply();
 	bool donefuncList();
 	bool donefuncDummy();
-	bool donefuncAlwaysTrue(){return true;};
+    bool donefuncReferenceAxis();
+    bool donefuncAlwaysTrue(){return true;};
 	void sendError(int, QString);
 	void checkValues();
 	void setPos(QString, eveVariant*);
 
 	int posCounter;
         int expectedPositions;
-	void (evePosCalc::*stepFunction)();
+    eveVariant (evePosCalc::*stepFunction)();
 	bool (evePosCalc::*doneFunction)();
 	eveVariant startPosAbs, endPosAbs, startPos, endPos, currentPos, stepWidth, offSet, nullVal;
 	eveType axisType;
@@ -76,7 +80,10 @@ private:
 	QList<double> posDoubleList;
 	eveScanModule* scanModule;
 	double multiplyFactor;
-	eveSMAxis* RefMultiplyAxis;
+    double referenceOffset;
+    QString refAxisName;
+    evePosCalc *referencePosCalc;
+    eveSMAxis* ReferenceAxis_obsolete;
 	bool absolute;
 	bool readyToGo;
 	bool doNotMove;

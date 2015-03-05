@@ -29,6 +29,9 @@ evePosCalc::evePosCalc(eveScanModule* sm, QString stepfunction, bool abs, eveTyp
     expectedPositions = 1;
     doNotMove = false;
     axisType = type;
+    referenceOffset = 0.0;
+    multiplyFactor = 1.0;
+    referencePosCalc = NULL;
 
     switch (axisType) {
     case eveFloat32T:
@@ -315,20 +318,35 @@ void evePosCalc::setStepPlugin(QString pluginname, QHash<QString, QString>& para
         if (paraHash.contains("factor")){
             bool ok;
             multiplyFactor = paraHash.value("factor").toDouble(&ok);
-            if (!ok)sendError(ERROR, QString("unable to convert ReferenceMultiply factor to double %1").arg(paraHash.value("factor")));
+            if (!ok)sendError(ERROR, QString("unable to convert ReferenceMultiply factor %1 to double").arg(paraHash.value("factor")));
         }
         if (paraHash.contains("referenceaxis")){
-            RefMultiplyAxis = scanModule->findAxis(paraHash.value("referenceaxis"));
+            refAxisName=paraHash.value("referenceaxis");
         }
         stepFunction = &evePosCalc::stepfuncReferenceMultiply;
-        doneFunction = &evePosCalc::donefuncAlwaysTrue;
+        doneFunction = &evePosCalc::donefuncReferenceAxis;
     }
-    if (pluginname == "MotionDisabled"){
+    else if (pluginname == "ReferenceAdd"){
+        if (paraHash.contains("summand")){
+            bool ok;
+            referenceOffset = paraHash.value("summand").toDouble(&ok);
+            if (!ok)sendError(ERROR, QString("unable to convert ReferenceAdd summand %1 to double").arg(paraHash.value("summand")));
+        }
+        if (paraHash.contains("referenceaxis")){
+            refAxisName=paraHash.value("referenceaxis");
+        }
+        stepFunction = &evePosCalc::stepfuncReferenceAdd;
+        doneFunction = &evePosCalc::donefuncReferenceAxis;
+    }
+    else if (pluginname == "MotionDisabled"){
         doNotMove = true;
         startPos=0;
         endPos=0;
         stepFunction = &evePosCalc::stepfuncMotionDisabled;
         doneFunction = &evePosCalc::donefuncAlwaysTrue;
+    }
+    else {
+        sendError(ERROR, QString("unknown step plugin %1").arg(pluginname));
     }
 }
 
@@ -373,7 +391,7 @@ eveVariant& evePosCalc::getNextPos(){
 
     if (!(this->*doneFunction)()){
         ++posCounter;
-        (this->*stepFunction)();
+        currentPos = (this->*stepFunction)();
     }
     sendError(DEBUG, QString("next Position %1").arg(currentPos.toString()));
     return currentPos;
@@ -406,6 +424,9 @@ void evePosCalc::reset(){
         startPosAbs = offSet * startPos;
         multiplyFactor = startPos.toDouble();
     }
+    else if (!refAxisName.isEmpty()) {
+        startPosAbs = (this->*stepFunction)();
+    }
     else {
         // here we add the current values to startpos/endpos if positionmode is relative
         // needs to be done here for Timer
@@ -431,27 +452,31 @@ void evePosCalc::reset(){
 
     currentPos = startPosAbs;
     posCounter = 0;
+
 }
 
 /**
  *
  * @brief set the next valid motorposition by adding stepwidth to current position
  */
-void evePosCalc::stepfuncAdd(){
+eveVariant evePosCalc::stepfuncAdd(){
+
+    eveVariant nextPos(currentPos);
 
     if (axisType == eveSTRING){
         sendError(ERROR, "stepfunction add may be used with integer, double or datetime values only");
     }
     else {
-        if ((currentPos.getType() == eveDateTimeT) && (stepWidth.getType() == eveDOUBLE)){
-            sendError(DEBUG, QString("adding stepwidth %1 to current position %2").arg(stepWidth.toDouble()).arg(currentPos.toDateTime().toString()));
-            currentPos.setValue(currentPos.toDateTime().addMSecs((qint64)(stepWidth.toDouble(NULL)*1000.0)));
+        if ((nextPos.getType() == eveDateTimeT) && (stepWidth.getType() == eveDOUBLE)){
+            sendError(DEBUG, QString("adding stepwidth %1 to current position %2").arg(stepWidth.toDouble()).arg(nextPos.toDateTime().toString()));
+            nextPos.setValue(currentPos.toDateTime().addMSecs((qint64)(stepWidth.toDouble(NULL)*1000.0)));
         }
         else {
-            currentPos = currentPos + stepWidth;
+            nextPos = currentPos + stepWidth;
         }
-        donefuncAdd();
+        if (donefuncAdd()) nextPos=endPosAbs;
     }
+    return nextPos;
 }
 /**
  *
@@ -471,12 +496,10 @@ bool evePosCalc::donefuncAdd(){
             double currentDouble = currentPos.toDouble();
             if (((stepWidth >=0) && ((currentDouble + fabs(1.0e-12 * currentDouble)) >= endPosAbs.toDouble())) ||
                     ((stepWidth < 0) && ((currentDouble - fabs(1.0e-12 * currentDouble)) <= endPosAbs.toDouble()))){
-                currentPos = endPosAbs;
                 done = true;
             }
         }
         else if (((stepWidth >=0) && (currentPos >= endPosAbs)) || ((stepWidth < 0) && (currentPos <= endPosAbs))){
-            currentPos = endPosAbs;
             if (currentPos.getType() == eveDateTimeT)
                 sendError(DEBUG, QString("at end: current position %1 endPosAbs %2 (%3)").arg(currentPos.toDateTime().toString()).arg(endPosAbs.toDateTime().toString()).arg(stepWidth.toDouble()));
             else
@@ -491,7 +514,9 @@ bool evePosCalc::donefuncAdd(){
  *
  * @brief set the next valid motorposition
  */
-void evePosCalc::stepfuncMultiply(){
+eveVariant evePosCalc::stepfuncMultiply(){
+
+    eveVariant nextPos(currentPos);
 
     if ((axisType != eveINT) &&  (axisType != eveDOUBLE)){
         sendError(ERROR, "stepfunction Multiply may be used with integer or double values only");
@@ -500,8 +525,9 @@ void evePosCalc::stepfuncMultiply(){
         multiplyFactor += stepWidth.toDouble();
 
         if (donefuncMultiply()) multiplyFactor = endPos.toDouble();
-        currentPos.setValue(offSet.toDouble() * multiplyFactor);
+        nextPos.setValue(offSet.toDouble() * multiplyFactor);
     }
+    return nextPos;
 }
 /**
  *
@@ -525,29 +551,32 @@ bool evePosCalc::donefuncMultiply(){
  *
  * @brief read Motorpositions from File
  */
-void evePosCalc::stepfuncList(){
+eveVariant evePosCalc::stepfuncList(){
+
+    eveVariant nextPos(currentPos);
 
     // posCounter == 0 => start Position,
     if (axisType == eveSTRING){
         if (posCounter < positionList.count())
-            currentPos.setValue(positionList.at(posCounter));
+            nextPos.setValue(positionList.at(posCounter));
     }
     else if (axisType == eveINT){
         if (posCounter < posIntList.count()){
             if (absolute)
-                currentPos.setValue(posIntList.at(posCounter));
+                nextPos.setValue(posIntList.at(posCounter));
             else
-                currentPos.setValue(posIntList.at(posCounter) + offSet.toDouble());;
+                nextPos.setValue(posIntList.at(posCounter) + offSet.toDouble());;
         }
     }
     else if (axisType == eveDOUBLE){
         if (posCounter < posDoubleList.count()){
             if (absolute)
-                currentPos.setValue(posDoubleList.at(posCounter));
+                nextPos.setValue(posDoubleList.at(posCounter));
             else
-                currentPos.setValue(posDoubleList.at(posCounter) + offSet.toDouble());;
+                nextPos.setValue(posDoubleList.at(posCounter) + offSet.toDouble());;
         }
     }
+    return nextPos;
 }
 /**
  *
@@ -568,28 +597,56 @@ bool evePosCalc::donefuncList(){
  * @brief stepfunction moves the axis to a multiple of the reference axis
  *
  */
-void evePosCalc::stepfuncReferenceMultiply(){
-    if (RefMultiplyAxis != NULL)
-        currentPos = RefMultiplyAxis->getTargetPos() * multiplyFactor;
+eveVariant evePosCalc::stepfuncReferenceMultiply(){
+    eveVariant nextPos(currentPos);
+    if (referencePosCalc != NULL)
+        nextPos = referencePosCalc->getCurrentPos() * multiplyFactor;
     else
         sendError(ERROR, "ReferenceMultiply: invalid reference axis");
+    return nextPos;
+}
+
+/**
+ * @brief stepfunction moves the axis to the position offset plus reference axis
+ *
+ */
+eveVariant evePosCalc::stepfuncReferenceAdd(){
+    eveVariant nextPos(currentPos);
+    if (referencePosCalc != NULL)
+        nextPos = referencePosCalc->getCurrentPos() + referenceOffset;
+    else
+        sendError(ERROR, "ReferenceAdd: invalid reference axis");
+    return nextPos;
+}
+
+/**
+ * @brief donefunction if axis uses reference axis
+ *
+ */
+bool evePosCalc::donefuncReferenceAxis(){
+    if (referencePosCalc != NULL) {
+        return (referencePosCalc->isAtEndPos() && (currentPos == (this->*stepFunction)()));
+    }
+    sendError(ERROR, "ReferenceAdd: invalid reference axis");
+    return true;
 }
 
 /**
  * @brief stepfunction does not move anything
  *
  */
-void evePosCalc::stepfuncMotionDisabled(){
-    return;
+eveVariant evePosCalc::stepfuncMotionDisabled(){
+    return eveVariant(currentPos);
 }
 
 /**
  * @brief dummy Function
  *
  */
-void evePosCalc::stepfuncDummy(){
+eveVariant evePosCalc::stepfuncDummy(){
 
     sendError(ERROR, "called unknown (dummy) stepfunction");
+    return eveVariant(currentPos);
 }
 /**
  * @brief dummy done check
