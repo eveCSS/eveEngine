@@ -587,6 +587,12 @@ void eveXMLReader::createDeviceDefinition(QDomElement device){
     	}
     }
 
+    domElement = device.firstChildElement("option");
+    while (!domElement.isNull()) {
+        createDeviceDefinition(domElement);
+        domElement = domElement.nextSiblingElement("option");
+    }
+
     domElement = device.firstChildElement("value");
 	if (!domElement.isNull())
 		valueTrans = createDeviceCommand(domElement);
@@ -1120,7 +1126,9 @@ QList<eveEventProperty*>* eveXMLReader::getEventList(QDomElement domElement){
 		domEvent = domElement.firstChildElement("breakevent");
 		while (!domEvent.isNull()) {
 			eveEventProperty* event = getEvent(eveEventProperty::BREAK, domEvent);
-			if (event != NULL ) eventList->append(event);
+            // set break events to both directions to track events before start
+            event->setDirection(eveDirectionONOFF);
+            if (event != NULL ) eventList->append(event);
 			domEvent = domEvent.nextSiblingElement("breakevent");
 		}
 		domEvent = domElement.firstChildElement("triggerevent");
@@ -1132,6 +1140,8 @@ QList<eveEventProperty*>* eveXMLReader::getEventList(QDomElement domElement){
 		domEvent = domElement.firstChildElement("stopevent");
 		while (!domEvent.isNull()) {
 			eveEventProperty* event = getEvent(eveEventProperty::STOP, domEvent);
+            // set stop events to both directions to track events before start
+            event->setDirection(eveDirectionONOFF);
 			if (event != NULL ) eventList->append(event);
 			domEvent = domEvent.nextSiblingElement("stopevent");
 		}

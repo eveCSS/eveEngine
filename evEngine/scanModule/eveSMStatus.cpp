@@ -9,20 +9,20 @@
 
 eveSMStatus::eveSMStatus() {
 
-	status = eveSmNOTSTARTED;
-	pause = false;
-	redo = false;
-	chainPause = false;
+    status = eveSmNOTSTARTED;
+    pause = false;
+    redo = false;
+    chainPause = false;
     masterPause = false;
     chainRedo = false;
-	trackRedo = false;
-	evTrigWait = false;
-	maTrigWait = false;
-	detTrigWait = false;
+    trackRedo = false;
+    evTrigWait = false;
+    maTrigWait = false;
+    detTrigWait = false;
 }
 
 eveSMStatus::~eveSMStatus() {
-	// TODO Auto-generated destructor stub
+    // TODO Auto-generated destructor stub
 }
 
 /**
@@ -34,20 +34,20 @@ eveSMStatus::~eveSMStatus() {
  */
 bool eveSMStatus::setStatus(smStatusT newStatus ) {
 
-	bool retval = false;
+    bool retval = false;
 
-	if ((newStatus == eveSmEXECUTING) && isPaused()){
+    if ((newStatus == eveSmEXECUTING) && isPaused()){
         retval = true;
         status = eveSmPAUSED;
-	}
-	else if (status != newStatus) {
-		retval=true;
-		// we are done, do not send status if previous status was smAppend
-		if ((status == eveSmAPPEND ) && (newStatus == eveSmDONE )) retval=false;
-		status = newStatus;
-	}
+    }
+    else if (status != newStatus) {
+        retval=true;
+        // we are done, do not send status if previous status was smAppend
+        if ((status == eveSmAPPEND ) && (newStatus == eveSmDONE )) retval=false;
+        status = newStatus;
+    }
 
-	return retval;
+    return retval;
 }
 
 int eveSMStatus::getPause() {
@@ -68,9 +68,9 @@ int eveSMStatus::getPause() {
  */
 bool eveSMStatus::isExecuting() {
     if ((status == eveSmEXECUTING) || (status == eveSmTRIGGERWAIT) || (status == eveSmPAUSED))
-		return true;
-	else
-		return false;
+        return true;
+    else
+        return false;
 }
 
 /**
@@ -78,18 +78,18 @@ bool eveSMStatus::isExecuting() {
  * @return true if status was "not executing"
  */
 bool eveSMStatus::forceExecuting() {
-	bool retval = false;
-	if (!(status == eveSmEXECUTING)) {
-		retval = true;
-		status = eveSmEXECUTING;
-	}
-	pause = false;
+    bool retval = false;
+    if (!(status == eveSmEXECUTING)) {
+        retval = true;
+        status = eveSmEXECUTING;
+    }
+    pause = false;
     masterPause = false;
     chainPause = false;
-	evTrigWait = false;
-	maTrigWait = false;
-	detTrigWait = false;
-	return retval;
+    evTrigWait = false;
+    maTrigWait = false;
+    detTrigWait = false;
+    return retval;
 }
 
 /**
@@ -98,40 +98,40 @@ bool eveSMStatus::forceExecuting() {
  */
 bool eveSMStatus::isDone() {
 
-	if ((status == eveSmDONE) || (status == eveSmAPPEND)) return true;
-	return false;
+    if ((status == eveSmDONE) || (status == eveSmAPPEND)) return true;
+    return false;
 }
 
 bool eveSMStatus::triggerManualStart(int rid){
 
-	manualRid=rid;
-	maTrigWait=true;
-	if (status != eveSmTRIGGERWAIT){
-		status = eveSmTRIGGERWAIT;
-		return true;
-	}
-	return false;
+    manualRid=rid;
+    maTrigWait=true;
+    if (status != eveSmTRIGGERWAIT){
+        status = eveSmTRIGGERWAIT;
+        return true;
+    }
+    return false;
 }
 
 bool eveSMStatus::triggerEventStart(){
 
-	evTrigWait=true;
+    evTrigWait=true;
     if (status != eveSmTRIGGERWAIT){
-		status = eveSmTRIGGERWAIT;
-		return true;
-	}
-	return false;
+        status = eveSmTRIGGERWAIT;
+        return true;
+    }
+    return false;
 }
 
 bool eveSMStatus::triggerDetecStart(int rid){
 
-	detecRid=rid;
-	detTrigWait=true;
-	if (status != eveSmTRIGGERWAIT){
-		status = eveSmTRIGGERWAIT;
-		return true;
-	}
-	return false;
+    detecRid=rid;
+    detTrigWait=true;
+    if (status != eveSmTRIGGERWAIT){
+        status = eveSmTRIGGERWAIT;
+        return true;
+    }
+    return false;
 }
 
 bool eveSMStatus::setEvent(eveEventProperty* evprop ) {
@@ -232,6 +232,10 @@ bool eveSMStatus::setEvent(eveEventProperty* evprop ) {
             break;
         case eveEventProperty::BREAK:
             if (isExecuting())	status = eveSmEXECUTING;
+            if (breakCondition != evprop->getOn()) {
+                changed = true;
+                breakCondition = evprop->getOn();
+            }
             break;
         case eveEventProperty::TRIGGER:
             // accept a trigger even if paused
@@ -247,6 +251,13 @@ bool eveSMStatus::setEvent(eveEventProperty* evprop ) {
                     status = eveSmEXECUTING;
                     changed = true;
                 }
+            }
+            break;
+        case eveEventProperty::STOP:
+        case eveEventProperty::HALT:
+            if (stopCondition != evprop->getOn()) {
+                changed = true;
+                stopCondition = evprop->getOn();
             }
             break;
         default:

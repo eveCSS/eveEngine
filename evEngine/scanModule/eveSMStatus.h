@@ -36,6 +36,8 @@ public:
 	bool triggerDetecStart(int);
 	bool isTriggerDetecWait(){return detTrigWait;};
 	bool forceExecuting();
+    bool haveStopCondition(){return stopCondition;};
+    bool haveBreakCondition(){return breakCondition;};
 
 private:
 	smStatusT status;
@@ -52,6 +54,8 @@ private:
 	bool evTrigWait;
 	bool maTrigWait;
 	bool detTrigWait;
+    bool stopCondition;
+    bool breakCondition;
 };
 
 #endif /* EVESMSTATUS_H_ */
