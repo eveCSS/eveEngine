@@ -1039,9 +1039,8 @@ void eveScanModule::startExec() {
     if (myStatus.haveBreakCondition()){
         sendError(INFO, 0, QString("Chain starting but skip condition present: skip rest of ScanModule"));
         doBreak = true;
-        emit sigExecStage();
     }
-    else if (myStatus.getStatus() == eveSmNOTSTARTED){
+    if (myStatus.getStatus() == eveSmNOTSTARTED){
 		sendError(DEBUG, 0, "starting scan");
 		// always send status executing first
         myStatus.setStatus(eveSmEXECUTING);
@@ -1090,7 +1089,7 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
         case eveEventProperty::STOP:
             if (nestedSM) nestedSM->newEvent(evprop);
             myStatus.setEvent(evprop);
-            if (myStatus.isExecuting()){
+            if (myStatus.isExecuting() || (evprop->getEventType() == eveEventTypeGUI)){
                 if(myStatus.forceExecuting()) manager->setStatus(smId, myStatus.getStatus(), myStatus.getPause());
                 sendError(INFO, 0, QString("Chain Stop/Halt Event: %1; Scan will end now").arg(evprop->getName()));
                 currentStage = eveStgFINISH;
