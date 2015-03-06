@@ -9,6 +9,7 @@
 #include <QProcess>
 #include <QDir>
 #include <QPluginLoader>
+#include <QLocale>
 #include "eveParameter.h"
 #include "eveDataCollector.h"
 #include "eveStorageManager.h"
@@ -333,13 +334,13 @@ QString eveDataCollector::macroExpand(QString eString){
                 eString.replace(QString("${MONTH}"), QString("%1").arg(now.toString("MM")));
         }
         if (eString.contains("${MONTHSTR}")){
-                eString.replace(QString("${MONTHSTR}"), QString("%1").arg(now.toString("MMM")));
+                eString.replace(QString("${MONTHSTR}"), QString("%1").arg(QLocale(QLocale::English).monthName(now.date().month(), QLocale::ShortFormat)));
         }
         if (eString.contains("${DAY}")){
                 eString.replace(QString("${DAY}"), QString("%1").arg(now.toString("dd")));
         }
         if (eString.contains("${DAYSTR}")){
-                eString.replace(QString("${DAYSTR}"), QString("%1").arg(now.toString("ddd")));
+                eString.replace(QString("${DAYSTR}"), QString("%1").arg(QLocale(QLocale::English).dayName(now.date().dayOfWeek(), QLocale::ShortFormat)));
         }
         // provide a leading zero for week numbers
         if (eString.contains("${WEEK}")){
