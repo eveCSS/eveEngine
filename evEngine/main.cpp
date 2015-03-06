@@ -49,7 +49,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 int main(int argc, char *argv[])
 {
-	bool useGui = false;
+    bool useGui = false;
 	bool useNet = true;
 	QString xmlFileName;
 	QString logFileName;
