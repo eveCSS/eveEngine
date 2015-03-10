@@ -1074,6 +1074,8 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
         // START wird an alle SMs geschickt, wenn root läuft, sonst nur an rootSM
         // BREAK wird nur an das innerste laufende geschickt
         // manueller Trigger ist auch ein chainEvent
+
+        // TODO diese case-Faelle sind noch mal in SMStatus ==> konsolidieren
         case eveEventProperty::HALT:
             if (myStatus.isExecuting()){
                 sendError(INFO, 0, QString("Chain Halt Event: %1").arg(evprop->getName()));

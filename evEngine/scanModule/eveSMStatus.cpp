@@ -19,6 +19,8 @@ eveSMStatus::eveSMStatus() {
     evTrigWait = false;
     maTrigWait = false;
     detTrigWait = false;
+    stopCondition = false;
+    breakCondition = false;
 }
 
 eveSMStatus::~eveSMStatus() {
@@ -184,6 +186,13 @@ bool eveSMStatus::setEvent(eveEventProperty* evprop ) {
                     status = eveSmEXECUTING;
                     changed = true;
                 }
+            }
+        }
+        else if  (evprop->getActionType() == eveEventProperty::BREAK){
+            if (isExecuting())	status = eveSmEXECUTING;
+            if (breakCondition != evprop->getOn()) {
+                changed = true;
+                breakCondition = evprop->getOn();
             }
         }
     }
