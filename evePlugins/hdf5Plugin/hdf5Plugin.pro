@@ -35,7 +35,7 @@ linux-g++-32 {
    ARCH = Linux
 }
 
-linux-g++-64 {
+linux-g++ {
    HDF_BASE = /home/eden/src/hdf5/1.6.10_x86_64
    HDF_LIB = $$HDF_BASE/lib64
    EPICS_BASE = /soft/epics/base-3.14.12.2

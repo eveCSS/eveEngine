@@ -37,7 +37,6 @@ HEADERS += scanModule/eveDeviceDefinitions.h \
     scanModule/eveSMChannel.h \
     scanModule/eveSMDevice.h \
     scanModule/eveVariant.h \
-    scanModule/eveSetValue.h \
     scanModule/eveCaTransport.h \
     scanModule/eveBaseTransport.h \
     scanModule/evePosCalc.h \
@@ -98,7 +97,6 @@ SOURCES += scanModule/eveDeviceDefinitions.cpp \
     scanModule/eveSMChannel.cpp \
     scanModule/eveSMDevice.cpp \
     scanModule/eveVariant.cpp \
-    scanModule/eveSetValue.cpp \
     scanModule/eveCaTransport.cpp \
     scanModule/eveBaseTransport.cpp \
     scanModule/evePosCalc.cpp \
@@ -154,7 +152,7 @@ linux-g++-32 {
    ARCH = Linux
 }
 
-linux-g++-64 {
+linux-g++ {
    EPICS_BASE = /soft/epics/base-3.14.12.2
    TARGET_ARCH = linux-x86_64
    ARCH = Linux
