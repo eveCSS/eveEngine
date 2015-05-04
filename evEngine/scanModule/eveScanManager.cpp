@@ -129,7 +129,7 @@ void eveScanManager::init() {
         }
         delete eventList;
     }
-    if (haveRedoEvent) rootSM->setDoRedo();
+    if (haveRedoEvent) rootSM->activateRedo();
     eventList = NULL;
 }
 

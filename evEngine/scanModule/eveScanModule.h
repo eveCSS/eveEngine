@@ -53,7 +53,7 @@ public:
     int getSmId(){return smId;};
     void readPos();
     bool newEvent(eveEventProperty*);
-    void setDoRedo();
+    void activateRedo();
 
 public slots:
     void execStage();
@@ -97,7 +97,6 @@ private:
     bool manualTrigger;
     bool manDetTrigger;
     bool doRedo;
-    bool doBreak;
     int valuesPerPos;
     int perPosCount;
     //	bool catchedTrigger;

@@ -22,13 +22,13 @@ public:
 	bool setStatus(smStatusT);
 	bool isExecuting();
 	bool isDone();
-    bool isRedo(){return (chainRedo || redo);};
+    bool isRedo(){return (redoActive && (chainRedo || redo));};
     bool isPaused(){return (chainPause || pause || masterPause);};
 	smStatusT getStatus(){return status;};
     int getPause();
 	bool setEvent(eveEventProperty* evprop );
 	void redoStart(){trackRedo = false;};
-	bool redoStatus(){return trackRedo;};
+    bool redoStatus(){return redoActive && trackRedo;};
 	bool triggerManualStart(int);
 	bool isManualTriggerWait(){return maTrigWait;};
 	bool triggerEventStart();
@@ -38,6 +38,8 @@ public:
 	bool forceExecuting();
     bool haveStopCondition(){return stopCondition;};
     bool haveBreakCondition(){return breakCondition;};
+    void activateRedo(){redoActive = true;};
+    bool redoIsActive() {return redoActive;};
 
 private:
 	smStatusT status;
@@ -56,6 +58,7 @@ private:
 	bool detTrigWait;
     bool stopCondition;
     bool breakCondition;
+    bool redoActive;
 };
 
 #endif /* EVESMSTATUS_H_ */
