@@ -19,6 +19,7 @@ public:
     void reset();
     bool isDone(){return allDone;};
     bool addValue(double);
+    bool replaceValue(double value, int pos);
     eveDataMessage* getResultMessage();
     bool limitMissed();
     int getAttempts(){return attempt + 1;};
