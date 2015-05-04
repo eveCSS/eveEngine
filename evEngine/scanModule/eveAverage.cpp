@@ -56,8 +56,6 @@ bool eveAverage::addValue(double value){
 
     if (allDone) return true;
 
-    if (value != value) return false; // NAN
-
     if ((attempt < maxAttempt) && (deviation > 0.0)){
         if ((lowLimit != 0.0) && (dataArray.size() == 0) && (fabs(value) < lowLimit)) {
             deviation = 0.0;
@@ -74,6 +72,23 @@ bool eveAverage::addValue(double value){
     if (dataArray.size() >= averageCount) allDone = true;
 
     return true;
+}
+
+/**
+ *replace value at specified array position
+ *
+ * @param value add value to list of values for calculations if it passes the tests
+ * @return false if array position doesn't exist
+ */
+bool eveAverage::replaceValue(double value, int pos){
+
+    if (dataArray.size() > pos) {
+        dataArray.replace(pos, value);
+        ++attempt;
+        return true;
+    }
+
+    return false;
 }
 
 eveDataMessage* eveAverage::getResultMessage(){

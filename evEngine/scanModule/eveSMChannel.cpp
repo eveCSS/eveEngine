@@ -15,6 +15,8 @@
 #include "eveCounter.h"
 #include "eveSMDetector.h"
 
+#define checkNaN(val) (val != val)
+
 /**
  *
  * @param scanmodule QObject parent
@@ -332,7 +334,9 @@ void eveSMChannel::transportReady(int status) {
     }
     else if (channelStatus == eveCHANNELREAD){
         --signalCounter;
-        if ((signalCounter <= 0) && retrieveData()) {
+        bool normalizeCheck = ((!(normalizeChannel)) || ((normalizeChannel) && (normalizeChannel->isDone())));
+        if ((signalCounter <= 0) && normalizeCheck) {
+            retrieveData();
 
             channelStatus = eveCHANNELIDLE;
 
@@ -358,15 +362,23 @@ void eveSMChannel::transportReady(int status) {
             else if (averageCount > 1){
                 // we need to do average measurements
                 if (normalizeChannel){
-                    if (averageRaw->addValue(valueRaw)){
+                    if (checkNaN(valueRaw) || checkNaN(normCalc) || checkNaN(normRaw)){
+                        sendError(ERROR, 0, QString("Channel %1 (%2) or its normalized value is NaN").arg(name).arg(xmlId));
+                    }
+                    else if (averageRaw->addValue(valueRaw)){
                         averageNormCalc->addValue(normCalc);
                         averageNormRaw->addValue(normRaw);
                     }
-                    else
-                        sendError(MINOR, 0, QString("Channel %1 (%2), missed deviation test").arg(name).arg(xmlId));
+                    else {
+                        sendError(MINOR, 0, QString("Channel %1 (%2), missed deviation test (normalization active)").arg(name).arg(xmlId));
+                        averageNormCalc->replaceValue(normCalc, 0);
+                        averageNormRaw->replaceValue(normRaw, 0);
+                    }
                 }
                 else {
-                    if (!averageRaw->addValue(valueRaw))
+                    if (checkNaN(valueRaw))
+                        sendError(MINOR, 0, QString("Channel %1 (%2), value is NaN").arg(name).arg(xmlId));
+                    else if (!averageRaw->addValue(valueRaw))
                         sendError(MINOR, 0, QString("Channel %1 (%2), missed deviation test").arg(name).arg(xmlId));
                 }
 
@@ -572,11 +584,9 @@ eveDataMessage* eveSMChannel::getLimitMessage(){
 
 /**
  *
- * @return true if NormalizeChannel is ready
+ * @return true
  */
 bool eveSMChannel::retrieveData(){
-
-    if ((normalizeChannel) && (!normalizeChannel->isDone())) return false;
 
     if (valueRawMsg != NULL) delete valueRawMsg;
     if (normCalcMsg != NULL) delete normCalcMsg;
