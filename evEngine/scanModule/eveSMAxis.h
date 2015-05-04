@@ -11,7 +11,6 @@
 #include <QList>
 #include <QDateTime>
 #include "eveDeviceDefinitions.h"
-#include "eveSetValue.h"
 #include "evePosCalc.h"
 #include "eveCaTransport.h"
 #include "eveSMBaseDevice.h"
@@ -43,7 +42,6 @@ public:
 	bool isAtEndPos(){return posCalc->isAtEndPos();};
     bool isAbs(){return posCalc->isAbs();};
     bool isOK(){return axisOK;};
-	//eveSetValue* getPos();
 	void execQueue();
 	void init();
 	bool isDone(){return ready;};
