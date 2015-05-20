@@ -41,6 +41,7 @@ void eveAverage::reset(){
     dataArray.clear();
     attempt = 0;
     allDone = false;
+    doDeviationTest = true;
 }
 
 /**
@@ -58,10 +59,9 @@ bool eveAverage::addValue(double value){
 
     if ((attempt < maxAttempt) && (deviation > 0.0)){
         if ((lowLimit != 0.0) && (dataArray.size() == 0) && (fabs(value) < lowLimit)) {
-            deviation = 0.0;
-            lowLimit = 0.0;
+            doDeviationTest = false;
         }
-        if ((deviation > 0.0 ) && (dataArray.size() == 1) && (fabs(dataArray.at(0)*deviation/100.0) < fabs(dataArray.at(0)-value))) {
+        if (doDeviationTest && (dataArray.size() == 1) && (fabs(dataArray.at(0)*deviation/100.0) < fabs(dataArray.at(0)-value))) {
             dataArray.replace(0, value);
             ++attempt;
             return false;

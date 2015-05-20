@@ -29,6 +29,7 @@ public:
 
 private:
     bool allDone;
+    bool doDeviationTest;
     int averageCount;
     int maxAttempt;
     int attempt;
