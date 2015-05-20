@@ -67,21 +67,19 @@ void eveStorageManager::handleMessage(eveMessage *message){
         }
         break;
     case EVEMESSAGETYPE_CHAINSTATUS:
-      if (((eveChainStatusMessage*)message)->getStatus() == eveChainMATHDONE){
+      if (((eveChainStatusMessage*)message)->getChainStatus() == CHStatusMATHDONE){
         int id = ((eveChainStatusMessage*)message)->getChainId();
         if (chainIdChannelHash.remove(id) == 0){
           sendError(DEBUG,0,QString("handleMessage: unable to remove not existing chainId %1 from chainList").arg(id));
         }
         else {
-          delayedStatus = new eveChainStatusMessage(eveChainSTORAGEDONE, id, 0, -1, eveTime::getCurrent(), -1, 0, 0);
+          delayedStatus = new eveChainStatusMessage(id, CHStatusSTORAGEDONE);
           delayedStatus->addDestinationFacility(EVECHANNEL_NET | EVECHANNEL_MANAGER);
           if (chainIdChannelHash.isEmpty()) {
             // no chains left, shut down
             if (!dc->isConfirmSave()){
               initShutdown();
-              eveError::log(DEBUG, QString("eveStorageManager: shutdown"));
-              eveChainStatusMessage* statusMessage = new eveChainStatusMessage(eveChainSTORAGEDONE, id, 0, -1, eveTime::getCurrent(), -1, 0, 0);
-              statusMessage->addDestinationFacility(EVECHANNEL_NET | EVECHANNEL_MANAGER);
+              eveError::log(DEBUG, QString("eveStorageManager: shutdown, send StorageDone message"));
               addMessage(delayedStatus);
               delayedStatus = NULL;
               addMessage(new eveMessageInt(EVEMESSAGETYPE_STORAGEDONE, channelId));

@@ -214,6 +214,15 @@ void eveMessageHub::newMessage(int messageSource)
                 if (mChanHash.value(EVECHANNEL_MANAGER)->queueMessage(message))message = NULL;
             }
             break;
+        case EVEMESSAGETYPE_CHAINPROGRESS:
+            if (useNet && mChanHash.contains(EVECHANNEL_NET)){
+                if (mChanHash.value(EVECHANNEL_NET)->queueMessage(message))message = NULL;
+            }
+            else {
+                delete message;
+                message = NULL;
+            }
+            break;
         case EVEMESSAGETYPE_CHAINSTATUS:
         {
             eveMessage* mclone = NULL;
@@ -229,7 +238,7 @@ void eveMessageHub::newMessage(int messageSource)
             }
 
             /* send chainstatus to viewers if available */
-            if (mChanHash.contains(EVECHANNEL_NET) && message->hasDestinationFacility(EVECHANNEL_NET)){
+            if (useNet && mChanHash.contains(EVECHANNEL_NET) && message->hasDestinationFacility(EVECHANNEL_NET)){
                 if (mclone == NULL) mclone = message->clone();
                 if(mChanHash.value(EVECHANNEL_NET)->queueMessage(mclone)) mclone = NULL;
             }
@@ -399,7 +408,7 @@ void eveMessageHub::newMessage(int messageSource)
             break;
         }
         if (message != NULL) {
-            addError(ERROR, 0, QString("newMessage: unable to forward message, type: %1").arg(message->getType()));
+            addError(ERROR, 0, QString("newMessage: unable to forward message, type: 0x%1 (%2)").arg(message->getType(), 0, 16).arg(message->getType()));
             delete message;
         }
         // get the next message, if we get the lock

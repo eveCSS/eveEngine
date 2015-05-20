@@ -80,12 +80,13 @@ void eveMathManager::handleMessage(eveMessage *message){
             addMessage(message);
         }
 		break;
-		case EVEMESSAGETYPE_CHAINSTATUS:
+        case EVEMESSAGETYPE_CHAINSTATUS:
 		{
             bool sendShutdown = false;
-			if (((eveChainStatusMessage*)message)->getChainId() == chid){
-				if (((eveChainStatusMessage*)message)->getStatus()== eveChainSmDONE){
-					int smid = ((eveChainStatusMessage*)message)->getSmId();
+            if (((eveChainStatusMessage*)message)->getChainId() == chid){
+                int smid = ((eveChainStatusMessage*)message)->getLastSmId();
+                SMStatusT lastSMStatus = ((eveChainStatusMessage*)message)->getLastSmStatus();
+                if (((eveChainStatusMessage*)message)->isDoneSM()){
 					foreach (eveMath* math, mathHash.values(smid)){
 						foreach (MathAlgorithm algorithm, eveMath::getAlgorithms()){
                             foreach (eveDataMessage* sendmessage, math->getResultMessage(algorithm, chid, smid)){
@@ -96,12 +97,10 @@ void eveMathManager::handleMessage(eveMessage *message){
 						}
 					}
 				}
-                else if (((eveChainStatusMessage*)message)->isPaused()){
-					int smid = ((eveChainStatusMessage*)message)->getSmId();
+                else if (lastSMStatus == SMStatusPAUSE){
 					if (!pauseList.contains(smid)) pauseList.append(smid);
 				}
-				else if (((eveChainStatusMessage*)message)->getStatus()== eveChainSmEXECUTING){
-					int smid = ((eveChainStatusMessage*)message)->getSmId();
+                else if (lastSMStatus == SMStatusEXECUTING){
 					if (pauseList.contains(smid)){
 						pauseList.removeOne(smid);
 					}
@@ -111,7 +110,7 @@ void eveMathManager::handleMessage(eveMessage *message){
 						}
 					}
 				}
-                else if (((eveChainStatusMessage*)message)->getStatus()== eveChainDONE)
+                else if (((eveChainStatusMessage*)message)->getChainStatus()== CHStatusDONE)
                     sendShutdown = true;
 			}
             else
@@ -123,9 +122,10 @@ void eveMathManager::handleMessage(eveMessage *message){
             message->addDestinationFacility(EVECHANNEL_EVENT);
             addMessage(message);
             if (sendShutdown){
-                eveChainStatusMessage* doneMessage = new eveChainStatusMessage(eveChainMATHDONE, chid, 0, -1, eveTime::getCurrent(), -1, 0, storageChannel);
+                eveChainStatusMessage* doneMessage = new eveChainStatusMessage(chid, CHStatusMATHDONE);
                 doneMessage->setDestinationChannel(storageChannel);
                 doneMessage->addDestinationFacility(EVECHANNEL_STORAGE);
+                sendError(DEBUG, 0, QString("MathManager send MathDone message chid: %1").arg(chid));
                 addMessage(doneMessage);
                 shutdown();
             }

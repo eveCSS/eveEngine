@@ -176,7 +176,7 @@ void eveScanManager::shutdown(){
  * only the first Start event starts the chain, all others resume from pause
  */
 void eveScanManager::smStart() {
-    sendError(INFO,0,"eveScanManager::smStart: starting root");
+    sendError(DEBUG,0,"eveScanManager::smStart: starting root");
     if (!isStarted) {
         sendStartTime();
         isStarted = true;
@@ -189,7 +189,6 @@ void eveScanManager::smStart() {
         evprop.setDirection(eveDirectionONOFF);
         if (rootSM) rootSM->newEvent(&evprop);
     }
-    //	if (rootSM) rootSM->startChain();
 }
 
 /**
@@ -203,7 +202,6 @@ void eveScanManager::smStart() {
 void eveScanManager::smHalt() {
     eveEventProperty evprop(eveEventProperty::HALT, 0);
     if (rootSM) rootSM->newEvent(&evprop);
-    //	if (rootSM) rootSM->haltChain();
 }
 
 /**
@@ -215,7 +213,6 @@ void eveScanManager::smHalt() {
 void eveScanManager::smBreak() {
     eveEventProperty evprop(eveEventProperty::BREAK, 0);
     if (rootSM) rootSM->newEvent(&evprop);
-    //	if (rootSM) rootSM->breakChain();
 }
 
 /**
@@ -228,7 +225,6 @@ void eveScanManager::smBreak() {
 void eveScanManager::smStop() {
     eveEventProperty evprop(eveEventProperty::STOP, 0);
     if (rootSM) rootSM->newEvent(&evprop);
-    //	if (rootSM) rootSM->stopChain();
 }
 
 /**
@@ -240,7 +236,6 @@ void eveScanManager::smStop() {
 void eveScanManager::smPause() {
     eveEventProperty evprop(eveEventProperty::PAUSE, 0);
     if (rootSM) rootSM->newEvent(&evprop);
-    //	if (rootSM) rootSM->pauseChain();
 }
 
 
@@ -250,14 +245,7 @@ void eveScanManager::smPause() {
  */
 void eveScanManager::smDone() {
 
-    //	if (rootSM && rootSM->isInitializing()){
-    //		rootSM->initialize();
-    //	}
-    //	else
-    if (rootSM && rootSM->isDone()){
-        // TODO
-        currentStatus.setChainStatus(eveChainDONE);
-        sendStatus(0, -1);
+    if (currentStatus.isDone()){
         shutdown();
     }
 }
@@ -287,7 +275,9 @@ void eveScanManager::sendRemainingTime(){
             int elapsed = startTime.secsTo(QDateTime::currentDateTime());
             int remaining = elapsed * totalPositions / posCounter - elapsed;
             sendError(DEBUG, 0, QString("remaining %4, elapsed %1, totalPositions %2, posCounter %3").arg(elapsed).arg(totalPositions).arg(posCounter).arg(remaining));
-            sendStatus(0, remaining);
+            eveChainProgressMessage* message = new eveChainProgressMessage(chainId, posCounter, eveTime::getCurrent(), remaining);
+            message->addDestinationFacility(EVECHANNEL_MATH);
+            addMessage(message);
         }
     }
 }
@@ -359,9 +349,13 @@ void eveScanManager::sendStartTime() {
  * @param smid id of scanmodule
  * @param status current chain status
  */
-void eveScanManager::setStatus(int smid, smStatusT status, int smpause){
-    currentStatus.setStatus(status, smpause);
-    sendStatus (smid, -1);
+void eveScanManager::setStatus(int smid, eveSMStatus& smstatus){
+    int rootsmid = 0;
+    if (rootSM) rootsmid = rootSM->getSmId();
+    if (currentStatus.setStatus(smid, rootsmid, smstatus)) sendStatus ();
+    if (currentStatus.isDone())
+        sendError(DEBUG,0,"eveScanManager::setStatus: all SMs done, ready to shutdown");
+
 }
 /**
  *
@@ -369,13 +363,12 @@ void eveScanManager::setStatus(int smid, smStatusT status, int smpause){
  * @param status current chain status
  * @param remainTime remaining time until scan is done (defaults to -1)
  */
-void eveScanManager::sendStatus(int smid, int remainTime){
+void eveScanManager::sendStatus(){
 
     // fill in our storage channel
-    eveChainStatusMessage* message = new eveChainStatusMessage(currentStatus.getStatus(), chainId, smid, posCounter, eveTime::getCurrent(), remainTime);
-    // we send all status messages to math first from where it will be sent to everone else
-    message->addDestinationFacility(EVECHANNEL_MATH);
-    addMessage(message);
+    eveChainStatusMessage* ecmessage = new eveChainStatusMessage(chainId, currentStatus);
+    ecmessage->addDestinationFacility(EVECHANNEL_MATH);
+    addMessage(ecmessage);
 }
 
 void eveScanManager::addToHash(QHash<QString, QString>& hash, QString key, eveXMLReader* parser){

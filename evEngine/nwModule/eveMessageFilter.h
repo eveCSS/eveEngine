@@ -44,7 +44,7 @@ private:
 	eveNetObject * netObject;
 	QTimer *seqTimer;
 	QList<eveMessage*> errorMessageCacheList;
-	eveChainStatusMessage *chainStatusCache;
+    eveChainStatusMessage *chainStatusCache;
 	eveEngineStatusMessage *engineStatusCache;
 	evePlayListMessage *playlistCache;
 	eveCurrentXmlMessage *currentXmlCache;

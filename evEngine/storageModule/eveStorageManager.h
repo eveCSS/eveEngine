@@ -31,7 +31,7 @@ public:
 
 private:
 	void initShutdown();
-  eveChainStatusMessage* delayedStatus;
+    eveChainStatusMessage* delayedStatus;
 	bool configStorage(eveStorageMessage*);
 	void addToHash(QHash<QString, QString>&, int, QString, eveXMLReader*);
         int confirmSaveRid;

@@ -30,7 +30,7 @@ public:
 private:
 	bool shutdownPending;
 	void registerEvent(eveEventRegisterMessage*);
-	void triggerSchedule(int, int, eveChainStatusMessage*);
+    void triggerSchedule(int, int, eveChainStatusMessage *);
 	void triggerDetector(eveMessageText*);
 	QHash<quint64, eveEventProperty* > scheduleHash;
 	QHash<QString, eveEventProperty* > detectorHash;

@@ -8,27 +8,36 @@
 #ifndef EVECHAINSTATUS_H_
 #define EVECHAINSTATUS_H_
 
+#include "qhash.h"
+#include "eveSMStatus.h"
 #include "eveMessage.h"
-#include "eveEventProperty.h"
 
-// enum chainStatusT see eveMessage
-// enum smStatusT {eveSmNOTSTARTED, eveSmINITIALIZING, eveSmEXECUTING, eveSmPAUSED, eveSmCHAINPAUSED, eveSmTRIGGERWAIT, eveSmAPPEND, eveSmDONE} ;
-
-// allow following states for cstatus: eveSmINITIALIZING,  eveSmEXECUTING, eveSmPAUSED, eveSmDONE
-// allow following additional substates: paused, redo
-// which may be active at the same time
-//
 
 class eveChainStatus {
 public:
-	eveChainStatus();
-	virtual ~eveChainStatus();
-	chainStatusT getStatus(){return cstatus;};
-    bool setStatus(smStatusT, int pause);
-    void setChainStatus(chainStatusT status){cstatus=status;};
+    eveChainStatus();
+    eveChainStatus(CHStatusT cstat, QHash<int, quint32>& smstat);
+    virtual ~eveChainStatus(){};
+    CHStatusT getCStatus(){return ecstatus;};
+    void setDone(){ecstatus=CHStatusDONE;};
+    bool isDone(){return (ecstatus==CHStatusDONE);};
+    bool setStatus(int smid, int rootsmid, eveSMStatus& smstatus);
+    QHash<int, quint32>& getSMStatusHash(){return smhash;};
+    int getLastSmId(){return lastSMsmid;};
+    SMStatusT getLastSmStatus(){return lastSMStatus;};
+    bool isDoneSM(){return lastSMisDone;};
+    bool isSmStarting(){return lastSmStarted;};
 
 private:
-	chainStatusT cstatus;
+    CHStatusT ecstatus;
+    QHash<int, quint32> smhash;
+    SMStatusT toStatus(quint32 fullstatus){return (SMStatusT) (fullstatus >> 16);} ;
+
+    int lastSMsmid;
+    SMStatusT lastSMStatus;
+    bool lastSMisDone;
+    bool lastSmStarted;
+
 };
 
 #endif /* EVECHAINSTATUS_H_ */

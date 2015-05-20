@@ -14,7 +14,7 @@
 #include "eveDataStatus.h"
 
 #define EVEMESSAGE_STARTTAG 0x0d0f0d0a
-#define EVEMESSAGE_VERSION 0x0100
+#define EVEMESSAGE_VERSION 0x0200
 #define EVEMESSAGE_MAXLENGTH 300000
 
 #define EVEMESSAGE_MIN_SUPPORTEDVERSION EVEMESSAGE_VERSION
@@ -35,7 +35,6 @@
 
 #define EVEMESSAGETYPE_ERROR 0x0101
 #define EVEMESSAGETYPE_ENGINESTATUS 0x0102
-#define EVEMESSAGETYPE_CHAINSTATUS 0x0103
 #define EVEMESSAGETYPE_DATA 0x0104
 #define EVEMESSAGETYPE_BASEDATA 0x0105
 #define EVEMESSAGETYPE_REQUEST 0x0108
@@ -43,6 +42,9 @@
 #define EVEMESSAGETYPE_METADATA 0x010a
 #define EVEMESSAGETYPE_CURRENTXML 0x0110
 #define EVEMESSAGETYPE_STORAGEDONE 0x0111
+#define EVEMESSAGETYPE_CHAINSTATUS 0x0112
+#define EVEMESSAGETYPE_VERSION 0x0113
+#define EVEMESSAGETYPE_CHAINPROGRESS 0x0114
 
 #define EVEMESSAGETYPE_PLAYLIST 0x0301
 
@@ -217,6 +219,27 @@ private:
 };
 
 /**
+ * \brief a message to send the current version
+ */
+class eveVersionMessage : public eveMessage
+{
+public:
+    eveVersionMessage();
+    eveVersionMessage(quint32, quint32, quint32);
+    virtual ~eveVersionMessage(){};
+    quint32 getVersion(){return version;};
+    quint32 getRevision(){return revision;};
+    quint32 getPatch(){return patch;};
+    bool compare(eveMessage *) {return false;};
+    virtual eveVersionMessage* clone(){return new eveVersionMessage(*this);};
+
+private:
+    quint32 version;
+    quint32 revision;
+    quint32 patch;
+};
+
+/**
  * \brief a message to add an entry to the playlist
  */
 class eveAddToPlMessage : public eveMessage
@@ -282,48 +305,65 @@ private:
 };
 
 /**
- *\brief status of chain or scanmodule
+ *\brief chain progress message
  */
-enum chainStatusT {eveChainSmIDLE=1, eveChainSmINITIALIZING, eveChainSmEXECUTING, eveChainSmPAUSED, eveChainSmTRIGGERWAIT, eveChainSmDONE, eveChainDONE, eveChainSTORAGEDONE, eveChainSmChainPAUSED, eveChainSmGUIPAUSED, eveChainMATHDONE};
-enum smStatusT {eveSmNOTSTARTED, eveSmINITIALIZING, eveSmEXECUTING, eveSmPAUSED, eveSmTRIGGERWAIT, eveSmAPPEND, eveSmDONE} ;
+class eveChainProgressMessage : public eveMessage
+{
+public:
+    eveChainProgressMessage(int, int, eveTime, int, int prio=0, int dest=0);
+    virtual ~eveChainProgressMessage(){};
+	int getChainId(){return chainId;};
+	int getPosCnt(){return posCounter;};
+	eveTime getTime(){return timestamp;};
+	int getRemainingTime(){return remainingTime;};
+    bool compare(eveMessage *){return false;};
+    virtual eveChainProgressMessage* clone(){return new eveChainProgressMessage(*this);};
 
+private:
+	eveTime timestamp;
+	int chainId;
+	int posCounter;
+	int remainingTime;
+};
+
+enum CHStatusT {CHStatusIDLE=1, CHStatusExecuting, CHStatusDONE, CHStatusSTORAGEDONE, CHStatusMATHDONE, CHStatusALLDONE};
+enum SMStatusT {SMStatusNOTSTARTED, SMStatusINITIALIZING, SMStatusEXECUTING, SMStatusPAUSE, SMStatusTRIGGERWAIT, SMStatusAPPEND, SMStatusDONE} ;
+enum SMReasonT {SMReasonNone, SMReasonSMREDOACTIVE, SMReasonCHREDOACTIVE, SMReasonSMPAUSE, SMReasonCHPAUSE, SMReasonGUIPAUSE, SMReasonSMSKIP,
+                SMReasonCHSKIP, SMReasonGUISKIP, SMReasonCHSTOP, SMReasonGUISTOP};
+
+class eveChainStatus;
 /**
- * \brief a message containing the status of the currently processing chain
+ * \brief a message containing the extended status of chain and scan modules
  *
- * possible status values are
- * eveChainSmIDLE: Chain has not been started yet
- * eveChainSmINITIALIZING: scanmodule is initializing, but may not yet started
- * eveChainSmEXECUTING: scanmodule (and chain) is executing
- * eveChainSmPAUSED: scanmodule (and chain) has been paused
- * eveChainSmTRIGGERWAIT: scanmodule waits for manual trigger
- * eveChainSmDONE: a scanmodule has finished
- * eveChainDONE: the chain ( all scanmodules) has finished
  */
 class eveChainStatusMessage : public eveMessage
 {
 public:
-	eveChainStatusMessage(chainStatusT, int, int, int);
-	eveChainStatusMessage(chainStatusT, int, int, int, eveTime, int, int prio=0, int dest=0);
-	virtual ~eveChainStatusMessage();
-	chainStatusT getStatus(){return cstatus;};
-	void setStatus(chainStatusT stat){cstatus=stat;};
-	int getChainId(){return chainId;};
-	int getSmId(){return smId;};
-	int getPosCnt(){return posCounter;};
-	eveTime getTime(){return timestamp;};
-	int getRemainingTime(){return remainingTime;};
-	bool compare(eveMessage *);
-    bool isPaused();
-	virtual eveChainStatusMessage* clone(){return new eveChainStatusMessage(*this);};
+    eveChainStatusMessage(int, eveChainStatus& chstatus);
+    eveChainStatusMessage(int, CHStatusT cstat);
+    virtual ~eveChainStatusMessage();
+    int getChainId(){return chainId;};
+    eveTime getTime(){return timestamp;};
+    int getLastSmId(){return lastSMsmid;};
+    SMStatusT getLastSmStatus(){return lastSMStatus;};
+    CHStatusT getChainStatus(){return ecstatus;};
+    QHash<int, quint32>& getSMStatusHash(){return esmstatus;};
+    bool isDoneSM(){return lastSMisDone;};
+    bool isSmStarting(){return lastSmStarted;};
+    bool compare(eveMessage *);
+    virtual eveChainStatusMessage* clone(){return new eveChainStatusMessage(*this);};
 
 private:
-	eveTime timestamp;
-	chainStatusT cstatus;
-	int chainId;
-	int smId;
-	int posCounter;
-	int remainingTime;
+    eveTime timestamp;
+    CHStatusT ecstatus;
+    int chainId;
+    QHash<int, quint32> esmstatus;
+    int lastSMsmid;
+    SMStatusT lastSMStatus;
+    bool lastSMisDone;
+    bool lastSmStarted;
 };
+
 
 /**
  * \brief a message containing a request to be sent to viewers

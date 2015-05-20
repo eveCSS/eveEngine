@@ -36,11 +36,11 @@ void eveEventManager::handleMessage(eveMessage *message){
 				moniOnlyList.append(devMon);
 			}
 			break;
-		case EVEMESSAGETYPE_CHAINSTATUS:
+        case EVEMESSAGETYPE_CHAINSTATUS:
 		{
-			int chainId = ((eveChainStatusMessage*)message)->getChainId();
-			int smId = ((eveChainStatusMessage*)message)->getSmId();
-			if (scheduleHash.contains(eveVariant::getMangled(chainId,smId))) triggerSchedule(chainId, smId, (eveChainStatusMessage*)message);
+            int chainId = ((eveChainStatusMessage*)message)->getChainId();
+            int smId = ((eveChainStatusMessage*)message)->getLastSmId();
+            if (scheduleHash.contains(eveVariant::getMangled(chainId,smId))) triggerSchedule(chainId, smId, (eveChainStatusMessage*)message);
 			break;
 		}
 		case EVEMESSAGETYPE_DETECTORREADY:
@@ -156,8 +156,8 @@ void eveEventManager::triggerSchedule(int chainid, int smid, eveChainStatusMessa
 
 	if (scheduleHash.contains(eveVariant::getMangled(chainid,smid))){
 		eveEventProperty* event = scheduleHash.value(eveVariant::getMangled(chainid,smid));
-		if (((event->getIncident() == eveIncidentEND) && (message->getStatus() == eveChainSmDONE)) ||
-				((event->getIncident() == eveIncidentSTART) && (message->getStatus() == eveChainSmEXECUTING))){
+        if (((event->getIncident() == eveIncidentEND) && (message->isDoneSM())) ||
+                ((event->getIncident() == eveIncidentSTART) && (message->isSmStarting()))){
 			event->setValue(event->getLimit());
 			event->fireEvent();
 			sendError(DEBUG, 0, QString("fired a schedule event (%1/%2)").arg(chainid).arg(smid));

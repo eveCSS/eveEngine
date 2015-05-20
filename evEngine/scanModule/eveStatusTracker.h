@@ -23,7 +23,7 @@ class eveBasicStatusTracker : public QObject{
 public:
 	eveBasicStatusTracker();
 	virtual ~eveBasicStatusTracker();
-	bool setChainStatus(eveChainStatusMessage*);
+    bool setChainStatus(eveChainStatusMessage*);
 	void addStorageId(int id){ chidWithStorageList.append(id);};
 	virtual eveEngineStatusMessage* getEngineStatusMessage();
 	engineStatusT getEngineStatus(){return engineStatus;};
@@ -38,7 +38,7 @@ signals:
 	void engineIdle();
 
 protected:
-	QHash<int, chainStatusT> chainStatus;
+    QHash<int, CHStatusT> chainStatus;
 	QList<int> chidWithStorageList;	// all chains with a storage module
 	engineStatusT engineStatus;
 	QString XmlName;

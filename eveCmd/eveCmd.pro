@@ -23,6 +23,8 @@ SOURCES += main.cpp \
     ../evEngine/scanModule/eveDataStatus.cpp \
     ../evEngine/scanModule/eveStartTime.cpp \
     ../evEngine/scanModule/eveTime.cpp \
+    ../evEngine/scanModule/eveChainStatus.cpp \
+    ../evEngine/scanModule/eveSMStatus.cpp \
     Cmdclient.cpp \
     ../evEngine/nwModule/eveParameter.cpp
 
@@ -34,12 +36,15 @@ HEADERS += \
     ../evEngine/scanModule/eveDataStatus.h \
     ../evEngine/scanModule/eveStartTime.h \
     ../evEngine/scanModule/eveTime.h \
+    ../evEngine/scanModule/eveChainStatus.h \
+    ../evEngine/scanModule/eveSMStatus.h \
     Cmdclient.h \
     ../evEngine/nwModule/eveParameter.h
 
 INCLUDEPATH += \
     ../evEngine/nwModule \
     ../evEngine/scanModule \
+    ../evEngine/eventModule
 
 win32-g++ {
    UNAME = $$system(uname -s)

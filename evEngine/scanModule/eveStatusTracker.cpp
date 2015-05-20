@@ -34,7 +34,7 @@ eveBasicStatusTracker::~eveBasicStatusTracker() {
 bool eveBasicStatusTracker::setChainStatus(eveChainStatusMessage* message) {
 
 	int chainId = message->getChainId();
-	chainStatusT newStatus = (chainStatusT)message->getStatus();
+    CHStatusT newStatus = message->getChainStatus();
 	bool AllDone = true;
 	bool engStatusChng = false;
 
@@ -42,25 +42,26 @@ bool eveBasicStatusTracker::setChainStatus(eveChainStatusMessage* message) {
 	chainStatus.insert(chainId,newStatus);
 
 	switch (newStatus) {
-		case eveChainSmEXECUTING:
+        case CHStatusExecuting:
 			if ((engineStatus == eveEngIDLEXML) || (engineStatus == eveEngLOADINGXML)){
 				engineStatus = eveEngEXECUTING;
 				engStatusChng=true;
 			}
 			break;
-		case eveChainDONE:
-		case eveChainSTORAGEDONE:
-			foreach (int cid, chainStatus.keys()){
+        case CHStatusDONE:
+        case CHStatusSTORAGEDONE:
+            eveError::log(DEBUG, QString("eveStatusTracker::Chain done"));
+            foreach (int cid, chainStatus.keys()){
 				//if (cid == chainId) continue;
-				chainStatusT endStatus = eveChainDONE;
+                CHStatusT endStatus = CHStatusDONE;
 				if (chidWithStorageList.contains(cid))
-					endStatus = eveChainSTORAGEDONE;
+                    endStatus = CHStatusSTORAGEDONE;
 				if (chainStatus.value(cid) != endStatus) AllDone = false;
-        // TODO remove this log line
-        if (newStatus == eveChainSTORAGEDONE) eveError::log(DEBUG, QString("eveStatusTracker chain: eveChainSTORAGEDONE"));
-			}
-			if (AllDone){
-        eveError::log(DEBUG, QString("eveStatusTracker::Engine done, Idle, NoXML"));
+                eveError::log(DEBUG, QString("eveStatusTracker:: chainStatus %1 endStatus %2").arg((quint32)chainStatus.value(cid)).arg((quint32)endStatus));
+            }
+            eveError::log(DEBUG, QString("eveStatusTracker:: All done? %1").arg(AllDone?"true":"false"));
+            if (AllDone){
+                eveError::log(DEBUG, QString("eveStatusTracker::Engine done, Idle, NoXML"));
 				if (engineStatus != eveEngIDLENOXML){
 					engineStatus = eveEngIDLENOXML;
 					engStatusChng=true;
@@ -126,14 +127,6 @@ bool eveManagerStatusTracker::setStart() {
 	if ((engineStatus == eveEngIDLEXML) || (engineStatus == eveEngPAUSED)){
 		engineStatus = eveEngEXECUTING;
 		return true;
-	}
-    else if (engineStatus == eveEngEXECUTING){
-		// some chains might be paused and should resume
-		foreach(int key, chainStatus.keys()){
-            if ((chainStatus.value(key) == eveChainSmPAUSED) ||
-                    (chainStatus.value(key) == eveChainSmChainPAUSED)||
-                    (chainStatus.value(key) == eveChainSmGUIPAUSED)) return true;
-		}
 	}
 	return false;
 }

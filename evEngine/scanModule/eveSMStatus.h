@@ -11,20 +11,23 @@
 #include "eveMessage.h"
 #include "eveEventProperty.h"
 
-// enum chainStatusT see eveMessage.h
-// enum smStatusT see eveMessage.h
-
 
 class eveSMStatus {
 public:
 	eveSMStatus();
 	virtual ~eveSMStatus();
-	bool setStatus(smStatusT);
 	bool isExecuting();
 	bool isDone();
-    bool isRedo(){return (redoActive && (chainRedo || redo));};
-    bool isPaused(){return (chainPause || pause || masterPause);};
-	smStatusT getStatus(){return status;};
+    bool setStart();
+    bool setDone();
+    bool setAppend();
+    bool isAppend(){return (status == SMStatusAPPEND); };
+    bool isNotStarted(){return (status == SMStatusNOTSTARTED); }; //TODO stimmt noch nicht, kann auch initializing sein, aber
+    bool isRedo(){return (redoActive && (chainRedo || smRedo));};
+    bool isPaused(){return (chainPause || smPause || masterPause);};
+    SMStatusT getStatus(){return status;};
+    SMReasonT getReason(){return reason;};
+    quint32 getFullStatus();
     int getPause();
 	bool setEvent(eveEventProperty* evprop );
 	void redoStart(){trackRedo = false;};
@@ -42,23 +45,26 @@ public:
     bool redoIsActive() {return redoActive;};
 
 private:
-	smStatusT status;
-	bool isTriggerWait(){return (evTrigWait || maTrigWait || detTrigWait);};
+    bool setStatus(SMStatusT, SMReasonT);
+    SMStatusT status;
+    SMReasonT reason;
+    bool isTriggerWait(){return (evTrigWait || maTrigWait || detTrigWait);};
 	int  manualRid;
 	int  detecRid;
-	bool pause;
-	bool redo;
+    bool smPause;
 	bool chainPause;
-    bool masterPause;
-	bool chainRedo;
-	bool trackRedo; // wird mit redoStart gelöscht, von redoEvent
-	                // gesetzt und redoStatus gelesen
+    bool masterPause;     // pause set by GUI
+    bool smRedo;          // smRedoEvent sets / unsets this
+    bool chainRedo;       // chainRedoEvent sets / unsets this
+    bool trackRedo;       // wird mit redoStart gelöscht, von redoEvent
+                          // gesetzt und redoStatus gelesen
 	bool evTrigWait;
 	bool maTrigWait;
 	bool detTrigWait;
     bool stopCondition;
     bool breakCondition;
     bool redoActive;
+    bool freezeReason;
 };
 
 #endif /* EVESMSTATUS_H_ */

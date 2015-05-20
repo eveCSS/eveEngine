@@ -42,7 +42,7 @@ public:
 	void sendError(int, int, QString);
 	void sendError(int, int, int, QString);
 	void sendMessage(eveMessage*);
-    void setStatus(int, smStatusT, int);
+    void setStatus(int, eveSMStatus &smstatus);
 	void handleMessage(eveMessage *);
 	void nextPos();
 	void registerEvent(int, eveEventProperty*, bool chain=false);
@@ -63,7 +63,7 @@ public slots:
 	void sendRemainingTime();
 
 private:
-	void sendStatus(int, int);
+    void sendStatus();
 	void sendStartTime();
 	void addToHash(QHash<QString, QString>&, QString, eveXMLReader*);
 	QHash<int, int> requestHash;

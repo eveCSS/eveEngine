@@ -4,6 +4,7 @@
 #include <QString>
 
 #include "eveMessageFactory.h"
+#include "eveChainStatus.h"
 #include "eveError.h"
 
 eveMessageFactory::eveMessageFactory()
@@ -37,7 +38,17 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 
 
 	switch (type) {
-		case EVEMESSAGETYPE_ADDTOPLAYLIST:
+    case EVEMESSAGETYPE_VERSION:
+    {
+        quint32 version;
+        quint32 revision;
+        quint32 patch;
+
+        inStream >> version >> revision >> patch;
+        message = new eveVersionMessage(version, revision, patch);
+    }
+    break;
+        case EVEMESSAGETYPE_ADDTOPLAYLIST:
 		case EVEMESSAGETYPE_CURRENTXML:
 		{
 			QString xmlName, xmlAuthor;
@@ -158,7 +169,7 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 			message = new eveEngineStatusMessage(estatus, xmlId);
 		}
 		break;
-		case EVEMESSAGETYPE_CHAINSTATUS:
+		case EVEMESSAGETYPE_CHAINPROGRESS:
 		{
 			struct timespec statTime;
 			quint32 secs, nsecs, cstatus, cid, smid, poscnt, remtime;
@@ -166,10 +177,31 @@ eveMessage * eveMessageFactory::getNewMessage(quint16 type, quint32 length, QByt
 			statTime.tv_sec = secs;
 			statTime.tv_nsec = nsecs;
 			eveTime messageTime(statTime);
-			message = new eveChainStatusMessage((chainStatusT)cstatus, cid, smid, poscnt, messageTime, remtime);
+            message = new eveChainProgressMessage(cid, poscnt, messageTime, remtime);
 		}
 		break;
-		case EVEMESSAGETYPE_PLAYLIST:
+    case EVEMESSAGETYPE_CHAINSTATUS:
+    {
+        struct timespec statTime;
+        int smid;
+        quint32 secs, nsecs, cstatus, cid, smstatus;
+        QHash<int, quint32> smstatusHash;
+
+        inStream >> secs >> nsecs >> cid >> cstatus;
+        quint32 msglen = length - 16;
+        while (msglen > 0 && (msglen % 8 == 0)){
+            inStream >> smid >> smstatus;
+            smstatusHash.insert(smid, smstatus);
+            msglen -= 8;
+        }
+        statTime.tv_sec = secs;
+        statTime.tv_nsec = nsecs;
+        eveTime messageTime(statTime);
+        eveChainStatus chstatus((CHStatusT) cstatus, smstatusHash);
+        message = new eveChainStatusMessage(cid, chstatus);
+    }
+    break;
+        case EVEMESSAGETYPE_PLAYLIST:
 		{
 			quint32 sum = 0;
 			qint32 plcount;
@@ -291,6 +323,7 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 	quint32 starttag = EVEMESSAGE_STARTTAG;
 	quint16 version = EVEMESSAGE_VERSION;
 	quint16 messageType = message->getType();
+    quint32 messageLength = 0;
 
 	QByteArray * block = new QByteArray();
     QDataStream outStream(block, QIODevice::WriteOnly);
@@ -299,18 +332,20 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
     outStream << starttag << version << messageType;
 
 	switch(messageType) {
-		case EVEMESSAGETYPE_ERROR:
+    case EVEMESSAGETYPE_VERSION:
+    {
+        eveVersionMessage * vMsg = (eveVersionMessage*)message;
+        outStream << vMsg->getVersion() << vMsg->getRevision() << vMsg->getPatch();
+    }
+        break;
+        case EVEMESSAGETYPE_ERROR:
 		{
 			eveTime errTime = ((eveErrorMessage*)message)->getTime();
 			quint8 severity = ((eveErrorMessage*)message)->getSeverity();
 			quint8 facility = ((eveErrorMessage*)message)->getFacility();
 			quint16 errType = ((eveErrorMessage*)message)->getErrorType();
 			QString errText = ((eveErrorMessage*)message)->getErrorText();
-			quint32 messageLength = 0;
 			outStream << messageLength << errTime.seconds() << errTime.nanoSeconds() << severity << facility << errType << errText;
-			outStream.device()->seek(8);
-			messageLength = block->length() - 12;
-			outStream << messageLength;
 		}
 			break;
 		case EVEMESSAGETYPE_ENGINESTATUS:
@@ -318,48 +353,42 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 			eveTime statTime = ((eveEngineStatusMessage*)message)->getTime();
 			QString xmlId = ((eveEngineStatusMessage*)message)->getXmlId();
 			quint32 estatus = ((eveEngineStatusMessage*)message)->getStatus();
-			quint32 messageLength = 0;
 			outStream << messageLength << statTime.seconds() << statTime.nanoSeconds() << estatus << xmlId;
-			outStream.device()->seek(8);
-			messageLength = block->length() - 12;
-			outStream << messageLength;
 		}
 		break;
-		case EVEMESSAGETYPE_CHAINSTATUS:
+		case EVEMESSAGETYPE_CHAINPROGRESS:
 		{
-			eveTime statTime = ((eveChainStatusMessage*)message)->getTime();
-			quint32 cstatus = ((eveChainStatusMessage*)message)->getStatus();
-			quint32 cid  = ((eveChainStatusMessage*)message)->getChainId();
-			quint32 smid = ((eveChainStatusMessage*)message)->getSmId();
-			quint32 poscnt = ((eveChainStatusMessage*)message)->getPosCnt();
-			quint32 remtime = ((eveChainStatusMessage*)message)->getRemainingTime();
-			quint32 messageLength = 0;
-			outStream << messageLength << statTime.seconds() << statTime.nanoSeconds() << cstatus << cid << smid << poscnt << remtime;
-			outStream.device()->seek(8);
-			messageLength = block->length() - 12;
-			outStream << messageLength;
+			eveTime statTime = ((eveChainProgressMessage*)message)->getTime();
+			quint32 cid  = ((eveChainProgressMessage*)message)->getChainId();
+			quint32 poscnt = ((eveChainProgressMessage*)message)->getPosCnt();
+			quint32 remtime = ((eveChainProgressMessage*)message)->getRemainingTime();
+            outStream << messageLength << statTime.seconds() << statTime.nanoSeconds() << cid << poscnt << remtime;
 		}
 		break;
-		case EVEMESSAGETYPE_REQUEST:
+    case EVEMESSAGETYPE_CHAINSTATUS:
+    {
+        eveTime statTime = ((eveChainStatusMessage*)message)->getTime();
+        quint32 cstatus = (quint32)((eveChainStatusMessage*)message)->getChainStatus();
+        quint32 cid  = (quint32) ((eveChainStatusMessage*)message)->getChainId();
+        outStream << messageLength << statTime.seconds() << statTime.nanoSeconds() << cid << cstatus;
+        QHash<int, quint32> smstatusHash =  ((eveChainStatusMessage*)message)->getSMStatusHash();
+        foreach (int smid, smstatusHash.keys()) {
+            outStream << smid << smstatusHash.value(smid);
+        }
+    }
+    break;
+        case EVEMESSAGETYPE_REQUEST:
 		{
 			quint32 rid  = ((eveRequestMessage*)message)->getReqId();
 			quint32 rtype = ((eveRequestMessage*)message)->getReqType();
 			QString rtext = ((eveRequestMessage*)message)->getReqText();
-			quint32 messageLength = 0;
 			outStream << messageLength << rid << rtype << rtext;
-			outStream.device()->seek(8);
-			messageLength = block->length() - 12;
-			outStream << messageLength;
 		}
 		break;
 		case EVEMESSAGETYPE_REQUESTCANCEL:
 		{
 			quint32 rid  = ((eveRequestCancelMessage*)message)->getReqId();
-			quint32 messageLength = 0;
 			outStream << messageLength << rid;
-			outStream.device()->seek(8);
-			messageLength = block->length() - 12;
-			outStream << messageLength;
 		}
 		break;
 		case EVEMESSAGETYPE_AUTOPLAY:
@@ -367,24 +396,15 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
         case EVEMESSAGETYPE_REMOVEFROMPLAYLIST:
 		{
 			qint32 ival  = ((eveMessageInt*)message)->getInt();
-			quint32 messageLength = 0;
 			outStream << messageLength << ival;
-			outStream.device()->seek(8);
-			messageLength = block->length() - 12;
-			outStream << messageLength;
-		}
+        }
 		break;
 		case EVEMESSAGETYPE_REORDERPLAYLIST:
 		{
 			qint32 ival1 = ((eveMessageIntList*)message)->getInt(0);
 			qint32 ival2 = ((eveMessageIntList*)message)->getInt(1);
-			quint32 messageLength = 0;
-
 			outStream << messageLength << ival1 << ival2;
-			outStream.device()->seek(8);
-			messageLength = block->length() - 12;
-			outStream << messageLength;
-		}
+        }
 		break;
 		case EVEMESSAGETYPE_ADDTOPLAYLIST:
 		case EVEMESSAGETYPE_CURRENTXML:
@@ -392,11 +412,7 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 			QString xmlName = ((eveAddToPlMessage*)message)->getXmlName();
 			QString xmlAuthor = ((eveAddToPlMessage*)message)->getXmlAuthor();
 			QByteArray xmlData = ((eveAddToPlMessage*)message)->getXmlData();
-			quint32 messageLength = 0;
 			outStream << messageLength << xmlName << xmlAuthor << xmlData;
-			outStream.device()->seek(8);
-			messageLength = block->length() - 12;
-			outStream << messageLength;
 		}
 		break;
 		case EVEMESSAGETYPE_DATA:
@@ -409,7 +425,6 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 			quint32 dataMod = (quint32)((eveDataMessage*)message)->getDataMod();
 			eveTime dtime = ((eveDataMessage*)message)->getDataTimeStamp();
 			QString xmlId = ((eveDataMessage*)message)->getXmlId();
-			quint32 messageLength = 0;
 			outStream << messageLength << chid << smid << poscounter << dtype << dataMod;
 			outStream << dstatus.getSeverity() << dstatus.getAlarmCondition() << dstatus.getAcquisitionStatus() << dtime.seconds() << dtime.nanoSeconds() << xmlId;
 			switch (dtype) {
@@ -449,15 +464,11 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 					outStream << strings;
 				} break;
 			}
-			outStream.device()->seek(8);
-			messageLength = block->length() - 12;
-			outStream << messageLength;
 		}
 		break;
 		case EVEMESSAGETYPE_PLAYLIST:
 		{
 			qint32 count = ((evePlayListMessage*)message)->getCount();
-			quint32 messageLength = 0;
 			evePlayListEntry plentry;
 
 			outStream << messageLength << count;
@@ -466,17 +477,19 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
 				if (plentry.pid == -1) continue;
 				outStream << plentry.pid << plentry.name << plentry.author;
 			}
-			outStream.device()->seek(8);
-			messageLength = block->length() - 12;
-			outStream << messageLength;
 		}
 		break;
 
 		default:
 			eveError::log(ERROR,QString("eveMessageFactory::getNewStream: unknown message type (%1)").arg(messageType));
 			block->clear();
+            return block;
 			break;
-	}
+    }
+    outStream.device()->seek(8);
+    messageLength = block->length() - 12;
+    outStream << messageLength;
+
 	return block;
 }
 

@@ -94,7 +94,7 @@ void eveManager::handleMessage(eveMessage *message){
         }
         break;
     case EVEMESSAGETYPE_START:
-        if (!sendStart()) sendError(INFO,0,"cannot process START command with current engine status");
+        sendStart();
         break;
     case EVEMESSAGETYPE_STOP:
         if (engineStatus->setStop()){
@@ -297,8 +297,9 @@ bool eveManager::sendStart(){
 
     // reset the start time, because we got a valid start signal
     if (engineStatus->getEngineStatus() == eveEngIDLEXML) eveStartTime::setStartTime(QDateTime::currentDateTime());
+    // always send start to chains, even if they are already started
+    emit startSMs();
     if (engineStatus->setStart()){
-		emit startSMs();
 		addMessage(engineStatus->getEngineStatusMessage());
 		return true;
 	}

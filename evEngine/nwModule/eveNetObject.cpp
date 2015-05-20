@@ -74,8 +74,9 @@ void eveNetObject::acceptSocket(){
 	if (newSocket != 0) {
 		eveSocket* eSocket = new eveSocket(newSocket, this);
 		socketList.insert(eSocket);
-		eveError::log(DEBUG, QString("eveNetObject: accepted socket"));
-		QList<eveMessage * > * calist = mFilter->getCache();
+        eveError::log(DEBUG, QString("eveNetObject: accepted socket"));
+        eSocket->sendMessage(eveMessageFactory::getNewStream(new eveVersionMessage()));
+        QList<eveMessage * > * calist = mFilter->getCache();
 		foreach (eveMessage * message, *calist){
 			QByteArray * sendByteArray = eveMessageFactory::getNewStream(message);
 			eSocket->sendMessage(sendByteArray);

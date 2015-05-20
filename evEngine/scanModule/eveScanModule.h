@@ -85,7 +85,6 @@ private:
     int currentPosition;
     eveSMStatus myStatus;
     stageT currentStage;
-    engineStatusT engineStatus;
     QString storageHint;
     bool currentStageReady;
     int currentStageCounter;

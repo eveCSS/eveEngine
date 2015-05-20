@@ -4,6 +4,8 @@
 #include "eveMessage.h"
 #include "eveError.h"
 #include "eveStartTime.h"
+#include "eveChainStatus.h"
+#include "eveParameter.h"
 
 eveMessage::eveMessage()
 {
@@ -27,7 +29,7 @@ eveMessage::eveMessage(int mtype, int prio, int dest)
 	assert ((type == EVEMESSAGETYPE_START) ||
 			(type == EVEMESSAGETYPE_HALT) ||
 			(type == EVEMESSAGETYPE_STORAGECONFIG) ||
-			(type == EVEMESSAGETYPE_CHAINSTATUS) ||
+            (type == EVEMESSAGETYPE_CHAINPROGRESS) ||
 			(type == EVEMESSAGETYPE_ENGINESTATUS) ||
 			(type == EVEMESSAGETYPE_DATA) ||
 			(type == EVEMESSAGETYPE_BASEDATA) ||
@@ -44,7 +46,9 @@ eveMessage::eveMessage(int mtype, int prio, int dest)
 			(type == EVEMESSAGETYPE_REMOVEFROMPLAYLIST) ||
 			(type == EVEMESSAGETYPE_STORAGEDONE) ||
 			(type == EVEMESSAGETYPE_DETECTORREADY) ||
-			(type == EVEMESSAGETYPE_MONITORREGISTER));
+            (type == EVEMESSAGETYPE_CHAINSTATUS) ||
+            (type == EVEMESSAGETYPE_VERSION) ||
+            (type == EVEMESSAGETYPE_MONITORREGISTER));
 }
 
 eveMessage::~eveMessage()
@@ -201,6 +205,34 @@ int eveMessageIntList::getInt(int index){
 	}
 }
 
+/**
+ * @brief eveVersionMessage::eveVersionMessage holds version, revision, patchlevel of evEngine
+ */
+eveVersionMessage::eveVersionMessage() :
+    eveMessage(EVEMESSAGETYPE_VERSION, 0, 0)
+{
+    version = 0;
+    revision = 0;
+    patch = 0;
+    QString appversion = eveParameter::getParameter("version");
+    QStringList appversionStrings = appversion.split(".");
+    if (appversionStrings.count() > 1){
+        version = appversionStrings[0].toUInt();
+        revision = appversionStrings[1].toUInt();
+        if (appversionStrings.count() > 2) patch = appversionStrings[2].toUInt();
+    }
+}
+
+/**
+ * @brief eveVersionMessage::eveVersionMessage holds version, revision, patchlevel of evEngine
+ */
+eveVersionMessage::eveVersionMessage(quint32 vers, quint32 rev, quint32 plevel) :
+    eveMessage(EVEMESSAGETYPE_VERSION, 0, 0)
+{
+    version = vers;
+    revision = rev;
+    patch = plevel;
+}
 
 /*
  * Class eveAddToPlMessage
@@ -290,6 +322,24 @@ bool eveEngineStatusMessage::compare(eveMessage *message)
 }
 
 /*
+ * Class eveChainProgressMessage
+ */
+/**
+ * \param chid  chain id
+ * \param pc	position counter
+ * \param epTime	current time
+ * \param remTime	remaining time
+ */
+eveChainProgressMessage::eveChainProgressMessage(int cid, int pc, eveTime epTime, int remTime, int prio, int dest) :
+    eveMessage(EVEMESSAGETYPE_CHAINPROGRESS, prio, dest)
+{
+	chainId = cid;
+	posCounter = pc;
+	timestamp = epTime;
+	remainingTime =remTime;
+}
+
+/*
  * Class eveChainStatusMessage
  */
 /**
@@ -298,32 +348,36 @@ bool eveEngineStatusMessage::compare(eveMessage *message)
  * \param sid	scanmodule id
  * \param pc	position counter
  */
-eveChainStatusMessage::eveChainStatusMessage(chainStatusT status, int cid, int sid, int pc) :
-	eveMessage(EVEMESSAGETYPE_CHAINSTATUS, 0, 0)
+eveChainStatusMessage::eveChainStatusMessage(int cid, eveChainStatus& chstatus) :
+    eveMessage(EVEMESSAGETYPE_CHAINSTATUS, 0, 0)
 {
-	cstatus = status;
-	chainId = cid;
-	smId = sid;
-	posCounter = pc;
-        timestamp = eveTime::getCurrent();
-        remainingTime = 0;
+    ecstatus = chstatus.getCStatus();
+    chainId = cid;
+    esmstatus = QHash<int, quint32>(chstatus.getSMStatusHash());
+    lastSMsmid = chstatus.getLastSmId();
+    lastSMStatus = chstatus.getLastSmStatus();
+    timestamp = eveTime::getCurrent();
+    lastSMisDone = chstatus.isDoneSM();
+    lastSmStarted = chstatus.isSmStarting();
 }
+
 /**
  * \param status status of currently executing chain
  * \param chid  chain id
  * \param sid	scanmodule id
  * \param pc	position counter
- * \param epTime	eveTime
  */
-eveChainStatusMessage::eveChainStatusMessage(chainStatusT status, int cid, int sid, int pc, eveTime epTime, int remTime, int prio, int dest) :
-	eveMessage(EVEMESSAGETYPE_CHAINSTATUS, prio, dest)
+eveChainStatusMessage::eveChainStatusMessage(int cid, CHStatusT chstat) :
+    eveMessage(EVEMESSAGETYPE_CHAINSTATUS, 0, 0)
 {
-	cstatus = status;
-	chainId = cid;
-	smId = sid;
-	posCounter = pc;
-	timestamp = epTime;
-	remainingTime =remTime;
+    ecstatus = chstat;
+    chainId = cid;
+    lastSMsmid = 0;
+    esmstatus.clear();
+    lastSMStatus = SMStatusNOTSTARTED;
+    timestamp = eveTime::getCurrent();
+    lastSMisDone = false;
+    lastSmStarted = false;
 }
 
 eveChainStatusMessage::~eveChainStatusMessage()
@@ -331,26 +385,16 @@ eveChainStatusMessage::~eveChainStatusMessage()
 }
 /**
  * \brief compare two messages
- * \param message a pointer to the message to compare with
- * \return true if messages are identical else false
+ * \param message pointer to the message to compare with
+ * \return true if messages are identical else false (always false)
  */
 bool eveChainStatusMessage::compare(eveMessage *message)
 {
-	if (!message) return false;
-	if (type != message->getType()) return false;
-	if (chainId != ((eveChainStatusMessage*)message)->getChainId()) return false;
-	if (smId != ((eveChainStatusMessage*)message)->getSmId()) return false;
-	if (cstatus == ((eveChainStatusMessage*)message)->getStatus()) return true;
+    if (!message) return false;
+    if (type != message->getType()) return false;
+    if (chainId != ((eveChainStatusMessage*)message)->getChainId()) return false;
 
-	return false;
-}
-
-bool eveChainStatusMessage::isPaused()
-{
-    if ((cstatus == eveChainSmPAUSED) || (cstatus == eveChainSmChainPAUSED)|| (cstatus == eveChainSmGUIPAUSED))
-        return true;
-    else
-        return false;
+    return false;
 }
 
 /*
