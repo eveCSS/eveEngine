@@ -958,7 +958,10 @@ void eveScanModule::stgFinish() {
         else
             currentStageReady=true;
 
-        if (currentStageReady) emit sigExecStage();
+        if (currentStageReady) {
+            emit sigExecStage();
+            sendError(DEBUG,0,"stgFinish done");
+        }
     }
 }
 
@@ -972,7 +975,9 @@ void eveScanModule::execStage() {
 
     // wait with break until stage is ready
     if (currentStageReady && myStatus.haveBreakCondition()){
-        currentStage = eveStgNEXTPOS;
+        if (currentStage < eveStgNEXTPOS) {
+            currentStage = eveStgNEXTPOS;
+        }
     }
     if (currentStage == eveStgFINISH) {
         if (currentStageReady){
@@ -1101,7 +1106,7 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
     case eveEventProperty::STOP:
         if (isChainEvent && (nestedSM)) nestedSM->newEvent(evprop);
         myStatus.setEvent(evprop);
-        if (myStatus.isExecuting() || (evprop->getEventType() == eveEventTypeGUI)){
+        if (myStatus.isExecuting()){
             if(myStatus.forceExecuting()) manager->setStatus(smId, myStatus);
             sendError(INFO, 0, QString("%1 Stop Event: %2; Scan will end now").arg(eventType).arg(evprop->getName()));
             currentStage = eveStgFINISH;

@@ -335,7 +335,7 @@ QByteArray * eveMessageFactory::getNewStream(eveMessage *message){
     case EVEMESSAGETYPE_VERSION:
     {
         eveVersionMessage * vMsg = (eveVersionMessage*)message;
-        outStream << vMsg->getVersion() << vMsg->getRevision() << vMsg->getPatch();
+        outStream << messageLength << vMsg->getVersion() << vMsg->getRevision() << vMsg->getPatch();
     }
         break;
         case EVEMESSAGETYPE_ERROR:

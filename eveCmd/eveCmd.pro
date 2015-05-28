@@ -67,7 +67,7 @@ linux-g++-32 {
    ARCH = Linux
 }
 
-linux-g++ {
+linux-g++-64 {
    EPICS_BASE = /soft/epics/base-3.14.12.2
    TARGET_ARCH = linux-x86_64
    ARCH = Linux
