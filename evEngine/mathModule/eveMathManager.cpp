@@ -82,7 +82,6 @@ void eveMathManager::handleMessage(eveMessage *message){
 		break;
         case EVEMESSAGETYPE_CHAINSTATUS:
 		{
-            bool sendShutdown = false;
             if (((eveChainStatusMessage*)message)->getChainId() == chid){
                 int smid = ((eveChainStatusMessage*)message)->getLastSmId();
                 SMStatusT lastSMStatus = ((eveChainStatusMessage*)message)->getLastSmStatus();
@@ -109,9 +108,7 @@ void eveMathManager::handleMessage(eveMessage *message){
 							if (math->hasInit()) math->reset();
 						}
 					}
-				}
-                else if (((eveChainStatusMessage*)message)->getChainStatus()== CHStatusDONE)
-                    sendShutdown = true;
+                }
 			}
             else
                 sendError(ERROR,0,QString("received chainstatus message for chain %1 my id: %2").arg(((eveChainStatusMessage*)message)->getChainId()).arg(chid));
@@ -121,10 +118,12 @@ void eveMathManager::handleMessage(eveMessage *message){
             message->setDestinationFacility(EVECHANNEL_STORAGE | EVECHANNEL_NET | EVECHANNEL_MANAGER);
             message->addDestinationFacility(EVECHANNEL_EVENT);
             addMessage(message);
-            if (sendShutdown){
+            if (((eveChainStatusMessage*)message)->getChainStatus() == CHStatusDONE){
                 eveChainStatusMessage* doneMessage = new eveChainStatusMessage(chid, CHStatusMATHDONE);
                 doneMessage->setDestinationChannel(storageChannel);
                 doneMessage->addDestinationFacility(EVECHANNEL_STORAGE);
+                doneMessage->addDestinationFacility(EVECHANNEL_MANAGER);
+                doneMessage->addDestinationFacility(EVECHANNEL_NET);
                 sendError(DEBUG, 0, QString("MathManager send MathDone message chid: %1").arg(chid));
                 addMessage(doneMessage);
                 shutdown();

@@ -33,63 +33,86 @@ eveBasicStatusTracker::~eveBasicStatusTracker() {
  */
 bool eveBasicStatusTracker::setChainStatus(eveChainStatusMessage* message) {
 
-	int chainId = message->getChainId();
+    int chainId = message->getChainId();
     CHStatusT newStatus = message->getChainStatus();
-	bool AllDone = true;
-	bool engStatusChng = false;
+    bool engStatusChng = false;
+    bool AllDone = true;
 
-	if(chainStatus.value(chainId) == newStatus) return false;
-	chainStatus.insert(chainId,newStatus);
+    if(chainStatus.value(chainId) == newStatus) return false;
+    chainStatus.insert(chainId,newStatus);
 
-	switch (newStatus) {
-        case CHStatusExecuting:
-			if ((engineStatus == eveEngIDLEXML) || (engineStatus == eveEngLOADINGXML)){
-				engineStatus = eveEngEXECUTING;
-				engStatusChng=true;
-			}
-			break;
-        case CHStatusDONE:
-        case CHStatusSTORAGEDONE:
-            eveError::log(DEBUG, QString("eveStatusTracker::Chain done"));
-            foreach (int cid, chainStatus.keys()){
-				//if (cid == chainId) continue;
-                CHStatusT endStatus = CHStatusDONE;
-				if (chidWithStorageList.contains(cid))
-                    endStatus = CHStatusSTORAGEDONE;
-				if (chainStatus.value(cid) != endStatus) AllDone = false;
-                eveError::log(DEBUG, QString("eveStatusTracker:: chainStatus %1 endStatus %2").arg((quint32)chainStatus.value(cid)).arg((quint32)endStatus));
+    switch (newStatus) {
+    case CHStatusIDLE:
+        if (!haveActiveMath.contains(chainId)) haveActiveMath.append(chainId);
+        if (!haveActiveScan.contains(chainId)) haveActiveScan.append(chainId);
+    case CHStatusExecuting:
+        if ((engineStatus == eveEngIDLEXML) || (engineStatus == eveEngLOADINGXML)){
+            engineStatus = eveEngEXECUTING;
+            engStatusChng=true;
+        }
+        break;
+    case CHStatusDONE:
+    case CHStatusSTORAGEDONE:
+    case CHStatusMATHDONE:
+        if (newStatus == CHStatusSTORAGEDONE) haveActiveStorage.removeAll(chainId);
+        else if (newStatus == CHStatusMATHDONE) haveActiveMath.removeAll(chainId);
+        else if (newStatus == CHStatusDONE) haveActiveScan.removeAll(chainId);
+        if (!(haveActiveMath.contains(chainId) || haveActiveStorage.contains(chainId) || haveActiveScan.contains(chainId))){
+            chainStatus.insert(chainId, CHStatusALLDONE);
+            eveError::log(DEBUG, QString("eveStatusTracker::Chain (math, storage, scan) done"));
+        }
+        foreach (int cid, chainStatus.keys()){
+            if (chainStatus.value(cid) != CHStatusALLDONE) AllDone = false;
+            eveError::log(DEBUG, QString("eveStatusTracker:: chainStatus %1").arg((quint32)chainStatus.value(cid)));
+        }
+        eveError::log(DEBUG, QString("eveStatusTracker:: All done? %1").arg(AllDone?"true":"false"));
+        if (AllDone){
+            eveError::log(DEBUG, QString("eveStatusTracker::Engine done, Idle, NoXML"));
+            if (engineStatus != eveEngIDLENOXML){
+                engineStatus = eveEngIDLENOXML;
+                engStatusChng=true;
+                // signal end of work, used to kill engine in batch mode
+                if (repeatCount == 0)emit engineIdle();
             }
-            eveError::log(DEBUG, QString("eveStatusTracker:: All done? %1").arg(AllDone?"true":"false"));
-            if (AllDone){
-                eveError::log(DEBUG, QString("eveStatusTracker::Engine done, Idle, NoXML"));
-				if (engineStatus != eveEngIDLENOXML){
-					engineStatus = eveEngIDLENOXML;
-					engStatusChng=true;
-					loadedXML = false;
-					XmlName.clear();
-					chainStatus.clear();
-					chidWithStorageList.clear();
-					// signal end of work, used to kill engine in batch mode
-					if (repeatCount == 0)emit engineIdle();
-				}
-			}
-			break;
-		default:
-			break;
-	}
-	return engStatusChng;
+        }
+        break;
+    default:
+        break;
+    }
+
+    return engStatusChng;
 }
+
+CHStatusT eveBasicStatusTracker::getChainStatus(int chid) {
+    if (chainStatus.contains(chid))
+        return chainStatus.value(chid);
+    else
+        return CHStatusUNKNOWN;
+}
+
+void eveBasicStatusTracker::reset(){
+
+    loadedXML = false;
+    XmlName.clear();
+    chainStatus.clear();
+    haveActiveStorage.clear();
+    haveActiveScan.clear();
+    haveActiveMath.clear();
+
+    return;
+}
+
 
 /**
  * \brief set the repeatCount to a number in range 0-65535
  */
 void eveBasicStatusTracker::setRepeatCount(int count) {
-	if (count < 0)
-		repeatCount=0;
-	else if (count > 0xffff)
-		repeatCount = 0xffff;
-	else
-		repeatCount = count;
+    if (count < 0)
+        repeatCount=0;
+    else if (count > 0xffff)
+        repeatCount = 0xffff;
+    else
+        repeatCount = count;
 }
 
 /**
@@ -97,25 +120,17 @@ void eveBasicStatusTracker::setRepeatCount(int count) {
  * \return a message containing the current engine status
  */
 eveEngineStatusMessage * eveBasicStatusTracker::getEngineStatusMessage() {
-	unsigned int status = ((unsigned int)engineStatus) | (repeatCount << 16);
-	return new eveEngineStatusMessage(status, XmlName);
+    unsigned int status = ((unsigned int)engineStatus) | (repeatCount << 16);
+    return new eveEngineStatusMessage(status, XmlName);
 }
 
-
-eveStatusTracker::eveStatusTracker() {
-	// Auto-generated constructor stub
-}
-
-eveStatusTracker::~eveStatusTracker() {
-	// Auto-generated destructor stub
-}
 
 eveManagerStatusTracker::eveManagerStatusTracker() {
-	autoStart = false;
+    autoStart = false;
 }
 
 eveManagerStatusTracker::~eveManagerStatusTracker() {
-	// Auto-generated destructor stub
+    // Auto-generated destructor stub
 }
 
 /**
@@ -124,11 +139,11 @@ eveManagerStatusTracker::~eveManagerStatusTracker() {
  */
 bool eveManagerStatusTracker::setStart() {
 
-	if ((engineStatus == eveEngIDLEXML) || (engineStatus == eveEngPAUSED)){
-		engineStatus = eveEngEXECUTING;
-		return true;
-	}
-	return false;
+    if ((engineStatus == eveEngIDLEXML) || (engineStatus == eveEngPAUSED)){
+        engineStatus = eveEngEXECUTING;
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -137,11 +152,11 @@ bool eveManagerStatusTracker::setStart() {
  */
 bool eveManagerStatusTracker::setStop() {
 
-	if ((engineStatus == eveEngEXECUTING) || (engineStatus == eveEngPAUSED)){
-		engineStatus = eveEngSTOPPED;
-		return true;
-	}
-	return false;
+    if ((engineStatus == eveEngEXECUTING) || (engineStatus == eveEngPAUSED)){
+        engineStatus = eveEngSTOPPED;
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -150,10 +165,10 @@ bool eveManagerStatusTracker::setStop() {
  */
 bool eveManagerStatusTracker::setBreak() {
 
-	if ((engineStatus == eveEngEXECUTING) || (engineStatus == eveEngPAUSED)){
-		return true;
-	}
-	return false;
+    if ((engineStatus == eveEngEXECUTING) || (engineStatus == eveEngPAUSED)){
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -162,13 +177,13 @@ bool eveManagerStatusTracker::setBreak() {
  */
 bool eveManagerStatusTracker::setHalt() {
 
-	if ((engineStatus == eveEngIDLEXML) || (engineStatus == eveEngLOADINGXML) ||
-			(engineStatus == eveEngEXECUTING) || (engineStatus == eveEngPAUSED)	||
-			(engineStatus == eveEngSTOPPED)){
-		engineStatus = eveEngHALTED;
-		return true;
-	}
-	return false;
+    if ((engineStatus == eveEngIDLEXML) || (engineStatus == eveEngLOADINGXML) ||
+            (engineStatus == eveEngEXECUTING) || (engineStatus == eveEngPAUSED)	||
+            (engineStatus == eveEngSTOPPED)){
+        engineStatus = eveEngHALTED;
+        return true;
+    }
+    return false;
 }
 /**
  * \brief tell tracker that stop command has been received
@@ -176,11 +191,11 @@ bool eveManagerStatusTracker::setHalt() {
  */
 bool eveManagerStatusTracker::setPause() {
 
-	if (engineStatus == eveEngEXECUTING){
-		engineStatus = eveEngPAUSED;
-		return true;
-	}
-	return false;
+    if (engineStatus == eveEngEXECUTING){
+        engineStatus = eveEngPAUSED;
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -189,12 +204,12 @@ bool eveManagerStatusTracker::setPause() {
  */
 bool eveManagerStatusTracker::setLoadingXML(QString xmlname) {
 
-	if (engineStatus == eveEngIDLENOXML){
-		engineStatus = eveEngLOADINGXML;
-		XmlName = xmlname;
-		return true;
-	}
-	return false;
+    if (engineStatus == eveEngIDLENOXML){
+        engineStatus = eveEngLOADINGXML;
+        XmlName = xmlname;
+        return true;
+    }
+    return false;
 }
 /**
  * \brief tell tracker that loading of XML was successful / unsuccessful
@@ -203,18 +218,18 @@ bool eveManagerStatusTracker::setLoadingXML(QString xmlname) {
  */
 bool eveManagerStatusTracker::setXMLLoaded(bool status) {
 
-	if (engineStatus == eveEngLOADINGXML){
-		if (status) {
-			engineStatus = eveEngIDLEXML;
-			loadedXML = true;
-		}
-		else {
-			engineStatus = eveEngIDLENOXML;
-			XmlName.clear();
-		}
-		return true;
-	}
-	return false;
+    if (engineStatus == eveEngLOADINGXML){
+        if (status) {
+            engineStatus = eveEngIDLEXML;
+            loadedXML = true;
+        }
+        else {
+            engineStatus = eveEngIDLENOXML;
+            XmlName.clear();
+        }
+        return true;
+    }
+    return false;
 }
 /**
  * \brief switch autostart on or off
@@ -223,14 +238,14 @@ bool eveManagerStatusTracker::setXMLLoaded(bool status) {
  */
 bool eveManagerStatusTracker::setAutoStart(bool autostart) {
 
-	if (autoStart == autostart) return false;
-	autoStart = autostart;
-	return true;
+    if (autoStart == autostart) return false;
+    autoStart = autostart;
+    return true;
 }
 
 eveEngineStatusMessage * eveManagerStatusTracker::getEngineStatusMessage() {
 
-	unsigned int status = ((unsigned int)engineStatus) | (repeatCount << 16);
-	if (autoStart) status |= EVEENGINESTATUS_AUTOSTART;
-	return new eveEngineStatusMessage(status, XmlName);
+    unsigned int status = ((unsigned int)engineStatus) | (repeatCount << 16);
+    if (autoStart) status |= EVEENGINESTATUS_AUTOSTART;
+    return new eveEngineStatusMessage(status, XmlName);
 }

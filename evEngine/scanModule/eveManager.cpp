@@ -134,12 +134,22 @@ void eveManager::handleMessage(eveMessage *message){
         }
         break;
     case EVEMESSAGETYPE_STORAGECONFIG:
-        engineStatus->addStorageId(((eveStorageMessage*)message)->getChainId());
+        engineStatus->setActiveStorage(((eveStorageMessage*)message)->getChainId());
         break;
     case EVEMESSAGETYPE_CHAINSTATUS:
-        if (engineStatus->setChainStatus((eveChainStatusMessage*)message)){
-            addMessage(engineStatus->getEngineStatusMessage());
+    {
+        int chid = ((eveChainStatusMessage*)message)->getChainId();
+        bool engineStatusChanged = engineStatus->setChainStatus((eveChainStatusMessage*)message);
+        if (engineStatus->getChainStatus(chid) == CHStatusALLDONE) {
+            eveChainStatusMessage *done_message = new eveChainStatusMessage(chid, CHStatusALLDONE);
+            done_message->addDestinationFacility(EVECHANNEL_NET);
+            addMessage(done_message);
         }
+        if (engineStatusChanged) {
+            addMessage(engineStatus->getEngineStatusMessage());
+            engineStatus->reset();
+        }
+    }
         break;
     case EVEMESSAGETYPE_ENGINESTATUS:
         // load the next entry from playlist, if whole chain is done

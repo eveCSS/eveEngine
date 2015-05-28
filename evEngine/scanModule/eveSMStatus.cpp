@@ -273,7 +273,8 @@ bool eveSMStatus::setEvent(eveEventProperty* evprop ) {
             if (isExecuting()) reason = SMReasonGUISKIP;
             breakCondition = evprop->getOn();
         }
-        else if  (evprop->getActionType() == eveEventProperty::STOP){
+        else if  ((evprop->getActionType() == eveEventProperty::STOP) ||
+                   (evprop->getActionType() == eveEventProperty::HALT)) {
             if (isExecuting()) reason = SMReasonGUISTOP;
             stopCondition = evprop->getOn();
         }

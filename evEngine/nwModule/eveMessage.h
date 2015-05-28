@@ -326,7 +326,7 @@ private:
 	int remainingTime;
 };
 
-enum CHStatusT {CHStatusIDLE=1, CHStatusExecuting, CHStatusDONE, CHStatusSTORAGEDONE, CHStatusMATHDONE, CHStatusALLDONE};
+enum CHStatusT {CHStatusUNKNOWN, CHStatusIDLE, CHStatusExecuting, CHStatusDONE, CHStatusSTORAGEDONE, CHStatusMATHDONE, CHStatusALLDONE};
 enum SMStatusT {SMStatusNOTSTARTED, SMStatusINITIALIZING, SMStatusEXECUTING, SMStatusPAUSE, SMStatusTRIGGERWAIT, SMStatusAPPEND, SMStatusDONE} ;
 enum SMReasonT {SMReasonNone, SMReasonSMREDOACTIVE, SMReasonCHREDOACTIVE, SMReasonSMPAUSE, SMReasonCHPAUSE, SMReasonGUIPAUSE, SMReasonSMSKIP,
                 SMReasonCHSKIP, SMReasonGUISKIP, SMReasonCHSTOP, SMReasonGUISTOP};

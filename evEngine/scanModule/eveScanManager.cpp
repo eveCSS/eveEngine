@@ -276,7 +276,6 @@ void eveScanManager::sendRemainingTime(){
             int remaining = elapsed * totalPositions / posCounter - elapsed;
             sendError(DEBUG, 0, QString("remaining %4, elapsed %1, totalPositions %2, posCounter %3").arg(elapsed).arg(totalPositions).arg(posCounter).arg(remaining));
             eveChainProgressMessage* message = new eveChainProgressMessage(chainId, posCounter, eveTime::getCurrent(), remaining);
-            // message->addDestinationFacility(EVECHANNEL_MATH);
             addMessage(message);
         }
     }
@@ -369,6 +368,7 @@ void eveScanManager::sendStatus(){
     eveChainStatusMessage* ecmessage = new eveChainStatusMessage(chainId, currentStatus);
     ecmessage->addDestinationFacility(EVECHANNEL_MATH);
     addMessage(ecmessage);
+    if (currentStatus.getCStatus() == CHStatusDONE) sendRemainingTime();
 }
 
 void eveScanManager::addToHash(QHash<QString, QString>& hash, QString key, eveXMLReader* parser){

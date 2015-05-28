@@ -23,10 +23,15 @@ class eveBasicStatusTracker : public QObject{
 public:
 	eveBasicStatusTracker();
 	virtual ~eveBasicStatusTracker();
+    void reset();
     bool setChainStatus(eveChainStatusMessage*);
-	void addStorageId(int id){ chidWithStorageList.append(id);};
-	virtual eveEngineStatusMessage* getEngineStatusMessage();
+    void setActiveStorage(int id){ haveActiveStorage.append(id);};
+    void setActiveScan(int id){ haveActiveScan.append(id);};
+    void setActiveMath(int id){ haveActiveMath.append(id);};
+    virtual eveEngineStatusMessage* getEngineStatusMessage();
 	engineStatusT getEngineStatus(){return engineStatus;};
+    CHStatusT getChainStatus(int chid);
+
 	int getRepeatCount(){return repeatCount;};
 	void setRepeatCount(int count);
 	void decrRepeatCount(){if (repeatCount > 0) --repeatCount;};
@@ -39,25 +44,16 @@ signals:
 
 protected:
     QHash<int, CHStatusT> chainStatus;
-	QList<int> chidWithStorageList;	// all chains with a storage module
-	engineStatusT engineStatus;
+    QList<int> haveActiveStorage;	// list of chains with a running storage module
+    QList<int> haveActiveMath;	    // list of chains with a running math module
+    QList<int> haveActiveScan;	    // list of chains with a running scan module
+    engineStatusT engineStatus;
 	QString XmlName;
 	bool loadedXML;
 	unsigned int repeatCount;
 
 };
 
-/**
- * \brief tracks chain status for Storage
- *
- * unsure if we need this
- */
-class eveStatusTracker : public eveBasicStatusTracker {
-public:
-	eveStatusTracker();
-	virtual ~eveStatusTracker();
-
-};
 
 /**
  * \brief tracks chain status and commands for manager
