@@ -1183,120 +1183,119 @@ QList<eveEventProperty*>* eveXMLReader::getEventList(QDomElement domElement){
 
 eveEventProperty* eveXMLReader::getEvent(eveEventProperty::actionTypeT action, QDomElement domElement){
 
- 	if (!domElement.hasAttribute("type")){
-		sendError(ERROR, 0, "getEvent: event tags must have an attribute type");
-		return NULL;
- 	}
+    QDomElement domDetector = domElement.firstChildElement("detectorevent");
+    QDomElement domSchedule = domElement.firstChildElement("scheduleevent");
+    QDomElement domMonitor = domElement.firstChildElement("monitorevent");
 
- 	if (domElement.attribute("type") == "schedule"){
-		eventTypeT eventType = eveEventTypeSCHEDULE;
-		incidentTypeT incident = eveIncidentEND;
-		int chid=0, smid=0;
-		QDomElement domIncident = domElement.firstChildElement("incident");
-		if ((!domIncident.isNull()) && (domIncident.text() == "Start")) incident = eveIncidentSTART;
-		QDomElement domChainid = domElement.firstChildElement("chainid");
-		QDomElement domSmid = domElement.firstChildElement("smid");
-		if (domChainid.isNull() || domSmid.isNull()){
-			sendError(ERROR, 0, "getEvent: <event type=schedule> must have valid <chainid> and <smid> tags");
-			return NULL;
-		}
-		bool cok, sok;
-		chid = domChainid.text().toInt(&cok);
-		smid = domSmid.text().toInt(&sok);
-		if (!cok || !sok){
-			sendError(ERROR, 0, "getEvent: error converting chainid or smid");
-			return NULL;
-		}
-		sendError(DEBUG, 0, QString("found schedule event definition, chid %1, smid %2").arg(chid).arg(smid));
-		return new eveEventProperty("", "", eveVariant(QVariant(eveVariant::getMangled(chid,smid))), eventType, incident, action, NULL);
-	}
- 	else if (domElement.attribute("type") == "detector"){
-		eventTypeT eventType = eveEventTypeDETECTOR;
+    if (!domDetector.isNull()) {
+        eventTypeT eventType = eveEventTypeDETECTOR;
 
-		QDomElement domId = domElement.firstChildElement("id");
-		if (domId.isNull()){
-			sendError(ERROR, 0, "getEvent: need <id> tag for detector event");
-			return NULL;
-		}
+        QDomElement domId = domDetector.firstChildElement("id");
+        if (domId.isNull()){
+            sendError(ERROR, 0, "getEvent: need <id> tag for detector event");
+            return NULL;
+        }
 
-		QString eventId = domId.text().trimmed();
-		QRegExp regex = QRegExp("^D-(\\d+)-(\\d+)-([a-zA-Z0-9_:.;%-]+)$");
-		if (!(eventId.contains(regex) && (regex.numCaptures() == 3))){
-			sendError(ERROR, 0, QString("get Detector Event: invalid detector id: %1").arg(eventId));
-			return NULL;
-		}
+        QString eventId = domId.text().trimmed();
+        QRegExp regex = QRegExp("^D-(\\d+)-(\\d+)-([a-zA-Z0-9_:.;%-]+)$");
+        if (!(eventId.contains(regex) && (regex.numCaptures() == 3))){
+            sendError(ERROR, 0, QString("get Detector Event: invalid detector id: %1").arg(eventId));
+            return NULL;
+        }
 
-		int chid=0, smid=0;
-		bool cok, sok;
+        int chid=0, smid=0;
+        bool cok, sok;
         sendError(DEBUG, 0, QString("get Detector Event: all: %1 chid %2, smid: %3 det: %4").arg(regex.capturedTexts().at(0)).arg(regex.capturedTexts().at(1)).arg(regex.capturedTexts().at(2)).arg(regex.capturedTexts().at(3)));
-		chid = regex.capturedTexts().at(1).toInt(&cok);
-		smid = regex.capturedTexts().at(2).toInt(&sok);
-		if (!cok || !sok){
-			sendError(ERROR, 0, "getEvent: error extracting chainid or smid from detector event id");
-			return NULL;
-		}
-		QString devname = regex.capturedTexts().at(3);
-		eveDeviceDefinition* deviceDef = deviceList.getAnyDef(devname);
-		if ((deviceDef == NULL) || (deviceDef->getValueCmd() == NULL)){
-			sendError(ERROR, 0, QString("get Detector event: no or invalid device definition found for %1").arg(devname));
-			return NULL;
-		}
-		// rebuild eventId to remove possible leading zeros
-		eventId = QString("D-%1-%2-%3").arg(chid).arg(smid).arg(devname);
-		sendError(DEBUG, 0, QString("found detector event definition for %1, id:%2, smid: %3, chid: %4").arg(devname).arg(eventId).arg(smid).arg(chid));
-		return new eveEventProperty(eventId, devname, eveVariant(QVariant(eveVariant::getMangled(chid,smid))), eventType, eveIncidentNONE, action, NULL);
-	}
-	else if (domElement.attribute("type") == "monitor"){
-	 	eventTypeT eventType = eveEventTypeMONITOR;
+        chid = regex.capturedTexts().at(1).toInt(&cok);
+        smid = regex.capturedTexts().at(2).toInt(&sok);
+        if (!cok || !sok){
+            sendError(ERROR, 0, "getEvent: error extracting chainid or smid from detector event id");
+            return NULL;
+        }
+        QString devname = regex.capturedTexts().at(3);
+        eveDeviceDefinition* deviceDef = deviceList.getAnyDef(devname);
+        if ((deviceDef == NULL) || (deviceDef->getValueCmd() == NULL)){
+            sendError(ERROR, 0, QString("get Detector event: no or invalid device definition found for %1").arg(devname));
+            return NULL;
+        }
+        // rebuild eventId to remove possible leading zeros
+        eventId = QString("D-%1-%2-%3").arg(chid).arg(smid).arg(devname);
+        sendError(DEBUG, 0, QString("found detector event definition for %1, id:%2, smid: %3, chid: %4").arg(devname).arg(eventId).arg(smid).arg(chid));
+        return new eveEventProperty(eventId, devname, eveVariant(QVariant(eveVariant::getMangled(chid,smid))), eventType, eveIncidentNONE, action, NULL);
+    }
+    else if (!domSchedule.isNull()) {
+        eventTypeT eventType = eveEventTypeSCHEDULE;
+        incidentTypeT incident = eveIncidentEND;
+        int chid=0, smid=0;
+        QDomElement domIncident = domSchedule.firstChildElement("incident");
+        if ((!domIncident.isNull()) && (domIncident.text() == "Start")) incident = eveIncidentSTART;
+        QDomElement domChainid = domSchedule.firstChildElement("chainid");
+        QDomElement domSmid = domSchedule.firstChildElement("smid");
+        if (domChainid.isNull() || domSmid.isNull()){
+            sendError(ERROR, 0, "getEvent: <event type=schedule> must have valid <chainid> and <smid> tags");
+            return NULL;
+        }
+        bool cok, sok;
+        chid = domChainid.text().toInt(&cok);
+        smid = domSmid.text().toInt(&sok);
+        if (!cok || !sok){
+            sendError(ERROR, 0, "getEvent: error converting chainid or smid");
+            return NULL;
+        }
+        sendError(DEBUG, 0, QString("found schedule event definition, chid %1, smid %2").arg(chid).arg(smid));
+        return new eveEventProperty("", "", eveVariant(QVariant(eveVariant::getMangled(chid,smid))), eventType, incident, action, NULL);
+    }
+    else if (!domMonitor.isNull()) {
+        eventTypeT eventType = eveEventTypeMONITOR;
 
-	 	QDomElement domId = domElement.firstChildElement("id");
-		if (domId.isNull()){
-			sendError(ERROR, 0, "getEvent: need <id> tag for monitor event");
-			return NULL;
-		}
+        QDomElement domId = domMonitor.firstChildElement("id");
+        if (domId.isNull()){
+            sendError(ERROR, 0, "getEvent: need <id> tag for monitor event");
+            return NULL;
+        }
 
-	 	eveDeviceDefinition* deviceDef = deviceList.getAnyDef(domId.text());
-		if ((deviceDef == NULL) || (deviceDef->getValueCmd() == NULL)){
-			sendError(ERROR, 0, QString("getEvent: no or invalid device definition found for %1").arg(domId.text()));
-			return NULL;
-		}
+        eveDeviceDefinition* deviceDef = deviceList.getAnyDef(domId.text());
+        if ((deviceDef == NULL) || (deviceDef->getValueCmd() == NULL)){
+            sendError(ERROR, 0, QString("getEvent: no or invalid device definition found for %1").arg(domId.text()));
+            return NULL;
+        }
 
-	 	QDomElement domLimit = domElement.firstChildElement("limit");
-		if (domLimit.isNull()){
-			sendError(ERROR, 0, QString("getEvent: need <limit> tag for monitor event with id %1").arg(domId.text()));
-			return NULL;
-		}
-		if (!domLimit.hasAttribute("comparison") || !domLimit.hasAttribute("type")){
-			sendError(ERROR, 0, QString("getEvent: need valid type and comparison attributes in <limit> tag of event with id %1").arg(domId.text()));
-			return NULL;
-		}
+        QDomElement domLimit = domMonitor.firstChildElement("limit");
+        if (domLimit.isNull()){
+            sendError(ERROR, 0, QString("getEvent: need <limit> tag for monitor event with id %1").arg(domId.text()));
+            return NULL;
+        }
+        if (!domLimit.hasAttribute("comparison") || !domLimit.hasAttribute("type")){
+            sendError(ERROR, 0, QString("getEvent: need valid type and comparison attributes in <limit> tag of event with id %1").arg(domId.text()));
+            return NULL;
+        }
 
-		eveVariant limitVal;
-		bool ok = true;
-		QString name = deviceDef->getName();
+        eveVariant limitVal;
+        bool ok = true;
+        QString name = deviceDef->getName();
 
-		QString comparison = domLimit.attribute("comparison");
+        QString comparison = domLimit.attribute("comparison");
 
-		QString typeString = domLimit.attribute("type");
-		if (typeString == "int"){
-			limitVal.setType(eveINT);
-			limitVal.setValue(domLimit.text().toInt(&ok));
-		}
-		else if (typeString == "double"){
-			limitVal.setType(eveDOUBLE);
-			limitVal.setValue(domLimit.text().toDouble(&ok));
-		}
-		else {
-			limitVal.setType(eveSTRING);
-			limitVal.setValue(domLimit.text());
-		}
-		if (!ok) sendError(ERROR, 0, QString("getEvent: error converting type attribute of <limit> tag of event with id %1").arg(domId.text()));
+        QString typeString = domLimit.attribute("type");
+        if (typeString == "int"){
+            limitVal.setType(eveINT);
+            limitVal.setValue(domLimit.text().toInt(&ok));
+        }
+        else if (typeString == "double"){
+            limitVal.setType(eveDOUBLE);
+            limitVal.setValue(domLimit.text().toDouble(&ok));
+        }
+        else {
+            limitVal.setType(eveSTRING);
+            limitVal.setValue(domLimit.text());
+        }
+        if (!ok) sendError(ERROR, 0, QString("getEvent: error converting type attribute of <limit> tag of event with id %1").arg(domId.text()));
 
-		sendError(DEBUG, 0, QString("found monitor event definition for %1").arg(name));
-		return new eveEventProperty(name, comparison, limitVal, eventType, eveIncidentNONE, action, deviceDef->getValueCmd()->clone());
+        sendError(DEBUG, 0, QString("found monitor event definition for %1").arg(name));
+        return new eveEventProperty(name, comparison, limitVal, eventType, eveIncidentNONE, action, deviceDef->getValueCmd()->clone());
 	}
 	else{
-		sendError(ERROR, 0, "getEvent: invalid attribute type");
+        sendError(ERROR, 0, "getEvent: invalid event specification");
 		return NULL;
 	}
 }
