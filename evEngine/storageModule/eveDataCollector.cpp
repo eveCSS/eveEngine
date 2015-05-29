@@ -133,7 +133,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QStri
       sman->sendError(ERROR, 0, QString("Please provide a valid location tag for save plugin %1").arg(pluginName));
       return;
     }
-    // check if sharelibName has a directory path, move it it sharelibPath
+    // check if sharelibName has a directory path
     QFileInfo finfo(sharelibName);
     QString sharelibPath = finfo.absolutePath();
     sharelibName = finfo.fileName();
@@ -143,11 +143,12 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QStri
 		QString osLibPrep = "";
 #elif defined(Q_OS_MAC)
 		// TODO what is the MacOS extension?
+#elif defined(Q_OS_LINUX)
 		QString osLibExt = ".so";
 		QString osLibPrep = "lib";
 #else
-		QString osLibExt = ".so";
-		QString osLibPrep = "lib";
+    QString osLibExt = "";
+    QString osLibPrep = "";
 #endif
 
 		if (!sharelibName.endsWith(osLibExt))
@@ -156,7 +157,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QStri
 			sharelibName = osLibPrep + sharelibName;
 
     QString sharelibNameVersion = sharelibName.left(sharelibName.lastIndexOf(osLibExt)) + "." +
-                                  eveParameter::getParameter("version") + osLibExt;
+                                  eveParameter::getParameter("savepluginversion") + osLibExt;
 
     QString pluginpath;
     QString fullname;
@@ -167,7 +168,7 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QStri
       }
     }
     QStringList dirSearchList = pluginpath.split(":");
-    if (sharelibPath.length() > 0) dirSearchList.prepend(sharelibPath);
+    if (sharelibPath.length() > 0) dirSearchList.append(sharelibPath);
     foreach (QString path, dirSearchList){
       if (path.length() == 0) continue;
       if (!path.endsWith("/")) path += "/";
@@ -176,11 +177,12 @@ eveDataCollector::eveDataCollector(eveStorageManager* sman, QHash<QString, QStri
         fullname = infoVersion.absoluteFilePath();
         break;
       }
-      QFileInfo info(path + sharelibName);
-      if (info.exists()) {
-        fullname = info.absoluteFilePath();
-        break;
-      }
+      // Comment to enforce plugin Version in library name
+//      QFileInfo info(path + sharelibName);
+//      if (info.exists()) {
+//        fullname = info.absoluteFilePath();
+//        break;
+//      }
     }
 
 		if (fullname.isEmpty()){
