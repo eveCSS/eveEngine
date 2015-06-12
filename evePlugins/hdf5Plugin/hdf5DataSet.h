@@ -21,10 +21,7 @@ using namespace std;
 #define STANDARD_ENUM_STRINGSIZE 16
 #define DATETIME_STRINGSIZE 23
 
-typedef struct {
-	qint32 positionCount;
-	void *aPtr;
-} memSpace_t;
+class PCmemSpace;
 
 class hdf5DataSet {
 public:
@@ -34,15 +31,12 @@ public:
 	int addData(eveDataMessage*);
 	void setSizeIncrement(int inc){sizeIncrement=inc;};
 	QString getError(){return errorString;};
+    static AtomType convertToHdf5Type(eveType);
 
 private:
     enum h5storageType {Unknown, PosCountValues, PosCountNamedArray};
     static CompType createDataType(QStringList, eveType);
-    static CompType createDataTypeOld(QString, QString, eveType, int);
     static CompType createModDataType(QString, QString, QString, eveType);
-    static AtomType convertToHdf5Type(eveType);
-	void* getDataBufferAddress(eveDataMessage*);
-	int getMinimumDataBufferLength(eveDataMessage*, int);
     void init(eveDataMessage*);
 	void addParamAttributes(H5Object*);
 	void addDataAttribute(H5Object*, QString, QString);
@@ -55,7 +49,7 @@ private:
 	H5File* dataFile;
 	QString errorString;
 	eveType dataType;
-	memSpace_t *memBuffer;
+    PCmemSpace *memBuffer;
 	QString dspath;			// e.g. /1/XMLID
 	QString name;
 	QString basename;

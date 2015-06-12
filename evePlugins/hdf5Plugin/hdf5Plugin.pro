@@ -5,10 +5,11 @@ INCLUDEPATH += ../../evEngine/storageModule/ \
     ../../evEngine/nwModule/ \
     ../../evEngine/scanModule/
 HEADERS = hdf5DataSet.h \
-    hdf5Plugin.h
+    hdf5Plugin.h \
+    pcmemspace.h
 SOURCES = hdf5DataSet.cpp \
     hdf5Plugin.cpp \
-    ../../evEngine/scanModule/eveTime.cpp
+    pcmemspace.cpp
 
 win32-g++ {
    UNAME = $$system(uname -s)
@@ -37,6 +38,7 @@ linux-g++-32 {
 
 linux-g++-64 {
    HDF_BASE = /home/eden/src/hdf5/1.6.10_x86_64
+#   HDF_BASE = /home/eden/src/hdf5/hdf5-1.8.9/hdf5_64bit
    HDF_LIB = $$HDF_BASE/lib64
    EPICS_BASE = /soft/epics/base-3.14.12.2
    TARGET_ARCH = linux-x86_64
@@ -46,6 +48,7 @@ linux-g++-64 {
 INCLUDEPATH += $$EPICS_BASE/include \
     $$EPICS_BASE/include/os/$$ARCH \
     $$HDF_BASE/include
+
 
 LIBS += -L $$EPICS_BASE/lib/$$TARGET_ARCH \
     -L$$HDF_LIB \

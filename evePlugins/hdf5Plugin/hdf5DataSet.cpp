@@ -8,6 +8,7 @@
 #include "hdf5DataSet.h"
 #include <QDateTime>
 #include "eveStartTime.h"
+#include "pcmemspace.h"
 
 hdf5DataSet::hdf5DataSet(QString path, QString colid, QString devicename, QStringList info, H5File* file) {
 
@@ -28,7 +29,8 @@ hdf5DataSet::~hdf5DataSet() {
 
     close();
     if (arraySize == 1) {
-        if (memBuffer != NULL) free(memBuffer);
+        if (memBuffer != NULL) delete memBuffer;
+        memBuffer = NULL;
     }
     else {
         if (isInit) targetGroup.close();
@@ -66,7 +68,9 @@ void hdf5DataSet::init(eveDataMessage* data){
         rank = 1;
         maxdim[0] = H5S_UNLIMITED;   /* Dataspace dimensions file*/
         currentDim[0] = sizeIncrement;
+        currentDim[1] = 0;
         chunk_dims[0] = 1;
+        chunk_dims[1] = 0;
     }
     else {
         sizeIncrement = 1;
@@ -74,7 +78,7 @@ void hdf5DataSet::init(eveDataMessage* data){
         maxdim[0] = arraySize;
         maxdim[1] = H5S_UNLIMITED;
         currentDim[0] = arraySize;		// not constant
-        currentDim[1] = sizeIncrement; 	// default array sizeIncrement
+        currentDim[1] = 0;
         chunk_dims[0] = arraySize;		// constant
         chunk_dims[1] = sizeIncrement;
     }
@@ -107,11 +111,7 @@ void hdf5DataSet::init(eveDataMessage* data){
 
             compoundType = createDataType(columnTitels, data->getDataType());
             // Create the memory buffer.
-            memBuffer = (memSpace_t*)malloc(compoundType.getSize());
-            if (memBuffer == NULL) {
-                errorString += QString("hdf5DataSet::init: Unable to allocate buffer");
-                return;
-            }
+            memBuffer = new PCmemSpace(compoundType.getSize());
 
             // Create the dataset.
             dset = dataFile->createDataSet(qPrintable(dspath), compoundType, dspace, createProps);
@@ -181,35 +181,26 @@ int hdf5DataSet::addData(eveDataMessage* data){
         }
 
         // zero the memory buffer
-        memset(memBuffer, 0, compoundType.getSize());
+        memBuffer->clear();
 
         if (data->getDataMod() == DMTdeviceData)
-            memBuffer->positionCount = data->getMSecsSinceStart();
+            memBuffer->setPosCount(data->getMSecsSinceStart());
         else
-            memBuffer->positionCount = data->getPositionCount();
+            memBuffer->setPosCount(data->getPositionCount());
 
-        if ((data->getDataType() == eveEnum16T) || (data->getDataType() == eveStringT) || (data->getDataType() == eveDateTimeT)){
-            int stringLength = convertToHdf5Type(data->getDataType()).getSize();
+        memBuffer->setData(data);
 
-            char *start = (char*) &memBuffer->aPtr;
-            char *bufferend = start + compoundType.getSize() - sizeof(qint32);
-            foreach(QString dataString, data->getStringArray()){
-                if((start + stringLength) <= bufferend) {
-                    strncpy(start, dataString.toLocal8Bit().constData(), stringLength);
-                    start += stringLength;
-                }
-            }
-        }
-        else {
-            void *buffer = getDataBufferAddress(data);
-            memcpy(&memBuffer->aPtr, buffer, getMinimumDataBufferLength(data, compoundType.getSize() - sizeof(qint32)));
-        }
-        dset.write ( (void*)memBuffer, compoundType, memspace, filespace );
-
-        ++currentOffset[0];
         if (currentOffset[0] >= currentDim[0]){
             currentDim[0] += sizeIncrement;
             dset.extend( currentDim );
+        }
+        try {
+            dset.write ( memBuffer->getBufferStartAddr(), compoundType, memspace, filespace );
+            ++currentOffset[0];
+        }
+        catch (...) {
+            errorString += QString("hdf5DataSet:addData: error writing to dataset %1").arg(dsname);
+            return ERROR;
         }
     }
     else {
@@ -257,7 +248,7 @@ int hdf5DataSet::addData(eveDataMessage* data){
             else {
                 try {
                     currentDim[0] = arraySize;		// not constant
-                    currentDim[1] = 1; 				// default array sizeIncrement
+                    currentDim[1] = sizeIncrement; 	// default array sizeIncrement
                     currentOffset[0] = 0;
                     currentOffset[1] = 0;
                     dset = dataFile->createDataSet(qPrintable(dsname), convertToHdf5Type(dataType), dspace, createProps);
@@ -281,7 +272,7 @@ int hdf5DataSet::addData(eveDataMessage* data){
                 currentDim[1] += sizeIncrement;
                 dset.extend( currentDim );
             }
-            dset.write( getDataBufferAddress(data), convertToHdf5Type(dataType), memspace, filespace );
+            dset.write(data->getBufferAddr(), convertToHdf5Type(dataType), memspace, filespace );
         }
         catch( Exception error )
         {
@@ -343,64 +334,6 @@ void hdf5DataSet::addDataAttribute(H5Object *target, QString attrName, QString a
  * @param number compare to this
  * @return the minimum of number and used bytes in the data array
  */
-int hdf5DataSet::getMinimumDataBufferLength(eveDataMessage* data, int other){
-
-    int arraySize = data->getArraySize();
-    int bufferSize = 0;
-
-    switch (data->getDataType()) {
-    case eveInt8T:
-    case eveUInt8T:
-        bufferSize = 1;
-        break;
-    case eveInt16T:
-    case eveUInt16T:
-        bufferSize = 2;
-        break;
-    case eveInt32T:
-    case eveUInt32T:
-    case eveFloat32T:
-        bufferSize = 4;
-        break;
-    case eveFloat64T:
-        bufferSize = 8;
-        break;
-    default:
-        break;
-    }
-    bufferSize *= arraySize;
-
-    if (bufferSize < other)
-        return bufferSize;
-
-    return other;
-}
-
-void* hdf5DataSet::getDataBufferAddress(eveDataMessage* data){
-
-    switch (data->getDataType()) {
-    case eveInt8T:
-    case eveUInt8T:
-        return (void*) data->getCharArray().constData();
-        break;
-    case eveInt16T:
-    case eveUInt16T:
-        return (void*) data->getShortArray().constData();
-        break;
-    case eveInt32T:
-    case eveUInt32T:
-        return (void*) data->getIntArray().constData();
-        break;
-    case eveFloat32T:
-        return (void*) data->getFloatArray().constData();
-        break;
-    case eveFloat64T:
-        return (void*) data->getDoubleArray().constData();
-        break;
-    default:
-        return NULL;
-    }
-}
 
 /**
  * @brief create a compound type with at least one int column

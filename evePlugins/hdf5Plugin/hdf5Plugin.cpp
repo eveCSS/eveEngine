@@ -112,7 +112,9 @@ int hdf5Plugin::init(QString filename, QString format, QHash<QString, QString>& 
 int hdf5Plugin::setXMLData(QByteArray* xmldata){
     int retval = DEBUG;
     if (isFileOpen) {
-        QString xmlfilename = fileName + ".scml";
+        QString xmlfilename(fileName);
+        if (xmlfilename.endsWith(".h5",Qt::CaseInsensitive)) xmlfilename.chop(3);
+        xmlfilename.append(".scml");
         QFile* filePtr = new QFile(xmlfilename);
         if (!filePtr->open(QIODevice::ReadWrite)){
             errorString = QString("HDF5Plugin: error opening xml file %1").arg(xmlfilename);
