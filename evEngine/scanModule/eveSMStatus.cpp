@@ -26,6 +26,12 @@ eveSMStatus::eveSMStatus() {
     detTrigWait = false;
     stopCondition = false;
     breakCondition = false;
+    isStarted = false;
+    freezeReason = false;
+    isStarted = false;
+    redoActive = false;
+    manualRid = 0;
+    detecRid = 0;
 }
 
 eveSMStatus::~eveSMStatus() {
@@ -62,21 +68,31 @@ eveSMStatus::~eveSMStatus() {
  */
 bool eveSMStatus::setStart() {
 
-    breakCondition = false;
-    stopCondition = false;
-    freezeReason = false;
+    SMStatusT oldstatus=status;
+    SMReasonT oldreason=reason;
+    isStarted = true;
     reason = SMReasonNone;
     if (!isExecuting()){
         status = SMStatusEXECUTING;
     }
-    return setStatus(status, reason);
+    return setStatus(oldstatus, oldreason);
+}
+
+/**
+ * @brief eveSMStatus::reset reset internal parameters (not isStarted)
+ * @return
+ */
+void eveSMStatus::reset() {
+
+    breakCondition = false;
+    stopCondition = false;
+    freezeReason = false;
 }
 
 bool eveSMStatus::setDone() {
 
     bool retval=true;
 
-    //if ((status == SMStatusAPPEND ) || (status == SMStatusDONE ))  retval = false;
     if (status == SMStatusDONE )  retval = false;
     status = SMStatusDONE;
     return retval;
@@ -124,6 +140,7 @@ bool eveSMStatus::forceExecuting() {
         retval = true;
         status = SMStatusEXECUTING;
     }
+    isStarted = true;
     smPause = false;
     masterPause = false;
     chainPause = false;
@@ -189,7 +206,19 @@ quint32 eveSMStatus::getFullStatus(){
 
 bool eveSMStatus::setStatus(SMStatusT oldstatus, SMReasonT oldreason) {
 
-    if (isExecuting()){
+    if (isBeforeExecuting()){
+        if (haveStopCondition() || haveBreakCondition()){
+            freezeReason=true;
+        }
+        if (isPaused()){
+            if (!freezeReason){
+                if (masterPause) reason = SMReasonGUIPAUSE;
+                else if (chainPause) reason = SMReasonCHPAUSE;
+                else reason = SMReasonSMPAUSE;
+            }
+        }
+    }
+    else if (isExecuting()){
         if (haveStopCondition() || haveBreakCondition()){
             freezeReason=true;
         }
@@ -270,12 +299,16 @@ bool eveSMStatus::setEvent(eveEventProperty* evprop ) {
             }
         }
         else if  (evprop->getActionType() == eveEventProperty::BREAK){
-            if (isExecuting()) reason = SMReasonGUISKIP;
+            if (isExecuting()) {
+                reason = SMReasonGUISKIP;
+                freezeReason=true;
+            }
             breakCondition = evprop->getOn();
         }
         else if  ((evprop->getActionType() == eveEventProperty::STOP) ||
                    (evprop->getActionType() == eveEventProperty::HALT)) {
-            if (isExecuting()) reason = SMReasonGUISTOP;
+            reason = SMReasonGUISTOP;
+            freezeReason=true;
             stopCondition = evprop->getOn();
         }
     }
@@ -301,9 +334,11 @@ bool eveSMStatus::setEvent(eveEventProperty* evprop ) {
         case eveEventProperty::BREAK:
             if (evprop->isChainAction()) {
                 reason = SMReasonCHSKIP;
+                freezeReason=true;
             }
             else {
                 reason = SMReasonSMSKIP;
+                freezeReason=true;
             }
             breakCondition = evprop->getOn();
             break;
@@ -322,6 +357,7 @@ bool eveSMStatus::setEvent(eveEventProperty* evprop ) {
         case eveEventProperty::HALT:
             // we have only chain stop events
             reason = SMReasonCHSTOP;
+            freezeReason=true;
             stopCondition = evprop->getOn();
             break;
         default:

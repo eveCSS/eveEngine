@@ -78,7 +78,7 @@ public:
 	bool setXMLLoaded(bool);
 	bool setLoadingXML(QString);
 	bool isXmlLoaded(){return loadedXML;};
-	bool isNoXmlLoaded(){return engineStatus == eveEngIDLENOXML;};
+    bool isNoXmlLoaded(){return (engineStatus == eveEngIDLENOXML);};
 	bool setAutoStart(bool);
 	bool isAutoStart(){return autoStart;};
 

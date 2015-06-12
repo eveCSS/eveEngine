@@ -21,8 +21,10 @@ public:
     bool setStart();
     bool setDone();
     bool setAppend();
+    void reset();
     bool isAppend(){return (status == SMStatusAPPEND); };
-    bool isNotStarted(){return (status == SMStatusNOTSTARTED); }; //TODO stimmt noch nicht, kann auch initializing sein, aber
+    bool isNotStarted(){return (!isStarted); };
+    bool isBeforeExecuting(){return ((status == SMStatusNOTSTARTED)||(status == SMStatusINITIALIZING)); };
     bool isRedo(){return (redoActive && (chainRedo || smRedo));};
     bool isPaused(){return (chainPause || smPause || masterPause);};
     SMStatusT getStatus(){return status;};
@@ -30,7 +32,8 @@ public:
     quint32 getFullStatus();
     int getPause();
 	bool setEvent(eveEventProperty* evprop );
-	void redoStart(){trackRedo = false;};
+    void redoStart(){trackRedo = false;};
+    bool checkStatus(){return setStatus(status, reason);};
     bool redoStatus(){return redoActive && trackRedo;};
 	bool triggerManualStart(int);
 	bool isManualTriggerWait(){return maTrigWait;};
@@ -38,7 +41,7 @@ public:
 	bool isTriggerEventWait(){return evTrigWait;};
 	bool triggerDetecStart(int);
 	bool isTriggerDetecWait(){return detTrigWait;};
-	bool forceExecuting();
+    bool forceExecuting();
     bool haveStopCondition(){return stopCondition;};
     bool haveBreakCondition(){return breakCondition;};
     void activateRedo(){redoActive = true;};
@@ -65,6 +68,7 @@ private:
     bool breakCondition;
     bool redoActive;
     bool freezeReason;
+    bool isStarted;
 };
 
 #endif /* EVESMSTATUS_H_ */

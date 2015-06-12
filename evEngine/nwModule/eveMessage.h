@@ -532,6 +532,59 @@ public:
 	virtual bool compare(eveMessage *);
 	bool isInteger();
 	bool isFloat();
+    // TODO needs to be inline for hdf5plugin
+    int getBufferLength(){
+        int bufferSize = 0;
+
+        switch (dataType) {
+        case eveInt8T:
+        case eveUInt8T:
+            bufferSize = 1;
+            break;
+        case eveInt16T:
+        case eveUInt16T:
+            bufferSize = 2;
+            break;
+        case eveInt32T:
+        case eveUInt32T:
+        case eveFloat32T:
+            bufferSize = 4;
+            break;
+        case eveFloat64T:
+            bufferSize = 8;
+            break;
+        default:
+            break;
+        }
+        bufferSize *= arraySize;
+
+        return bufferSize;
+    };
+    void* getBufferAddr(){
+
+        switch (dataType) {
+        case eveInt8T:
+        case eveUInt8T:
+            return (void*) dataArrayChar.constData();
+            break;
+        case eveInt16T:
+        case eveUInt16T:
+            return (void*) dataArrayShort.constData();
+            break;
+        case eveInt32T:
+        case eveUInt32T:
+            return (void*) dataArrayInt.constData();
+            break;
+        case eveFloat32T:
+            return (void*) dataArrayFloat.constData();
+            break;
+        case eveFloat64T:
+            return (void*) dataArrayDouble.constData();
+            break;
+        default:
+            return NULL;
+        }
+    };
 
 private:
 	int posCount;

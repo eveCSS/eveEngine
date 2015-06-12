@@ -45,6 +45,7 @@ bool eveBasicStatusTracker::setChainStatus(eveChainStatusMessage* message) {
     case CHStatusIDLE:
         if (!haveActiveMath.contains(chainId)) haveActiveMath.append(chainId);
         if (!haveActiveScan.contains(chainId)) haveActiveScan.append(chainId);
+        break;
     case CHStatusExecuting:
         if ((engineStatus == eveEngIDLEXML) || (engineStatus == eveEngLOADINGXML)){
             engineStatus = eveEngEXECUTING;
@@ -152,7 +153,9 @@ bool eveManagerStatusTracker::setStart() {
  */
 bool eveManagerStatusTracker::setStop() {
 
-    if ((engineStatus == eveEngEXECUTING) || (engineStatus == eveEngPAUSED)){
+    if ((engineStatus == eveEngIDLEXML) || (engineStatus == eveEngLOADINGXML) ||
+            (engineStatus == eveEngEXECUTING) || (engineStatus == eveEngPAUSED)	||
+            (engineStatus == eveEngSTOPPED)){
         engineStatus = eveEngSTOPPED;
         return true;
     }
