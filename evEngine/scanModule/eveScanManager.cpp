@@ -123,7 +123,6 @@ void eveScanManager::init() {
     if (eventList != NULL){
         foreach (eveEventProperty* evprop, *eventList){
             sendError(DEBUG, 0, QString("registering chain event"));
-            if (haveRedoEvent) sendError(MINOR, 0, QString("more than one redo event in a chain is unsupported"));
             registerEvent(0, evprop, true);
             if (evprop->getActionType() == eveEventProperty::REDO) haveRedoEvent = true;
         }
