@@ -726,6 +726,11 @@ void eveScanModule::stgTrigRead() {
                         QVector<int> intArr = averageMsg->getIntArray();
                         sendError(DEBUG, 0, QString("%1: average count: %2, attempts: %3").arg(channel->getName()).arg(intArr[0]).arg(intArr[1]));
                         sendMessage(averageMsg);
+                        averageMsg = channel->getAverageParamsMessage();
+                        if (averageMsg != NULL){
+                            averageMsg->setPositionCount(triggerPosCount);
+                            sendMessage(averageMsg);
+                        }
                     }
                     if (limitMsg != NULL){
                         limitMsg->setPositionCount(triggerPosCount);

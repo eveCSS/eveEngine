@@ -46,6 +46,7 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveSMDetector* smdetector,
     normCalcMsg = NULL;
     normRawMsg = NULL;
     averageMsg = NULL;
+    averageParamsMsg = NULL;
     limitMsg = NULL;
     channelStatus = eveCHANNELINIT;
     channelType=definition->getChannelType();
@@ -391,8 +392,14 @@ void eveSMChannel::transportReady(int status) {
                     QVector<int> averageArr(2);
                     averageArr[0] = averageCount;
                     averageArr[1] = averageRaw->getAttempts();
+                    if (averageMsg != NULL) delete averageMsg;
                     averageMsg = new eveDataMessage(xmlId, "Attempts", eveDataStatus(), DMTaverageParams, eveTime::getCurrent(), averageArr);
                     averageMsg->setAuxString("AverageCount");
+                    QVector<int> averageParamsArr(1);
+                    averageParamsArr[0] = maxAttempts;
+                    if (averageParamsMsg != NULL) delete averageParamsMsg;
+                    averageParamsMsg = new eveDataMessage(xmlId, "MaxAttempts", eveDataStatus(), DMTaverageParams, eveTime::getCurrent(), averageParamsArr);
+                    averageParamsMsg->setAuxString("MaxAttempts");
                     if (maxDeviation > 0.0) {
                         QVector<double> deviationArr(2);
                         deviationArr[0] = minimum;
@@ -570,6 +577,15 @@ eveDataMessage* eveSMChannel::getNormRawValueMessage(){
 eveDataMessage* eveSMChannel::getAverageMessage(){
     eveDataMessage* return_data = averageMsg;
     averageMsg = NULL;
+    return return_data;
+}
+/**
+ *
+ * @return average count and attempt
+ */
+eveDataMessage* eveSMChannel::getAverageParamsMessage(){
+    eveDataMessage* return_data = averageParamsMsg;
+    averageParamsMsg = NULL;
     return return_data;
 }
 /**
