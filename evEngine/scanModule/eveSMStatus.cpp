@@ -210,18 +210,15 @@ bool eveSMStatus::setStatus(SMStatusT oldstatus, SMReasonT oldreason) {
         if (haveStopCondition() || haveBreakCondition()){
             freezeReason=true;
         }
-        if (isPaused()){
-            if (!freezeReason){
-                if (masterPause) reason = SMReasonGUIPAUSE;
-                else if (chainPause) reason = SMReasonCHPAUSE;
-                else reason = SMReasonSMPAUSE;
-            }
-        }
+//        if (isPaused()){
+//            if (!freezeReason){
+//                if (masterPause) reason = SMReasonGUIPAUSE;
+//                else if (chainPause) reason = SMReasonCHPAUSE;
+//                else reason = SMReasonSMPAUSE;
+//            }
+//        }
     }
     else if (isExecuting()){
-        if (haveStopCondition() || haveBreakCondition()){
-            freezeReason=true;
-        }
 
         if (isPaused()){
             status = SMStatusPAUSE;
@@ -245,7 +242,13 @@ bool eveSMStatus::setStatus(SMStatusT oldstatus, SMReasonT oldreason) {
         }
         else {
             status = SMStatusEXECUTING;
-            if (!freezeReason) reason = SMReasonNone;
+            if (freezeReason){
+                // redo may have been changed but freezereason won't show it
+                return true;
+            }
+            else {
+                reason = SMReasonNone;
+            }
         }
     }
     if ((oldstatus == status) && (oldreason == reason))
@@ -307,7 +310,7 @@ bool eveSMStatus::setEvent(eveEventProperty* evprop ) {
         }
         else if  ((evprop->getActionType() == eveEventProperty::STOP) ||
                    (evprop->getActionType() == eveEventProperty::HALT)) {
-            reason = SMReasonGUISTOP;
+            if (!isAppend()) reason = SMReasonGUISTOP;
             freezeReason=true;
             stopCondition = evprop->getOn();
         }
