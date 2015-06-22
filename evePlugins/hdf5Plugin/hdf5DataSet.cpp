@@ -172,6 +172,10 @@ int hdf5DataSet::addData(eveDataMessage* data){
     if (storageType == PosCountValues){
         DataSpace filespace;
         try {
+            if (currentOffset[0] >= currentDim[0]){
+                currentDim[0] += sizeIncrement;
+                dset.extend( currentDim );
+            }
             filespace = dset.getSpace();
             filespace.selectHyperslab( H5S_SELECT_SET, chunk_dims, currentOffset );
         }
@@ -190,10 +194,6 @@ int hdf5DataSet::addData(eveDataMessage* data){
 
         memBuffer->setData(data);
 
-        if (currentOffset[0] >= currentDim[0]){
-            currentDim[0] += sizeIncrement;
-            dset.extend( currentDim );
-        }
         try {
             dset.write ( memBuffer->getBufferStartAddr(), compoundType, memspace, filespace );
             ++currentOffset[0];
