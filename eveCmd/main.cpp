@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     QString hostName = "localhost";
     int portNumber = 12345;
     int repeatCount = -1;
-    char* usage ="eveCmd -f <xml-File> [-d debuglevel] [-h <hostname> (default localhost)] [-r <repeatCount>] [-p <port> (default 12345)]";
+    char* usage = (char*)"eveCmd -f <xml-File> [-d debuglevel] [-h <hostname> (default localhost)] [-r <repeatCount>] [-p <port> (default 12345)]";
 
 
     if (argc <= 1){
