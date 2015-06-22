@@ -117,9 +117,14 @@ void eveEventManager::registerEvent(eveEventRegisterMessage* message){
 		if (event->getEventType() == eveEventTypeSCHEDULE){
 			bool ok;
 			quint64 id = event->getLimit().toULongLong(&ok);
-			if (ok) {
-				scheduleHash.remove(id);
-			}
+            if (ok) scheduleHash.remove(id);
+            try {
+                delete event;
+            }
+            catch (std::exception& e)
+            {
+                sendError(FATAL, 0, QString("C++ Exception while deleting schedule event %1").arg(e.what()));
+            }
 		}
 		else if (event->getEventType() == eveEventTypeDETECTOR){
 			if (detectorHash.contains(event->getName())){
@@ -130,7 +135,7 @@ void eveEventManager::registerEvent(eveEventRegisterMessage* message){
                  }
                  catch (std::exception& e)
                  {
-                         sendError(FATAL, 0, QString("C++ Exception while deleting event %1").arg(e.what()));
+                         sendError(FATAL, 0, QString("C++ Exception while deleting detector event %1").arg(e.what()));
                  }
             }
 		}
@@ -143,7 +148,7 @@ void eveEventManager::registerEvent(eveEventRegisterMessage* message){
                 }
                 catch (std::exception& e)
                 {
-                        sendError(FATAL, 0, QString("C++ Exception while deleting event %1").arg(e.what()));
+                        sendError(FATAL, 0, QString("C++ Exception while deleting monitor event %1").arg(e.what()));
                 }
             }
 		}
@@ -205,7 +210,7 @@ void eveEventManager::shutdown(){
 	if (!shutdownPending) {
 		shutdownPending = true;
 
-		// stop input Queue
+        // stop input Queue
 		disableInput();
 		// delete all events
 		foreach (eveEventProperty* event, scheduleHash){
@@ -220,7 +225,7 @@ void eveEventManager::shutdown(){
 			delete monitorHash.take(monevent);
 			delete monevent;
 		}
-		connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
+        connect(this, SIGNAL(messageTaken()), this, SLOT(shutdown()) ,Qt::QueuedConnection);
 	}
 
 	// make sure mHub reads all outstanding messages before closing the channel

@@ -187,7 +187,8 @@ eveSMChannel::~eveSMChannel() {
         if (haveUnit && !isDetectorUnit) delete unitTrans;
 
         foreach (eveEventProperty* evprop, *eventList){
-            disconnect(evprop, SIGNAL(signalEvent(eveEventProperty*)), this, SLOT(newEvent(eveEventProperty*)));
+            // may not work, if events are already deleted
+            // disconnect(evprop, SIGNAL(signalEvent(eveEventProperty*)), this, SLOT(newEvent(eveEventProperty*)));
             eveEventRegisterMessage* regmessage = new eveEventRegisterMessage(false, evprop);
             scanModule->sendMessage(regmessage);
         }
@@ -235,7 +236,7 @@ void eveSMChannel::init() {
     }
 
     foreach (eveEventProperty* evprop, *eventList){
-        sendError(DEBUG, 0, QString("registering detector event").arg(evprop->getName()));
+        sendError(DEBUG, 0, QString("registering detector event %1").arg(evprop->getName()));
         connect(evprop, SIGNAL(signalEvent(eveEventProperty*)), this, SLOT(newEvent(eveEventProperty*)), Qt::QueuedConnection);
         eveEventRegisterMessage* regmessage = new eveEventRegisterMessage(true, evprop);
         scanModule->sendMessage(regmessage);

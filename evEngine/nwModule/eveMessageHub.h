@@ -63,6 +63,7 @@ private:
     bool useGui;
     bool useNet;
     int loglevel;
+    bool shutdown;
 };
 
 #endif /*EVEMESSAGEHUB_H_*/

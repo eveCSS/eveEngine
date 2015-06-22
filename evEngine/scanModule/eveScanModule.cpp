@@ -27,7 +27,6 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     currentStageCounter = 0;
     smId = smid;
     chainId = chainid;
-//	delayedStart = false;
     expectedPositions = 1;
     currentPosition = 0;
     eventTrigger = false;
@@ -72,8 +71,6 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     	appendedSM = new eveScanModule(manager, parser, chainId, appendedNo, eveSmTypeAPPENDED);
     	connect (appendedSM, SIGNAL(SMready()), this, SLOT(execStage()), Qt::QueuedConnection);
     }
-
-    // TODO check startevent
 
     // get all prescan/postscan actions
     preScanList = parser->getPreScanList(this, chainId, smId);
@@ -153,9 +150,6 @@ eveScanModule::~eveScanModule() {
 
     try
     {
-        // TODO
-        // unregister events ? (or is it done elsewhere)
-
         if (nestedSM != NULL) delete nestedSM;
         if (appendedSM != NULL) delete appendedSM;
 
@@ -628,8 +622,6 @@ void eveScanModule::stgTrigRead() {
                 nestedSM->startExec();
                 ++signalCounter;
             }
-            // execute the Transport Queue
-            // TODO merge the detectors transportlists and execute their queues
             // For now we have just CA as a transport and execute directly
             eveCaTransport::execQueue();
             emit sigExecStage();
@@ -1132,11 +1124,6 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
             manager->setStatus(smId, myStatus);
             emit sigExecStage();
         }
-        else {
-            // TODO Test only
-            sendError(DEBUG, 0, QString("%1 Redo Event: %2 no status change, status: %3, reason: %4").arg(eventType)
-                      .arg(evprop->getName()).arg(myStatus.getStatus()).arg(myStatus.getReason()));
-        }
 
         if (appendedSM) appendedSM->newEvent(evprop);
         break;
@@ -1153,17 +1140,7 @@ bool eveScanModule::newEvent(eveEventProperty* evprop) {
         if (appendedSM) appendedSM->newEvent(evprop);
         break;
     case eveEventProperty::START:
-        // TODO kann noch einfacher werden
-        if (myStatus.isNotStarted()) {
-            startExec();
-        }
-        // not needed
-//        else {
-//            if (myStatus.setEvent(evprop)) {
-//                manager->setStatus(smId, myStatus);
-//                emit sigExecStage();
-//            }
-//        }
+        if (myStatus.isNotStarted()) startExec();
         break;
     case eveEventProperty::BREAK:
         if (myStatus.isExecuting()){

@@ -21,6 +21,7 @@ eveMessageHub::eveMessageHub(bool gui, bool net)
 	nextChannel = EVECHANNELS_RESERVED;
 	engineStatus = EVEENGINESTATUS_IDLENOXML;
 	mHub = this;
+    shutdown = false;
 	currentXmlId = "none";
 	reqMan = new eveRequestManager();
 	loglevel = eveParameter::getParameter("loglevel").toInt();
@@ -408,7 +409,7 @@ void eveMessageHub::newMessage(int messageSource)
             break;
         }
         if (message != NULL) {
-            addError(ERROR, 0, QString("newMessage: unable to forward message, type: 0x%1 (%2)").arg(message->getType(), 0, 16).arg(message->getType()));
+            if (!shutdown) addError(ERROR, 0, QString("newMessage: unable to forward message, type: 0x%1 (%2)").arg(message->getType(), 0, 16).arg(message->getType()));
             delete message;
         }
         // get the next message, if we get the lock
@@ -447,7 +448,7 @@ void eveMessageHub::addError(int severity, int errorType,  QString errorString)
  */
 void eveMessageHub::close()
 {
-
+    shutdown = true;
 	eveError::log(DEBUG, "MessageHub shut down");
 	emit closeAll();
 	QTimer::singleShot(100, this, SLOT(waitUntilDone()));
