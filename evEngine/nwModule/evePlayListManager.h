@@ -23,7 +23,7 @@
  */
 struct evePlayListData {
     bool isLoaded;
-    int pid;
+    unsigned int pid;
     QString name;
     QString author;
     QByteArray data;
@@ -58,7 +58,7 @@ private:
     eveManager* manager;
     bool modified;
     bool haveCurrent;
-    int lastId;
+    unsigned int lastId;
     void flushPlaylist();
     evePlayListEntry currentPLE;
     QString currentFilename;
@@ -66,7 +66,7 @@ private:
     QString dirFileName;
     QDir playlistPath;
     QList<evePlayListEntry> playlist;
-    QHash<int, evePlayListData*> datahash;
+    QHash<unsigned int, evePlayListData*> datahash;
     void sendError(int, int, QString);
     bool xmlPassedVerification(QByteArray & );
 };

@@ -3,8 +3,8 @@
 
 eveManagerThread::eveManagerThread(QWaitCondition* waitRegistration, QMutex *mutex)
 {
-	channelRegistered = waitRegistration;
-	waitMutex = mutex;
+    channelRegistered = waitRegistration;
+    waitMutex = mutex;
 }
 
 eveManagerThread::~eveManagerThread()
@@ -15,11 +15,11 @@ eveManagerThread::~eveManagerThread()
  */
 void eveManagerThread::run()
 {
-	// create a Manager
-        eveManager *manager = new eveManager();
-	waitMutex->lock();
-	channelRegistered->wakeAll();
-	waitMutex->unlock();
-	exec();
-        delete manager;
+    // create a Manager
+    eveManager *manager = new eveManager();
+    waitMutex->lock();
+    channelRegistered->wakeAll();
+    waitMutex->unlock();
+    exec();
+    delete manager;
 }

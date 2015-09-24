@@ -112,7 +112,7 @@
 #define EVEENGINESTATUS_AUTOSTART 0x0100		// autostart bit
 
 struct evePlayListEntry {
-        int pid;
+        unsigned int pid;
         QString name;
         QString author;
 };
