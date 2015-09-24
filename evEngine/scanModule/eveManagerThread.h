@@ -10,7 +10,7 @@ class eveManagerThread : public QThread
 {
 public:
 	eveManagerThread(QWaitCondition*, QMutex *);
-	virtual ~eveManagerThread();
+    virtual ~eveManagerThread();
     void run();
 
 private:

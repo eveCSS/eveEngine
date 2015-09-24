@@ -97,26 +97,28 @@ void evePlayListManager::addEntry(QString name, QString author, QByteArray data)
         eveError::log(ERROR, "evePlayListManager::addEntry: Too many playlist entries");
         return;
     }
-    if (lastId > 2000000000)
-        lastId=1;
-    else
-        ++lastId;
-
     if (data.length() < 10){
         eveError::log(ERROR, "evePlayListManager::addEntry: XML-Data is empty");
         return;
     }
 
-    if (!xmlPassedVerification(data)) {
-        sendError(ERROR, 0, QString("SCML Validation unsuccessful, Skip entry %1").arg(name));
-        return;
-    }
+    if (lastId > 0x7FFFFFFF)
+        lastId=1;
+    else
+        ++lastId;
 
     ple.pid = lastId;
     ple.name = name;
     ple.author = author;
     if (ple.name.length() < 1) ple.name = "none";
     if (ple.author.length() < 1) ple.author = "none";
+
+    // Caution XML verification uses QNetworkManager and is asynchronous
+    // works only if this and all parent functions are reentrant!
+    if (!xmlPassedVerification(data)) {
+        sendError(ERROR, 0, QString("SCML Validation unsuccessful, Skip entry %1").arg(name));
+        return;
+    }
 
     // always save to temporary file
     QString filename = QUuid::createUuid().toString();
@@ -336,7 +338,14 @@ bool evePlayListManager::xmlPassedVerification(QByteArray &xmldata) {
     }
 
     QXmlSchema schema;
-    schema.load(QUrl(QString("file://%1").arg(schemaFileInfo.absoluteFilePath())));
+    QFile file(schemaFileInfo.absoluteFilePath());
+    if (!file.open(QIODevice::ReadOnly)){
+        // warn and continue without validation
+        sendError(MINOR, 0, QString("Unable to open schema file: %1. Resuming without validation!").arg(schemaFileInfo.absoluteFilePath()));
+        return true;
+    }
+
+    schema.load(&file, QUrl::fromLocalFile(schemaFileInfo.absoluteFilePath()));
 
     bool retval = false;
     if (schema.isValid()) {
