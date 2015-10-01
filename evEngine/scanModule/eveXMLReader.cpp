@@ -1127,8 +1127,10 @@ QList<eveEventProperty*>* eveXMLReader::getEventList(QDomElement domElement){
 		while (!domEvent.isNull()) {
 			eveEventProperty* event = getEvent(eveEventProperty::BREAK, domEvent);
             // set break events to both directions to track events before start
-            event->setDirection(eveDirectionONOFF);
-            if (event != NULL ) eventList->append(event);
+            if (event != NULL ) {
+                event->setDirection(eveDirectionONOFF);
+                eventList->append(event);
+            }
 			domEvent = domEvent.nextSiblingElement("breakevent");
 		}
 		domEvent = domElement.firstChildElement("triggerevent");
@@ -1141,8 +1143,10 @@ QList<eveEventProperty*>* eveXMLReader::getEventList(QDomElement domElement){
 		while (!domEvent.isNull()) {
 			eveEventProperty* event = getEvent(eveEventProperty::STOP, domEvent);
             // set stop events to both directions to track events before start
-            event->setDirection(eveDirectionONOFF);
-			if (event != NULL ) eventList->append(event);
+            if (event != NULL ) {
+                event->setDirection(eveDirectionONOFF);
+                eventList->append(event);
+            }
 			domEvent = domEvent.nextSiblingElement("stopevent");
 		}
 		domEvent = domElement.firstChildElement("pauseevent");
