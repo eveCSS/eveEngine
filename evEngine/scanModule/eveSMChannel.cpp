@@ -32,6 +32,9 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveSMDetector* smdetector,
     haveStop = false;
     haveTrigger = false;
     haveUnit = false;
+    isDetectorTrigger = false;
+    isDetectorUnit = false;
+    isDetectorStop = false;
     deferredTrigger = false;
     name = definition->getName();
     xmlId = definition->getId();
@@ -56,8 +59,6 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveSMDetector* smdetector,
     // true if read timeout is <= 10s
     timeoutShort = true;
     normalizeChannel = normalizeWith;
-    isDetectorTrigger = false;
-    isDetectorUnit = false;
     detector = smdetector;
     sendreadyevent = false;
     delayedTrigger = false;
@@ -99,6 +100,7 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveSMDetector* smdetector,
     else{
         stopTrans = detector->getStopTrans();
         stopValue = detector->getStopValue();
+        isDetectorStop = true;
     }
     if (stopTrans != NULL) haveStop = true;
 
@@ -181,10 +183,22 @@ eveSMChannel::~eveSMChannel() {
             delete normalizeChannel;
             normalizeChannel = NULL;
         }
-        if (haveValue) delete valueTrans;
-        if (haveStop) delete stopTrans;
-        if (haveTrigger && !isDetectorTrigger) delete triggerTrans;
-        if (haveUnit && !isDetectorUnit) delete unitTrans;
+        if (haveValue) {
+            delete valueTrans;
+            haveValue = false;
+        }
+        if (haveStop && !isDetectorStop) {
+            delete stopTrans;
+            haveStop = false;
+        }
+        if (haveTrigger && !isDetectorTrigger) {
+            delete triggerTrans;
+            haveTrigger = false;
+        }
+        if (haveUnit && !isDetectorUnit) {
+            delete unitTrans;
+            haveUnit = false;
+        }
 
         foreach (eveEventProperty* evprop, *eventList){
             // may not work, if events are already deleted

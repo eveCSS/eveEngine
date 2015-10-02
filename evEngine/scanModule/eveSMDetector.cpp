@@ -49,8 +49,18 @@ eveSMDetector::~eveSMDetector() {
     sendError(DEBUG, 0, QString("Deleting Detector %1").arg(name));
     try
     {
-        if (triggerTrans != NULL) delete triggerTrans;
-        if (unitTrans != NULL) delete unitTrans;
+        if (triggerTrans != NULL) {
+            delete triggerTrans;
+            triggerTrans = NULL;
+        }
+        if (unitTrans != NULL) {
+            delete unitTrans;
+            unitTrans = NULL;
+        }
+        if (stopTrans != NULL) {
+            delete stopTrans;
+            stopTrans = NULL;
+        }
     }
     catch (std::exception& e)
     {

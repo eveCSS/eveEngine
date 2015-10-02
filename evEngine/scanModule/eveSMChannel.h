@@ -82,6 +82,9 @@ private:
     bool haveStop;
     bool haveTrigger;
     bool haveUnit;
+    bool isDetectorStop;
+    bool isDetectorTrigger;
+    bool isDetectorUnit;
     bool channelOK;
     bool deferredTrigger;
     int signalCounter;
@@ -115,8 +118,6 @@ private:
     eveVariant stopValue;
     int averageCount, maxAttempts;
     double maxDeviation, minimum;
-    bool isDetectorTrigger;
-    bool isDetectorUnit;
     eveSMDetector* detector;
 
 };
