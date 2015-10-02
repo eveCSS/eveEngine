@@ -24,7 +24,7 @@
 using namespace std;
 
 #define SAVEPLUGIN_VERSION "1.3"
-#define EVEH5_VERSION "2.0"
+#define EVEH5_VERSION "2.1"
 
 class hdf5Plugin : public QObject, eveFileWriter{
 

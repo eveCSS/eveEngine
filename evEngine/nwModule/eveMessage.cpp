@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include <assert.h>
+#include <QChar>
 #include "eveMessage.h"
 #include "eveError.h"
 #include "eveStartTime.h"
@@ -722,9 +723,22 @@ eveDataMessage::eveDataMessage(QString xmlid, QString name, eveDataStatus stat, 
 	arraySize = 1;
 	timestamp = eveTime(mtime);
 	posCount = 0;
+    QChar sign('+');
 
-	if (datetime.isValid())
-        dataStrings = QStringList(datetime.toString("yyyy-MM-dd hh:mm:ss.zzz"));
+    // TODO
+    // Qt::ISO doesn't do it, we have to build our own ISO format, which is wrong
+    // if UTC time diff is not full hours (India?)
+    // Fix if using QT5 which has proper support
+    QDateTime UTC(QDateTime::currentDateTimeUtc());
+    QDateTime local(UTC.toLocalTime());
+    int utcdiff = local.time().hour() - UTC.time().hour();
+    if (utcdiff < 12) utcdiff +=24;
+    if (utcdiff > 12) utcdiff -=24;
+    if (utcdiff < 0) sign = QChar('-');
+
+    if (dateTime.isValid())
+        dataStrings = QStringList(QString("%1%2%3:00").arg(dateTime.toString("yyyy-MM-ddThh:mm:ss.zzz"))\
+                                  .arg(sign).arg(utcdiff,2,10,QLatin1Char('0')));
 	else
 		dataStrings = QStringList("");
 

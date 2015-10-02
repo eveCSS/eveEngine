@@ -19,7 +19,7 @@ using namespace std;
 
 #define STANDARD_STRINGSIZE 40
 #define STANDARD_ENUM_STRINGSIZE 16
-#define DATETIME_STRINGSIZE 23
+#define DATETIME_STRINGSIZE 29
 
 class PCmemSpace;
 
