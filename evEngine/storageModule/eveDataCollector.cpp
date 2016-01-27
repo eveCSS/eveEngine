@@ -330,36 +330,39 @@ QString eveDataCollector::macroExpand(QString eString){
 	QDateTime now=QDateTime::currentDateTime();
 
         if (eString.contains("${YEAR}")){
-                eString.replace(QString("${YEAR}"), QString("%1").arg(now.date().year()));
+                eString.replace(QString("${YEAR}"), now.toString("yyyy"));
+        }
+        if (eString.contains("${YR}")){
+                eString.replace(QString("${YR}"), now.toString("yy"));
         }
         if (eString.contains("${MONTH}")){
-                eString.replace(QString("${MONTH}"), QString("%1").arg(now.toString("MM")));
+                eString.replace(QString("${MONTH}"), now.toString("MM"));
         }
         if (eString.contains("${MONTHSTR}")){
-                eString.replace(QString("${MONTHSTR}"), QString("%1").arg(QLocale(QLocale::English).monthName(now.date().month(), QLocale::ShortFormat)));
+                eString.replace(QString("${MONTHSTR}"), QLocale(QLocale::English).monthName(now.date().month(), QLocale::ShortFormat));
         }
         if (eString.contains("${DAY}")){
-                eString.replace(QString("${DAY}"), QString("%1").arg(now.toString("dd")));
+                eString.replace(QString("${DAY}"), now.toString("dd"));
         }
         if (eString.contains("${DAYSTR}")){
-                eString.replace(QString("${DAYSTR}"), QString("%1").arg(QLocale(QLocale::English).dayName(now.date().dayOfWeek(), QLocale::ShortFormat)));
+                eString.replace(QString("${DAYSTR}"), QLocale(QLocale::English).dayName(now.date().dayOfWeek(), QLocale::ShortFormat));
         }
         // provide a leading zero for week numbers
         if (eString.contains("${WEEK}")){
             eString.replace(QString("${WEEK}"), QString("%1").arg(now.date().weekNumber(), 2, 10, QLatin1Char('0')));
 	}
 	if (eString.contains("${DATE}")){
-		eString.replace(QString("${DATE}"), QString("%1").arg(now.toString("yyyyMMdd")));
+        eString.replace(QString("${DATE}"), now.toString("yyyyMMdd"));
 	}
 	if (eString.contains("${DATE-}")){
-		eString.replace(QString("${DATE-}"), QString("%1").arg(now.toString("yyyy-MM-dd")));
+        eString.replace(QString("${DATE-}"), now.toString("yyyy-MM-dd"));
 	}
         if (eString.contains("${TIME}")){
-		eString.replace(QString("${TIME}"), QString("%1").arg(now.toString("hhmmss")));
-	}
+        eString.replace(QString("${TIME}"), now.toString("hhmmss"));
+    }
 	if (eString.contains("${TIME-}")){
-		eString.replace(QString("${TIME-}"), QString("%1").arg(now.toString("hh-mm-ss")));
-	}
+        eString.replace(QString("${TIME-}"), now.toString("hh-mm-ss"));
+    }
 	while (eString.contains(QRegExp("\\$\\{PV:[^}]*\\}"))) {
 
 		QRegExp pvPattern("\\$\\{PV:([^}]*)\\}");
