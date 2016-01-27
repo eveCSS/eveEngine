@@ -272,7 +272,8 @@ void eveScanManager::sendRemainingTime(){
         if ((totalPositions > 2) && (posCounter > 1)){
             if (totalPositions < posCounter) totalPositions = posCounter;
             int elapsed = startTime.secsTo(QDateTime::currentDateTime());
-            int remaining = elapsed * totalPositions / posCounter - elapsed;
+            int remaining = posCountDuration * totalPositions - elapsed;
+            // remaining = elapsed * totalPositions / posCounter - elapsed;
             sendError(DEBUG, 0, QString("remaining %4, elapsed %1, totalPositions %2, posCounter %3").arg(elapsed).arg(totalPositions).arg(posCounter).arg(remaining));
             eveChainProgressMessage* message = new eveChainProgressMessage(chainId, posCounter, eveTime::getCurrent(), remaining);
             addMessage(message);
@@ -382,6 +383,8 @@ void eveScanManager::addToHash(QHash<QString, QString>& hash, QString key, eveXM
  * increment position counter and send next-position-message
  */
 void eveScanManager::nextPos(){
+    float elapsed = (float)startTime.secsTo(QDateTime::currentDateTime());
+    posCountDuration = elapsed/((float)posCounter);
     ++posCounter;
     eveDataMessage* message = new eveDataMessage("PosCountTimer", "", eveDataStatus(), DMTmetaData, eveTime::getCurrent(), QVector<int>(1, eveStartTime::getMSecsSinceStart()));
     message->setDestinationChannel(storageChannel);

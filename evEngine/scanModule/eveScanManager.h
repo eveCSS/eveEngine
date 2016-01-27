@@ -33,58 +33,59 @@ enum smTypeT {eveSmTypeROOT, eveSmTypeNESTED, eveSmTypeAPPENDED};
  */
 class eveScanManager : public eveMessageChannel
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	eveScanManager(eveManager *, eveXMLReader *, int, int);
-	virtual ~eveScanManager();
-	virtual void shutdown();
-	void sendError(int, int, QString);
-	void sendError(int, int, int, QString);
-	void sendMessage(eveMessage*);
+    eveScanManager(eveManager *, eveXMLReader *, int, int);
+    virtual ~eveScanManager();
+    virtual void shutdown();
+    void sendError(int, int, QString);
+    void sendError(int, int, int, QString);
+    void sendMessage(eveMessage*);
     void setStatus(int, eveSMStatus &smstatus);
-	void handleMessage(eveMessage *);
-	void nextPos();
-	void registerEvent(int, eveEventProperty*, bool chain=false);
-	int sendRequest(int, QString);
-	void cancelRequest(int rid);
-	int getPositionCount(){return posCounter;};
+    void handleMessage(eveMessage *);
+    void nextPos();
+    void registerEvent(int, eveEventProperty*, bool chain=false);
+    int sendRequest(int, QString);
+    void cancelRequest(int rid);
+    int getPositionCount(){return posCounter;};
 
 public slots:
-	void smStart();
-	void smHalt();
-	void smBreak();
-	void smStop();
-	void smPause();
-//	void smRedo();
-	void init();
-	void smDone();
-	void newEvent(eveEventProperty*);
-	void sendRemainingTime();
+    void smStart();
+    void smHalt();
+    void smBreak();
+    void smStop();
+    void smPause();
+    //	void smRedo();
+    void init();
+    void smDone();
+    void newEvent(eveEventProperty*);
+    void sendRemainingTime();
 
 private:
     void sendStatus();
-	void sendStartTime();
-	void addToHash(QHash<QString, QString>&, QString, eveXMLReader*);
-	QHash<int, int> requestHash;
-	QHash<QString, QString> chainHash;
-	QHash<QString, QString> savePluginHash;
-	QList<eveEventProperty*> eventPropList;
-	eveChainStatus currentStatus;
-	int nextEventId;
-	int chainId;
-	int storageChannel;
-	bool useStorage;
-	eveScanModule * rootSM;
-	eveManager *manager;
-	int posCounter;
-        int totalPositions;
-	bool doBreak;
-        bool isStarted;
-	bool shutdownPending;
-	QTimer *sendStatusTimer;
-        QDateTime startTime;
-	QList<eveEventProperty*>* eventList;
+    void sendStartTime();
+    void addToHash(QHash<QString, QString>&, QString, eveXMLReader*);
+    QHash<int, int> requestHash;
+    QHash<QString, QString> chainHash;
+    QHash<QString, QString> savePluginHash;
+    QList<eveEventProperty*> eventPropList;
+    eveChainStatus currentStatus;
+    int nextEventId;
+    int chainId;
+    int storageChannel;
+    bool useStorage;
+    eveScanModule * rootSM;
+    eveManager *manager;
+    float posCountDuration;
+    int posCounter;
+    int totalPositions;
+    bool doBreak;
+    bool isStarted;
+    bool shutdownPending;
+    QTimer *sendStatusTimer;
+    QDateTime startTime;
+    QList<eveEventProperty*>* eventList;
 };
 
 #endif /* EVESCANMANAGER_H_ */
