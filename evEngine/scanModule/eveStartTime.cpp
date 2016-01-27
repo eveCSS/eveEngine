@@ -35,7 +35,7 @@ int eveStartTime::getMSecsSinceStart() {
 
 	QReadLocker locker(&lock);
 	QDateTime now = QDateTime::currentDateTime();
-	int msecs = 86400 * starttime.daysTo(now);
+    int msecs = 86400000 * starttime.daysTo(now);
 	msecs += starttime.time().msecsTo(now.time());
 	return msecs;
 
