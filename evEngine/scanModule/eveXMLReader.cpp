@@ -204,6 +204,7 @@ eveTransportDefinition * eveXMLReader::createTransportDefinition(QDomElement nod
 	eveType accesstype = eveInt8T;
 	eveTransportT transport = eveTRANS_CA;
 	transMethodT accessMethod= eveGET;
+    QHash<QString, QString> attributes;
 
 	if (node.hasAttribute("type")) {
 		typeString = node.attribute("type");
@@ -249,8 +250,21 @@ eveTransportDefinition * eveXMLReader::createTransportDefinition(QDomElement nod
 		transportString = node.attribute("transport");
 		if (transportString == "local") transport = eveTRANS_LOCAL;
 	}
+    QStringList fullpvname = node.text().trimmed().split(" ", QString::SkipEmptyParts);
+    if (fullpvname.length() > 1){
+        // fullpvname[1] is a JSON object, remove braces and split
+        fullpvname[1].replace("{","");
+        fullpvname[1].replace("}","");
+        QStringList attribList = fullpvname[1].split(",",QString::SkipEmptyParts);
+        for (int counter = 0; counter < attribList.length(); ++counter){
+            if (attribList[counter].contains(":")) {
+                QStringList attribParts=attribList[counter].split(":");
+                if (attribParts.length() > 1) attributes.insert(attribParts[0].trimmed(),attribParts[1].trimmed());
+            }
+        }
+    }
 	// return default transport
-	return new eveTransportDefinition(transport, accesstype, accessMethod, timeout, node.text());
+    return new eveTransportDefinition(transport, accesstype, accessMethod, timeout, fullpvname[0], attributes);
 
 }
 

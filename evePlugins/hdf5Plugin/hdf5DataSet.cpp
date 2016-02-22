@@ -23,6 +23,14 @@ hdf5DataSet::hdf5DataSet(QString path, QString colid, QString devicename, QStrin
     isInit = false;
     dsetOpen = false;
     sizeIncrement = 50;
+    longString = false;
+
+    if (!params.isEmpty()){
+        foreach (QString attribute, params) {
+            if (attribute.contains("longString") && attribute.contains(":true")) longString = true;
+        }
+    }
+
 }
 
 hdf5DataSet::~hdf5DataSet() {
@@ -111,7 +119,7 @@ void hdf5DataSet::init(eveDataMessage* data){
 
             compoundType = createDataType(columnTitels, data->getDataType());
             // Create the memory buffer.
-            memBuffer = new PCmemSpace(compoundType.getSize());
+            memBuffer = new PCmemSpace(compoundType.getSize(), longString);
 
             // Create the dataset.
             dset = dataFile->createDataSet(qPrintable(dspath), compoundType, dspace, createProps);
@@ -251,7 +259,7 @@ int hdf5DataSet::addData(eveDataMessage* data){
                     currentDim[1] = sizeIncrement; 	// default array sizeIncrement
                     currentOffset[0] = 0;
                     currentOffset[1] = 0;
-                    dset = dataFile->createDataSet(qPrintable(dsname), convertToHdf5Type(dataType), dspace, createProps);
+                    dset = dataFile->createDataSet(qPrintable(dsname), convertToHdf5Type(dataType, longString), dspace, createProps);
                     dset.extend( currentDim );
                     dsetOpen = true;
                 }
@@ -272,7 +280,7 @@ int hdf5DataSet::addData(eveDataMessage* data){
                 currentDim[1] += sizeIncrement;
                 dset.extend( currentDim );
             }
-            dset.write(data->getBufferAddr(), convertToHdf5Type(dataType), memspace, filespace );
+            dset.write(data->getBufferAddr(), convertToHdf5Type(dataType, longString), memspace, filespace );
         }
         catch( Exception error )
         {
@@ -347,7 +355,7 @@ CompType hdf5DataSet::createDataType(QStringList names, eveType type){
     DataType typeA(PredType::NATIVE_INT32);
     DataType typeB;
     int count = 0;
-    size_t dtSize = typeA.getSize() + convertToHdf5Type(type).getSize() *(names.size() - 1);
+    size_t dtSize = typeA.getSize() + convertToHdf5Type(type, longString).getSize() *(names.size() - 1);
 
     CompType comptype(dtSize);
     std::string title = std::string(qPrintable(names.at(count)));
@@ -369,7 +377,7 @@ CompType hdf5DataSet::createDataType(QStringList names, eveType type){
         case eveEnum16T:
         case eveStringT:
         case eveDateTimeT:
-            typeB = convertToHdf5Type(type);
+            typeB = convertToHdf5Type(type, longString);
             break;
         default:
             return CompType(0);
@@ -386,7 +394,7 @@ CompType hdf5DataSet::createDataType(QStringList names, eveType type){
  * @param type
  * @return H5 type
  */
-AtomType hdf5DataSet::convertToHdf5Type(eveType type){
+AtomType hdf5DataSet::convertToHdf5Type(eveType type, bool longstring){
     switch (type) {
     case eveInt8T:
         return AtomType(PredType::NATIVE_INT8);
@@ -407,7 +415,10 @@ AtomType hdf5DataSet::convertToHdf5Type(eveType type){
     case eveEnum16T:
         return AtomType(StrType(PredType::C_S1, STANDARD_ENUM_STRINGSIZE+1));
     case eveStringT:
-        return AtomType(StrType(PredType::C_S1, STANDARD_STRINGSIZE+1));
+        if (longstring)
+            return AtomType(StrType(PredType::C_S1, LONGSTRING_STRINGSIZE+1));
+        else
+            return AtomType(StrType(PredType::C_S1, STANDARD_STRINGSIZE+1));
     case eveDateTimeT:
         return AtomType(StrType(PredType::C_S1, DATETIME_STRINGSIZE+1));
     default:

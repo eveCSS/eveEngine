@@ -66,12 +66,14 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveSMDetector* smdetector,
     valueRaw = 0.0;
     normCalc = 0.0;
     normRaw = 0.0;
+    longString = false;
 
     if ((definition->getValueCmd() != NULL) && (definition->getValueCmd()->getTrans()!= NULL)){
         eveTransportDefinition* transdef = (eveTransportDefinition*)definition->getValueCmd()->getTrans();
         if (transdef->getTransType() == eveTRANS_CA){
             valueTrans = new eveCaTransport(this, xmlId, name, (eveTransportDefinition*)definition->getValueCmd()->getTrans());
             if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
+            longString = ((eveCaTransport*) valueTrans)->getLongString();
         }
         else if (transdef->getTransType() == eveTRANS_LOCAL) {
             if (transdef->getName() == "Timer"){
@@ -706,6 +708,7 @@ eveDevInfoMessage* eveSMChannel::getDeviceInfo(bool normalizeInfo){
         dataMod = DMTnormalized;
         auxInfo = normalizeChannel->getXmlId();
     }
+    if (longString)sl->append(QString("longString:true"));
 
     return new eveDevInfoMessage(xmlId, name, sl, dataMod, auxInfo);
 }

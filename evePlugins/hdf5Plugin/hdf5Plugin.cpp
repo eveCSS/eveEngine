@@ -194,7 +194,7 @@ int hdf5Plugin::addData(int pathId, eveDataMessage* data)
         ds = dsNameHash.value(dsname);
     }
     else {
-        ds = new hdf5DataSet(dsname, data->getXmlId(), data->getName(), QStringList(), dataFile);
+        ds = new hdf5DataSet(dsname, data->getXmlId(), data->getName(), data->getAttributes(), dataFile);
         dsNameHash.insert(dsname, ds);
         ds->setSizeIncrement(defaultSizeIncrement);
         createGroup(dsname);

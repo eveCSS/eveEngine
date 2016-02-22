@@ -523,6 +523,9 @@ public:
 	eveType getDataType(){return dataType;};
 	eveTime getDataTimeStamp(){return timestamp;};
 	eveTime geteveDT(){return eveTime::eveTimeFromDateTime(dateTime);};
+    QStringList getAttributes(){return attribList;};
+    void addAttribute(QString attribute){attribList.append(attribute);};
+
 	bool isEmpty(){return !(arraySize);};
 	int getArraySize(){return arraySize;};
 	int getPositionCount(){return posCount;};
@@ -599,6 +602,7 @@ private:
 	QVector<double> dataArrayDouble;
 	QStringList dataStrings;
 	QDateTime dateTime;
+    QStringList attribList;
 };
 
 /**

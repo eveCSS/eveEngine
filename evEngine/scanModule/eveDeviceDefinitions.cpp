@@ -7,12 +7,20 @@
 
 #include "eveDeviceDefinitions.h"
 
-eveTransportDefinition::eveTransportDefinition(eveTransportT ttype, eveType etype, transMethodT transMethod, double timeo, QString accname) {
+eveTransportDefinition::eveTransportDefinition(eveTransportT ttype, eveType etype, transMethodT transMethod, double timeo, QString accname, QHash<QString, QString> attribs) {
 	dataType=etype;
 	timeout = timeo;
 	accessName = accname;
 	method = transMethod;
 	transType = ttype;
+    attributes = attribs;
+}
+eveTransportDefinition::eveTransportDefinition(eveTransportT ttype, eveType etype, transMethodT transMethod, double timeo, QString accname) {
+    dataType=etype;
+    timeout = timeo;
+    accessName = accname;
+    method = transMethod;
+    transType = ttype;
 }
 eveTransportDefinition::~eveTransportDefinition() {
 	// TODO Auto-generated destructor stub

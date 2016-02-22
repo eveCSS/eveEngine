@@ -87,6 +87,7 @@ private:
     bool isDetectorUnit;
     bool channelOK;
     bool deferredTrigger;
+    bool longString;
     int signalCounter;
     QList<eveCalc *> positionerList;
     QList<eveTransportT> transportList;

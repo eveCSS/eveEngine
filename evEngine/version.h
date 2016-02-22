@@ -1,8 +1,8 @@
 #ifndef VERSION_H
 #define VERSION_H
 
-#define EVE_VERSION "1.24.0"
+#define EVE_VERSION "1.25.0"
 #define SCML_VERSION "4.0"
-#define SAVEPLUGIN_VERSION "1.3" // only plugins with exactly this version string will be loaded
+#define SAVEPLUGIN_VERSION "1.4" // only plugins with exactly this version string will be loaded
 
 #endif // VERSION_H

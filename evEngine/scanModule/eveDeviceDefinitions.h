@@ -9,6 +9,7 @@
 #define EVEDEVICE_H_
 
 #include <QString>
+#include <QHash>
 #include <QList>
 #include <QStringList>
 #include "eveTypes.h"
@@ -24,13 +25,15 @@ class eveMotorDefinition;
  */
 class eveTransportDefinition {
 public:
-	eveTransportDefinition(eveTransportT, eveType, transMethodT, double, QString );
-	virtual ~eveTransportDefinition();
+    eveTransportDefinition(eveTransportT, eveType, transMethodT, double, QString);
+    eveTransportDefinition(eveTransportT, eveType, transMethodT, double, QString, QHash<QString, QString>);
+    virtual ~eveTransportDefinition();
 	eveTransportDefinition* clone();
 	QString getName(){return accessName;};
 	eveType getDataType(){return dataType;};
 	eveTransportT getTransType(){return transType;};
 	transMethodT getMethod(){return method;};
+    QHash<QString, QString> getAttributes(){return attributes;};
 	double getTimeout(){return timeout;};
 
 private:
@@ -38,6 +41,7 @@ private:
 	eveTransportT transType;
 	QString accessName;
 	transMethodT method;
+    QHash<QString, QString> attributes;
 	double timeout;
 };
 

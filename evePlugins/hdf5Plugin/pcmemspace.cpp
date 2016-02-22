@@ -1,9 +1,10 @@
 #include "pcmemspace.h"
 #include "hdf5DataSet.h"
 
-PCmemSpace::PCmemSpace(int size)
+PCmemSpace::PCmemSpace(int size, bool longstr)
 {
     memsize = 0;
+    longString = longstr;
     datastart = NULL;
     if (size < 5) size = 5;
     pcstart = (char*) malloc(size);
@@ -26,7 +27,7 @@ void PCmemSpace::setData(eveDataMessage* message){
     if (memsize < 1) return;
 
     if ((message->getDataType() == eveEnum16T) || (message->getDataType() == eveStringT) || (message->getDataType() == eveDateTimeT)){
-        int stringLength = hdf5DataSet::convertToHdf5Type(message->getDataType()).getSize();
+        int stringLength = hdf5DataSet::convertToHdf5Type(message->getDataType(), longString).getSize();
 
         char *tmpstart = datastart;
         char *bufferend = datastart + memsize - 4;

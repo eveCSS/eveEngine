@@ -18,6 +18,7 @@ using namespace H5;
 using namespace std;
 
 #define STANDARD_STRINGSIZE 40
+#define LONGSTRING_STRINGSIZE 256
 #define STANDARD_ENUM_STRINGSIZE 16
 #define DATETIME_STRINGSIZE 29
 
@@ -31,11 +32,11 @@ public:
 	int addData(eveDataMessage*);
 	void setSizeIncrement(int inc){sizeIncrement=inc;};
 	QString getError(){return errorString;};
-    static AtomType convertToHdf5Type(eveType);
+    static AtomType convertToHdf5Type(eveType, bool);
 
 private:
     enum h5storageType {Unknown, PosCountValues, PosCountNamedArray};
-    static CompType createDataType(QStringList, eveType);
+    CompType createDataType(QStringList, eveType);
     static CompType createModDataType(QString, QString, QString, eveType);
     void init(eveDataMessage*);
 	void addParamAttributes(H5Object*);
@@ -66,6 +67,7 @@ private:
 	CompType compoundType;
 	DSetCreatPropList createProps;
 	bool dsetOpen;
+    bool longString;
 	int sizeIncrement;
 };
 

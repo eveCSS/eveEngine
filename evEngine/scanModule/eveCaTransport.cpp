@@ -25,6 +25,7 @@ eveCaTransport::eveCaTransport(eveSMBaseDevice *parent, QString xmlid, QString n
 	transStatus = eveUNDEFINED;
 	currentAction = eveIDLE;
 	needEnums = true;
+    longString = false;
 	enumsInProgress = false;
 	isMonitorOn = false;
 	chanChid = 0;
@@ -36,6 +37,17 @@ eveCaTransport::eveCaTransport(eveSMBaseDevice *parent, QString xmlid, QString n
 	method = transdef->getMethod();
 	dataType = transdef->getDataType();
 	baseDevice = parent;
+
+    QHash<QString, QString> attributes = transdef->getAttributes();
+    if (!attributes.isEmpty()){
+        foreach(QString key, attributes.keys()){
+            if (key.contains("longString") && attributes.value(key).contains("true")){
+                longString = true;
+                break;
+            }
+        }
+    }
+
 	int timeOut = (int)(transdef->getTimeout()*1000.0);
 
 	getTimer = new QTimer(this);
@@ -170,8 +182,13 @@ void eveCaTransport::setCnctStatus(int status) {
 	}
 	else {
 		sendError(DEBUG, 0, "connected");
-		dataCount = ca_element_count(chanChid);
+        dataCount = ca_element_count(chanChid);
 		elementType = ca_field_type(chanChid);
+        // sendError(DEBUG, 0, QString("longString: %1, type: %2, count: %3").arg(longString).arg(elementType).arg(dataCount));
+        if ((longString) && (elementType != DBF_CHAR)) {
+            longString = false;
+            sendError(DEBUG, 0, QString("CaTransport %1 is a longString").arg(pvname));
+        }
 		// as request type we always use DBR_TIME_<PRIMITIVE TYPE>
 		requestType = dbf_type_to_DBR_TIME(elementType);
 		if ((elementType == DBF_ENUM) && needEnums){
@@ -497,9 +514,14 @@ int eveCaTransport::writeData(eveVariant writedata, bool queue){
 
 	bool retstat;
 	char *strPtr;
+    int bufferlen = MAX_STRING_SIZE+1;
+    int elemCount = 1;
+    eveType dType = dataType;
+
+    if (longString) bufferlen = dataCount;
 
     if (writeDataPtr == NULL) {
-		writeDataPtr = malloc(MAX_STRING_SIZE+1);
+        writeDataPtr = malloc(bufferlen);
 		if (!writeDataPtr) {
 			sendError(ERROR,0,QString("eveCaTransport::writeData Unable to allocate memory"));
 			return 1;
@@ -519,17 +541,22 @@ int eveCaTransport::writeData(eveVariant writedata, bool queue){
 	}
 	else if (dataType == eveSTRING){
 		strPtr = (char*) writeDataPtr;
-		strncpy(strPtr, writedata.toString().toAscii().data(), MAX_STRING_SIZE);
-		strPtr[MAX_STRING_SIZE] = 0;
+        strncpy(strPtr, writedata.toString().toAscii().data(), bufferlen-1);
+        strPtr[bufferlen-1] = 0;
+        if (longString) {
+            // if longString is true, we send a char array instead of a string
+            elemCount = strlen(strPtr);
+            dType = eveUInt8T;
+        }
 	}
 
 	if ((method == evePUT) || (method == eveGETPUT)){
-		retstat = put(dataType, 1, writeDataPtr, !queue);
+        retstat = put(dType, elemCount, writeDataPtr, !queue);
 		// we signal immediately
 		if (retstat)emit done(0);
 	}
 	else
-		retstat = putCB(dataType, 1, writeDataPtr, !queue);
+        retstat = putCB(dType, elemCount, writeDataPtr, !queue);
 
 	if (retstat)
 		return 0;
@@ -612,9 +639,17 @@ eveDataMessage* eveCaTransport::getDataMessage(struct event_handler_args arg){
 		newdata = new eveDataMessage(xmlId, name, dStatus, dataMod, etime, dataArray);
 	}
 	else if (arg.type == DBR_TIME_CHAR){
-		QVector<signed char> dataArray(arg.count);
-		memcpy((void *)dataArray.data(), (const void *) &((struct dbr_time_char *)arg.dbr)->value, sizeof(char) * arg.count);
-		newdata = new eveDataMessage(xmlId, name, dStatus, dataMod, etime, dataArray);
+        if (pv->getLongString()) {
+            // create DataMessage of type String if we have a a longString
+            unsigned char *mystr = &((struct dbr_time_char *)arg.dbr)->value;
+            newdata = new eveDataMessage(xmlId, name, dStatus, dataMod, etime, QStringList(QString((const char*)mystr)));
+            newdata->addAttribute("longString:true");
+        }
+        else {
+            QVector<signed char> dataArray(arg.count);
+            memcpy((void *)dataArray.data(), (const void *) &((struct dbr_time_char *)arg.dbr)->value, sizeof(char) * arg.count);
+            newdata = new eveDataMessage(xmlId, name, dStatus, dataMod, etime, dataArray);
+        }
 	}
 	else if (arg.type == DBR_TIME_FLOAT){
 		QVector<float> dataArray(arg.count);

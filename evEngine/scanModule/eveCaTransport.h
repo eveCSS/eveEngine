@@ -57,6 +57,7 @@ public:
 	static eveDataMessage* getDataMessage(struct event_handler_args arg);
 	static epicsType convertEveToEpicsType(eveType intype){return (epicsType) intype;};
 	static int convertEpicsToDBR(epicsType type){return epicsTypeToDBR_XXXX[type];};
+    bool getLongString(){return longString;};
 
 public slots:
 	void setCnctStatus(int);
@@ -76,7 +77,7 @@ signals:
 
 private:
     static QHash<struct ca_client_context *, int> contextCounter;
-	static QReadWriteLock contextLock;
+    static QReadWriteLock contextLock;
     QTimer *getTimer;
     QTimer *putTimer;
     void getEnumStrs();
@@ -100,7 +101,7 @@ private:
 	bool enumsInProgress;
 	struct ca_client_context *caThreadContext;
 	bool isMonitorOn;
-
+    bool longString;
 };
 
 #endif /* EVECATRANSPORT_H_ */

@@ -5,7 +5,7 @@
 class PCmemSpace
 {
 public:
-    PCmemSpace(int);
+    PCmemSpace(int, bool);
     virtual ~PCmemSpace();
     void setPosCount(int);
     void setData(eveDataMessage* message);
@@ -17,6 +17,7 @@ private:
     int memsize;
     char* pcstart;
     char* datastart;
+    bool longString;
 };
 
 #endif // PCMEMSPACE_H
