@@ -35,31 +35,38 @@ eveNetObject::~eveNetObject()
  */
 void eveNetObject::init(){
 
-	quint16 port = eveParameter::getParameter("port").toShort();
+    // TODO
+    if (eveParameter::getParameter("interfaces") != "all")
+        eveError::log(MINOR, "eveNetObject::init: selecting specific interfaces not yet implemented");
 
-	// TODO
-	if (eveParameter::getParameter("interfaces") != "all")
-			eveError::log(MINOR, "eveNetObject::init: selecting specific interfaces not yet implemented");
+    disconnect(this, SIGNAL(initDelayed()), this, SLOT(init()));
 
-	disconnect(this, SIGNAL(initDelayed()), this, SLOT(init()));
+    if (use_net){
+        // register with mHub if not already done
+        eveMessageHub::getmHub()->registerChannel(this, channelId);
+        mFilter = new eveMessageFilter(this);
 
-	if (use_net){
+        qint32 testport = eveParameter::getParameter("port").toInt();
 
-		// register with mHub if not already done
-		eveMessageHub::getmHub()->registerChannel(this, channelId);
-		mFilter = new eveMessageFilter(this);
+        if ((testport > 65535) || (testport < 1024)) {
+            eveError::log(ERROR, QString("invalid port %1, must be in range 1024 -> 65535").arg(testport));
+            addMessage(new eveMessage(EVEMESSAGETYPE_ENDPROGRAM));
+        }
+        else {
+            quint16 port = eveParameter::getParameter("port").toUShort();
 
-		// create a TCP-Listener Object
-		netListener = new QTcpServer(this);
-		connect(netListener, SIGNAL(newConnection()), this, SLOT(acceptSocket()));
+            // create a TCP-Listener Object
+            netListener = new QTcpServer(this);
+            connect(netListener, SIGNAL(newConnection()), this, SLOT(acceptSocket()));
 
-		if (!netListener->listen(QHostAddress::Any, port )){
-			eveError::log(ERROR, QString("Error listening on port %1; Error: %2").arg(port).arg(netListener->errorString()));
-			addMessage(new eveMessage(EVEMESSAGETYPE_ENDPROGRAM));
-		}
-		else
-			eveError::log(DEBUG, QString("listening on port %1").arg(port));
-	}
+            if (!netListener->listen(QHostAddress::Any, port )){
+                eveError::log(ERROR, QString("Error listening on port %1; Error: %2").arg(port).arg(netListener->errorString()));
+                addMessage(new eveMessage(EVEMESSAGETYPE_ENDPROGRAM));
+            }
+            else
+                eveError::log(DEBUG, QString("listening on port %1").arg(port));
+        }
+    }
 }
 
 /* \brief add a socket to the list
@@ -152,7 +159,7 @@ void eveNetObject::shutdown(){
 	if (!shutdownPending){
 		shutdownPending = true;
 		eveError::log(DEBUG, "NetObject shutdown", EVEMESSAGEFACILITY_NETWORK);
-		netListener->close();
+        if (netListener) netListener->close();
 		disableInput();
 		eveMessageHub::getmHub()->unregisterChannel(channelId);
 		foreach (eveSocket *sock, socketList) {
