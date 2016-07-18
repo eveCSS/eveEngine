@@ -46,6 +46,7 @@ private:
     bool haveStorage(){return !storageChannelList.isEmpty();};
     int scanChannelCounter;
     int nextChannel;
+    int waitCounter;
     QThread* nwThread;
     QThread* managerThread;
     QThread* eventThread;

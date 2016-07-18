@@ -23,6 +23,7 @@ eveMessageHub::eveMessageHub(bool gui, bool net)
 	mHub = this;
     shutdown = false;
 	currentXmlId = "none";
+    waitCounter = 0;
 	reqMan = new eveRequestManager();
 	loglevel = eveParameter::getParameter("loglevel").toInt();
 	connect (this, SIGNAL(messageWaiting(int)), this, SLOT(newMessage(int)), Qt::QueuedConnection);
@@ -460,7 +461,8 @@ void eveMessageHub::close()
 void eveMessageHub::waitUntilDone()
 {
 	QReadLocker locker(&channelLock);
-	if (!mChanHash.isEmpty()){
+    if (!mChanHash.isEmpty() && waitCounter < 100){
+        ++waitCounter;
 		// close nwThread last
 		if (mChanHash.size()==1) emit closeNet();
 		QTimer::singleShot(100, this, SLOT(waitUntilDone()));
@@ -468,12 +470,8 @@ void eveMessageHub::waitUntilDone()
 		return;
 	}
 	eveError::log(DEBUG, "MessageHub shutdown, done");
-	if (useGui) {
-		emit closeParent();
-	}
-	else {
-		QApplication::exit(0);
-	}
+
+    QApplication::exit(0);
 }
 
 /**
