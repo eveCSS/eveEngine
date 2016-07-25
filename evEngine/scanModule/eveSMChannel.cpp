@@ -13,6 +13,7 @@
 #include "eveScanModule.h"
 #include "eveTimer.h"
 #include "eveCounter.h"
+#include "eveSMCounter.h"
 #include "eveSMDetector.h"
 
 #define checkNaN(val) (val != val)
@@ -82,6 +83,9 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveSMDetector* smdetector,
             }
             else if (transdef->getName() == "Counter"){
                 valueTrans = new eveCounter(this, xmlId, name, transdef);
+            }
+            else if (transdef->getName() == "SM-Counter"){
+                valueTrans = new eveSMCounter(scanModule, this, xmlId, name, transdef);
             }
         }
         if (transdef->getTimeout() > 10.0) timeoutShort = false;

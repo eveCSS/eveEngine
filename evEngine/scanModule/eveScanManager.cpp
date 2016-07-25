@@ -32,6 +32,7 @@ eveScanManager::eveScanManager(eveManager *parent, eveXMLReader *parser, int cha
     chainId = chainid;
     storageChannel = storageChan;
     posCounter = 0;
+    smCounter = 0;
     totalPositions = 1;
     useStorage = false;
     manager = parent;
@@ -392,6 +393,16 @@ void eveScanManager::nextPos(){
     message->setPositionCount(posCounter);
     message->setChainId(chainId);
     addMessage(message);
+}
+
+/**
+ * increment scanmodule counter
+ */
+void eveScanManager::incrSMCounter(){
+    if (smCounter >= 0x7fffffff)
+        smCounter = 0;
+    else
+        ++smCounter;
 }
 
 /**

@@ -380,8 +380,9 @@ void eveScanModule::eveStgStartExecuting() {
 void eveScanModule::stgGotoStart() {
 
     if (currentStageCounter == 0){
-        // increment posCounter unless we are nested
+        // increment posCounter unless we are nested, increment SM-Counter
         if (smType != eveSmTypeNESTED) sendNextPos();
+        manager->incrSMCounter();
         sendError(DEBUG, 0, "stgGotoStart");
         currentStageCounter = 1;
         signalCounter = 0;

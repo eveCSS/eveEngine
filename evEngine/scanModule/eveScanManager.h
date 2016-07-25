@@ -49,6 +49,9 @@ public:
     int sendRequest(int, QString);
     void cancelRequest(int rid);
     int getPositionCount(){return posCounter;};
+    int getSMCount(){return smCounter;};
+    void incrSMCounter();
+
 
 public slots:
     void smStart();
@@ -75,6 +78,7 @@ private:
     int chainId;
     int storageChannel;
     bool useStorage;
+    int smCounter;
     eveScanModule * rootSM;
     eveManager *manager;
     float posCountDuration;

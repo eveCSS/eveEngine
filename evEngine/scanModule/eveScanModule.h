@@ -54,6 +54,7 @@ public:
     void readPos();
     bool newEvent(eveEventProperty*);
     void activateRedo();
+    int getSMCount(){return manager->getSMCount();};
 
 public slots:
     void execStage();
