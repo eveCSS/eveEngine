@@ -299,6 +299,8 @@ bool eveSMStatus::setEvent(eveEventProperty* evprop ) {
             if (isTriggerWait()) {
                 if (manualRid == evprop->getEventId())
                     maTrigWait = false;
+                else if (detecRid == evprop->getEventId())
+                    detTrigWait = false;
             }
         }
         else if  (evprop->getActionType() == eveEventProperty::BREAK){
