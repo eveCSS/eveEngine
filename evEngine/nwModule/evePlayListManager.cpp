@@ -113,8 +113,6 @@ void evePlayListManager::addEntry(QString name, QString author, QByteArray data)
     if (ple.name.length() < 1) ple.name = "none";
     if (ple.author.length() < 1) ple.author = "none";
 
-    eveError::log(ERROR, QString("evePlayListManager: got entry id: %1 name: %2").arg(ple.pid).arg(ple.name));
-
     // Caution XML verification uses QNetworkManager and is asynchronous
     // works only if this and all parent functions are reentrant!
     if (!xmlPassedVerification(data)) {
@@ -159,8 +157,6 @@ void evePlayListManager::addEntry(QString name, QString author, QByteArray data)
  * \param pld playlistdata to insert
  */
 void evePlayListManager::insertEntry(evePlayListEntry ple, evePlayListData* pld){
-
-    eveError::log(ERROR, QString("evePlayListManager: insert entry id: %1 name: %2").arg(ple.pid).arg(ple.name));
 
 //    QListIterator<evePlayListEntry> itera(playlist);
     bool insertDone=false;
