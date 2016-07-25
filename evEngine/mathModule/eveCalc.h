@@ -24,6 +24,7 @@ public:
     static QList<MathAlgorithm> getAlgorithms();
     eveCalc(eveMessageChannel*, QString, QString, QString, QString);
     eveCalc(eveMathConfig mathConfig, eveMessageChannel* manag);
+    eveCalc(eveMessageChannel* manag, QHash<QString, QString>* mathparams);
     virtual ~eveCalc();
     void reset();
     bool addValue(QString, int pos, eveVariant);
@@ -44,6 +45,7 @@ protected:
     QString detectorId;
     QString normalizeId;
     int ypos;
+    double threshold;
     int position;
     double ydata;
 

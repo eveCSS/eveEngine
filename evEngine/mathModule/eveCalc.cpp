@@ -25,35 +25,52 @@
  *
  */
 eveCalc::eveCalc(eveMessageChannel* manag, QString calcAlgorithm, QString xAxis, QString yAxis, QString normAxis) {
-	manager = manag;
-	xAxisId = xAxis;
-	detectorId = yAxis;
-	normalizeId = normAxis;
-	algorithm = toMathAlgorithm(calcAlgorithm);
-	if (normalizeId.isEmpty())
-		doNormalize = false;
-	else
-		doNormalize = true;
-	saveValues = true;
+    manager = manag;
+    xAxisId = xAxis;
+    detectorId = yAxis;
+    normalizeId = normAxis;
+    algorithm = toMathAlgorithm(calcAlgorithm);
+    if (normalizeId.isEmpty())
+        doNormalize = false;
+    else
+        doNormalize = true;
+    saveValues = true;
     normalizeExt = false;
-        // don't save all values for MIN, MAX, SUM
-        if ((algorithm == MIN) || (algorithm == MAX) || (algorithm == SUM)) saveValues = false;
-	reset();
+    // don't save all values for MIN, MAX, SUM
+    if ((algorithm == MIN) || (algorithm == MAX) || (algorithm == SUM)) saveValues = false;
+    threshold = 0.5;
+    reset();
 
 }
 
 eveCalc::eveCalc(eveMathConfig mathConfig, eveMessageChannel* manag) {
-	manager = manag;
-	xAxisId = QString(mathConfig.getXAxis());
-	detectorId = QString(mathConfig.getDetector());
-	normalizeId = QString(mathConfig.getNormalizeDetector());
-	algorithm = UNKNOWN;
+    manager = manag;
+    xAxisId = QString(mathConfig.getXAxis());
+    detectorId = QString(mathConfig.getDetector());
+    normalizeId = QString(mathConfig.getNormalizeDetector());
+    algorithm = UNKNOWN;
     normalizeExt = mathConfig.getNormalizeExternal();
     doNormalize = false;
     if (!normalizeId.isEmpty() && !normalizeExt) doNormalize = true;
-	saveValues = true;
-	reset();
+    saveValues = true;
+    threshold = 0.5;
+    reset();
 
+}
+
+eveCalc::eveCalc(eveMessageChannel* manag, QHash<QString, QString>* mathparams) {
+    manager = manag;
+    algorithm = toMathAlgorithm(mathparams->value("pluginname", QString()));
+    xAxisId = mathparams->value("axis_id", QString());
+    detectorId = mathparams->value("channel_id", QString());
+    normalizeId = mathparams->value("normalize_id", QString());
+    QString threshold_str = mathparams->value("threshold", QString());
+    threshold = 0.5;
+    bool ok = false;
+    if (!threshold_str.isEmpty()){
+        threshold = threshold_str.toDouble(&ok);
+        if (ok) threshold *= 0.01;
+    }
 }
 
 eveCalc::~eveCalc() {
@@ -451,8 +468,8 @@ eveCalc::Calcresult eveCalc::getPeakAndCenter(const QVector<QPointF>& curve){
         QPointF first = curve.first();
         QPointF last = curve.last();
         int index = 0, minindex = 0, maxindex = 0;
-        double halfMaxY;
-        double halfDistY;
+        double threshMaxY;
+        double threshDistY;
         bool haveMaxCenter = false, haveMinCenter = false;
         int rightMaxIndex = 0, leftMaxIndex = 0;
         int rightMinIndex = 0, leftMinIndex = 0;
@@ -469,19 +486,19 @@ eveCalc::Calcresult eveCalc::getPeakAndCenter(const QVector<QPointF>& curve){
             ++index;
         }
 
-        halfMaxY = (max.ry() + min.ry())/2;
-        halfDistY = fabs((max.ry() - min.ry())/2.);
+        threshMaxY = (max.ry() + min.ry())*threshold;
+        threshDistY = fabs((max.ry() - min.ry())*(1-threshold));
 
         // check if curve goes down to 50% left and right from max
         if ((max.ry() > first.ry()) && (max.ry() > last.ry())){
             for (int i = maxindex; i < curve.size(); ++i){
-                if (fabs(max.ry() - curve.at(i).y()) > halfDistY) {
+                if (fabs(max.ry() - curve.at(i).y()) > threshDistY) {
                     rightMaxIndex = i;
                     break;
                 }
             }
             for (int i = maxindex; i >= 0; --i){
-                if (fabs(max.ry() - curve.at(i).y()) > halfDistY){
+                if (fabs(max.ry() - curve.at(i).y()) > threshDistY){
                     leftMaxIndex = i;
                     break;
                 }
@@ -490,13 +507,13 @@ eveCalc::Calcresult eveCalc::getPeakAndCenter(const QVector<QPointF>& curve){
         // check if curve goes up to 50% left and right from min
         if ((min.ry() < first.ry()) && (min.ry() < last.ry())){
             for (int i = minindex; i < curve.size(); ++i){
-                if (fabs(min.ry() - curve.at(i).y()) > halfDistY) {
+                if (fabs(min.ry() - curve.at(i).y()) > threshDistY) {
                     rightMinIndex = i;
                     break;
                 }
             }
             for (int i = minindex; i >= 0; --i){
-                if (fabs(min.ry() - curve.at(i).y()) > halfDistY){
+                if (fabs(min.ry() - curve.at(i).y()) > threshDistY){
                     leftMinIndex = i;
                     break;
                 }
@@ -531,9 +548,9 @@ eveCalc::Calcresult eveCalc::getPeakAndCenter(const QVector<QPointF>& curve){
 
         if (haveMaxCenter || haveMinCenter) {
             // linear fit to find halfMaxX
-            double halfMaxXright = (halfMaxY - curve.at(rightIndex).y()) * (curve.at(rightIndex-1).x() - curve.at(rightIndex).x()) /
+            double halfMaxXright = (threshMaxY - curve.at(rightIndex).y()) * (curve.at(rightIndex-1).x() - curve.at(rightIndex).x()) /
                     (curve.at(rightIndex-1).y() - curve.at(rightIndex).y()) + curve.at(rightIndex).x();
-            double halfMaxXleft = (halfMaxY - curve.at(leftIndex).y()) * (curve.at(leftIndex+1).x() - curve.at(leftIndex).x()) /
+            double halfMaxXleft = (threshMaxY - curve.at(leftIndex).y()) * (curve.at(leftIndex+1).x() - curve.at(leftIndex).x()) /
                     (curve.at(leftIndex+1).y() - curve.at(leftIndex).y()) + curve.at(leftIndex).x();
 
             center = (halfMaxXright + halfMaxXleft) * 0.5;

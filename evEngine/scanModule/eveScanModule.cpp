@@ -107,14 +107,12 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     posPluginDataList = parser->getPositionerPluginList(chainId, smId);
     while (!posPluginDataList->isEmpty()){
             QHash<QString, QString>* positionerHash = posPluginDataList->takeFirst();
-            QString algorithm = positionerHash->value("pluginname", QString());
             QString xAxisId = positionerHash->value("axis_id", QString());
             QString channelId = positionerHash->value("channel_id", QString());
             QString normalizeId = positionerHash->value("normalize_id", QString());
-            delete positionerHash;
 
-            if (!algorithm.isEmpty() && !xAxisId.isEmpty() && !channelId.isEmpty()){
-                    eveCalc* positioner = new eveCalc(manager, algorithm, xAxisId, channelId, normalizeId);
+            if (!positionerHash->value("pluginname").isEmpty() && !xAxisId.isEmpty() && !channelId.isEmpty()){
+                    eveCalc* positioner = new eveCalc(manager, positionerHash);
                     positionerList.append(positioner);
                     foreach (eveSMAxis *axis, *axisList){
                             if (axis->getXmlId() == xAxisId) {
@@ -133,6 +131,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
                             }
                     }
             }
+            delete positionerHash;
     }
     delete posPluginDataList;
 
