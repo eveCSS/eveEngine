@@ -284,6 +284,10 @@ bool eveManager::createSMs(QByteArray xmldata, bool isRepeat) {
 			addMessage(new eveMonitorRegisterMessage(monitorOption, storageChannelId));
 		}
 		delete monitors;
+        // add metadata to datafile
+        eveMessageTextList* mtl = new eveMessageTextList(EVEMESSAGETYPE_METADATA,
+                           (QStringList() << "SCML-Name" << currentPlEntry->name << "SCML-Author" << currentPlEntry->author));
+        addMessage(mtl);
 	}
 	delete scmlParser;
 
