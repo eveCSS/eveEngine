@@ -113,6 +113,8 @@ void evePlayListManager::addEntry(QString name, QString author, QByteArray data)
     if (ple.name.length() < 1) ple.name = "none";
     if (ple.author.length() < 1) ple.author = "none";
 
+    eveError::log(ERROR, QString("evePlayListManager: got entry id: %1 name: %2").arg(ple.pid).arg(ple.name));
+
     // Caution XML verification uses QNetworkManager and is asynchronous
     // works only if this and all parent functions are reentrant!
     if (!xmlPassedVerification(data)) {
@@ -146,12 +148,42 @@ void evePlayListManager::addEntry(QString name, QString author, QByteArray data)
         pld->isLoaded = true;
         pld->data = data;
     }
-    datahash.insert(ple.pid, pld);
-    playlist.append(ple);
+    insertEntry(ple, pld);
     flushPlaylist();
 
     return;
 }
+/**
+ * \brief add playlist entry
+ * \param ple playlistentry to insert
+ * \param pld playlistdata to insert
+ */
+void evePlayListManager::insertEntry(evePlayListEntry ple, evePlayListData* pld){
+
+    eveError::log(ERROR, QString("evePlayListManager: insert entry id: %1 name: %2").arg(ple.pid).arg(ple.name));
+
+//    QListIterator<evePlayListEntry> itera(playlist);
+    bool insertDone=false;
+    QList<evePlayListEntry>::iterator itera;
+    for (itera = playlist.begin(); itera != playlist.end(); ++itera) {
+        if (itera->pid < ple.pid) continue;
+        playlist.insert(itera, ple);
+        insertDone = true;
+        break;
+    }
+//    for (int i = playlist.size()-1; i >=0 ; --i) {
+//        eveError::log(ERROR, QString("evePlayListManager: loop count: %1 entry id: %2 (%3)").arg(i).arg(ple.pid).arg(playlist.size()));
+//        if (playlist.at(i).pid > ple.pid) continue;
+//        playlist.insert(i, ple);
+//        insertDone = true;
+//        break;
+//    }
+    if (!insertDone) playlist.append(ple);
+    datahash.insert(ple.pid, pld);
+
+
+}
+
 
 /**
  * \brief remove playlist entry

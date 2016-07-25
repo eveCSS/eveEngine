@@ -119,6 +119,7 @@ eveMessageTextList::eveMessageTextList(int mType, QStringList& textlist, int pri
 	// check the allowed types; for now EVEMESSAGETYPE_METADATA is the only candidate
 	assert(type == EVEMESSAGETYPE_METADATA);
 	priority = prio;
+    chainId = 0;
 }
 /**
  * \brief compare two messages

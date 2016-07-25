@@ -69,6 +69,8 @@ private:
     QHash<unsigned int, evePlayListData*> datahash;
     void sendError(int, int, QString);
     bool xmlPassedVerification(QByteArray & );
+    void insertEntry(evePlayListEntry, evePlayListData*);
+
 };
 
 #endif /* EVEPLAYLISTMANAGER_H_ */
