@@ -407,6 +407,30 @@ void eveScanModule::stgGotoStart() {
             if (allDone){
                 currentStageCounter = 2;
                 signalCounter = 0;
+                if (manualTrigger){
+                    triggerRid = manager->sendRequest(smId, "Trigger Positioning");
+                    if (myStatus.triggerManualStart(triggerRid)) manager->setStatus(smId, myStatus);
+                    ++signalCounter;
+                }
+                if (eventTrigger){
+                    if (myStatus.triggerEventStart()) manager->setStatus(smId, myStatus);
+                    ++signalCounter;
+                }
+                emit sigExecStage();
+            }
+        }
+    }
+    else if (currentStageCounter == 2){
+        if (signalCounter > 0){
+            --signalCounter;
+        }
+        else {
+            if (!myStatus.isTriggerEventWait() && !myStatus.isManualTriggerWait()){
+                currentStageCounter = 3;
+                signalCounter = 0;
+
+                if (manualTrigger) manager->cancelRequest(triggerRid);
+
                 foreach (eveSMAxis *axis, *axisList){
                     sendError(DEBUG, 0, QString("Moving axis %1").arg(axis->getName()));
                     axis->setTimer(QDateTime::currentDateTime());
