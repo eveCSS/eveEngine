@@ -36,7 +36,7 @@ public:
 	void setStepFile(QString);
 	void setStepPlugin(QString, QHash<QString, QString>& );
     QString getRefAxisName(){return refAxisName;};
-    void setRefAxisPosCalc(evePosCalc* poscalc){referencePosCalc = poscalc;};
+    void setRefAxisPosCalc(evePosCalc* poscalc){if (poscalc != this) referencePosCalc = poscalc;};
 	void setPositionList(QString);
 	void reset();
 	eveVariant& getNextPos();
