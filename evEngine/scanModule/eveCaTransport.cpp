@@ -542,10 +542,13 @@ int eveCaTransport::writeData(eveVariant writedata, bool queue){
 	else if (dataType == eveSTRING){
 		strPtr = (char*) writeDataPtr;
         strncpy(strPtr, writedata.toString().toAscii().data(), bufferlen-1);
-        strPtr[bufferlen-1] = 0;
+        int strlength = writedata.toString().length();
+        if (strlength > bufferlen -1) strlength = bufferlen-1;
+        strPtr[strlength] = 0;
         if (longString) {
             // if longString is true, we send a char array instead of a string
-            elemCount = strlen(strPtr);
+            // keep the trailing 0 as last array element
+            elemCount = strlength+1;
             dType = eveUInt8T;
         }
 	}
