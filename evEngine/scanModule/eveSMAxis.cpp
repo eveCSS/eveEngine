@@ -481,7 +481,8 @@ void eveSMAxis::readPos(bool queue) {
 bool eveSMAxis::execPositioner(){
 	if (positioner == NULL) return false;
 	if (positioner->calculate()){
-		gotoPos(positioner->getXResult(), false);
+        sendError(DEBUG ,0,"moving to target position for postscan positioning");
+        gotoPos(positioner->getXResult(), false);
 		return true;
 	}
 	else {

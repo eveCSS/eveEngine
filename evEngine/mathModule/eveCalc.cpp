@@ -64,13 +64,17 @@ eveCalc::eveCalc(eveMessageChannel* manag, QHash<QString, QString>* mathparams) 
     xAxisId = mathparams->value("axis_id", QString());
     detectorId = mathparams->value("channel_id", QString());
     normalizeId = mathparams->value("normalize_id", QString());
+    doNormalize = true;
+    if (normalizeId.isEmpty()) doNormalize = false;
     QString threshold_str = mathparams->value("threshold", QString());
+    saveValues = true;
     threshold = 0.5;
     bool ok = false;
     if (!threshold_str.isEmpty()){
         threshold = threshold_str.toDouble(&ok);
         if (ok) threshold *= 0.01;
     }
+    reset();
 }
 
 eveCalc::~eveCalc() {
