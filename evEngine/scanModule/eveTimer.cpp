@@ -136,12 +136,12 @@ int eveTimer::writeData(eveVariant writedata, bool queue){
     }
     else if (writedata.getType() == eveFloat64T){
         bool ok = true;
-        double mSecsD=writedata.toDouble(&ok);
+        double seconds=writedata.toDouble(&ok);
         if (!ok){
             sendError(DEBUG, 0, QString("Error converting data to double (msecs)"));
         }
         else {
-            int mSecs = (int)(mSecsD * 1000.0);
+            int mSecs = (int)(seconds * 1000.0);
             mSecs -= getMSecsUntil(currentDT);
             if (mSecs < 0 ) mSecs=0;
             sendError(DEBUG, 0, QString("eveTimer: load double timer with %1 msecs").arg(mSecs));

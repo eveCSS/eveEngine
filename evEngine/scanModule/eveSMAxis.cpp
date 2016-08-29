@@ -482,6 +482,10 @@ bool eveSMAxis::execPositioner(){
 	if (positioner == NULL) return false;
 	if (positioner->calculate()){
         sendError(DEBUG ,0,"moving to target position for postscan positioning");
+        if (isTimer) {
+            sendError(MINOR,0,"timer axis is not a valid axis for postscan positioning");
+            return false;
+        }
         gotoPos(positioner->getXResult(), false);
 		return true;
 	}
