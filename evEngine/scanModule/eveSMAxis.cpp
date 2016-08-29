@@ -164,7 +164,7 @@ eveSMAxis::~eveSMAxis() {
 		if (haveDeadband) delete deadbandTrans;
 		if (haveTrigger && !isMotorTrigger) delete triggerTrans;
 		if (haveUnit && !isMotorUnit) delete unitTrans;
-
+        if (curPosition != NULL) delete curPosition;
 		delete posCalc;
 	}
 	catch (std::exception& e)
@@ -514,16 +514,6 @@ void eveSMAxis::stop() {
 		else
 			axisStop = true;
 	}
-}
-
-/**
- *
- * @return current position value
- */
-eveDataMessage* eveSMAxis::getPositionMessage(){
-	eveDataMessage* return_data = curPosition;
-	curPosition = NULL;
-	return return_data;
 }
 
 /**
