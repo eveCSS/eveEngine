@@ -47,8 +47,7 @@ public:
 	bool isDone(){return ready;};
 	QString getUnit(){return unit;};
 	eveDevInfoMessage* getDeviceInfo();
-    eveDataMessage* getPositionMessage(){return new eveDataMessage(*curPosition);};
-
+    eveDataMessage* getPositionMessage();
     void sendError(int, int, int, QString);
     int getExpectedPositions(){return posCalc->getExpectedPositions();};
     void addPositioner(eveCalc* pos){positioner = pos;};

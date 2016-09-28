@@ -383,6 +383,14 @@ void eveSMAxis::signalReady() {
 	emit axisDone();
 }
 
+eveDataMessage* eveSMAxis::getPositionMessage(){
+    if (curPosition != NULL)
+        return new eveDataMessage(*curPosition);
+
+    return NULL;
+};
+
+
 /**
  * \brief get start position and go there, reset internal counter
  * @param queue if true don't send the command, instead put it in the send queue
