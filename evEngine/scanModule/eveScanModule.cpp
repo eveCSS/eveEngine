@@ -35,15 +35,17 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     triggerRid = 0;
     triggerDetecRid = 0;
     perPosCount = 0;
+    storageHint = "default";
 
 	// convert times to msecs
     settleDelay = (int)(parser->getSMTagDouble(chainId, smId, "settletime", 0.0)*1000.0);
     triggerDelay = (int)(parser->getSMTagDouble(chainId, smId, "triggerdelay", 0.0)*1000.0);
     manualTrigger  = parser->getSMTagBool(chainId, smId, "triggerconfirmaxis", false);
     manDetTrigger = parser->getSMTagBool(chainId, smId, "triggerconfirmchannel", false);
-    QString scanType = parser->getSMTag(chainId, smId, "type");
-    storageHint = parser->getSMTag(chainId, smId, "storage");
-    if (storageHint.length() == 0) storageHint = "default";
+    QString SMType = parser->getSMTag(chainId, smId, "type");
+    if ((SMType == "save_axis_positions") || (SMType == "save_channel_values")) {
+        storageHint = "alternate";
+    }
 
     stageHash.insert(eveStgINIT, &eveScanModule::stgInit);
     stageHash.insert(eveStgREADPOS, &eveScanModule::stgReadPos);
