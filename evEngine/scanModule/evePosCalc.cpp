@@ -286,11 +286,16 @@ void evePosCalc::setStepFile(QString stepfilename) {
                     positionList.append(line);
                 }
             }
+            if((posIntList.count() == 0) && (posDoubleList.count() == 0) && (positionList.count() == 0))
+                sendError(ERROR, QString("position file is empty: %1").arg(fileInfo.absoluteFilePath()));
             file.close();
         }
         else {
             sendError(ERROR, QString("unable to open position file %1").arg(fileInfo.absoluteFilePath()));
         }
+    }
+    else {
+        sendError(ERROR, QString("position file does not exist or is not readable: %1").arg(fileInfo.absoluteFilePath()));
     }
     if ((axisType == eveINT) && (posIntList.count() > 0)){
         startPos = posIntList.first();
