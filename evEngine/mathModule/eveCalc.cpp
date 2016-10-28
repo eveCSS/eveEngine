@@ -68,6 +68,7 @@ eveCalc::eveCalc(eveMessageChannel* manag, QHash<QString, QString>* mathparams) 
     if (normalizeId.isEmpty()) doNormalize = false;
     QString threshold_str = mathparams->value("threshold", QString());
     saveValues = true;
+    normalizeExt = false;
     threshold = 0.5;
     bool ok = false;
     if (!threshold_str.isEmpty()){
@@ -126,7 +127,7 @@ void eveCalc::reset(){
  */
 bool eveCalc::addValue(QString deviceId, int pos, eveVariant dataVar){
 
-    bool retval = false;
+    bool retval = true;
 
     if (deviceId == xAxisId) {
         // set position at first invocation
@@ -169,15 +170,15 @@ bool eveCalc::addValue(QString deviceId, int pos, eveVariant dataVar){
                 if (doNormalize) {
                     if (fabs(zdata) > 0.0) {
                         ydata /= zdata;
-                        retval = true;
                     }
                     else {
+                        retval = false;
                         ydata = 0.0;
                         manager->sendError(MINOR, MATH, 0, QString("unable to normalize with normalize detector value 0.0"));
                     }
                 }
                 ++count;
-                acceptPoint(xdata, ydata);
+                if (retval) retval = acceptPoint(xdata, ydata);
             }
         }
         else 	if (dataVar.canConvert(QVariant::DateTime)){
@@ -314,11 +315,12 @@ MathAlgorithm eveCalc::toMathAlgorithm(QString AlgoString){
 	return returnAlgo;
 }
 
-void eveCalc::acceptPoint(double xval, double yval) {
+bool eveCalc::acceptPoint(double xval, double yval) {
     if ((saveValues)||(count == 0)){
         // we always save the start values
         newValues = true;
         points.append(QPointF(xval, yval));
+        manager->sendError(DEBUG, MATH, 0, QString("add point to calc %1 / %2").arg(xval).arg(yval));
     }
     if (yval < curveMin.ry()) {
         curveMin.setY(yval);
@@ -332,7 +334,9 @@ void eveCalc::acceptPoint(double xval, double yval) {
         curveSum += QPointF(0.0, yval);
     } catch (std::exception& e) {
         eveError::log(ERROR, QString("C++ Exception in eveCalc > sum += value <  %1").arg(e.what()), MATH);
+        return false;
     }
+    return true;
 }
 
 QPointF eveCalc::getResult(MathAlgorithm algo){
@@ -372,7 +376,15 @@ QPointF eveCalc::getResult(MathAlgorithm algo){
 
 bool eveCalc::calculatePeakCenterFWHM(){
 
-    if ((points.size() < 3) || (curveMin.ry() == curveMax.ry())) return false;
+    if (points.size() < 3) {
+        manager->sendError(DEBUG, MATH, 0, QString("unable to do calculations with less then 3 data points"));
+        return false;
+    }
+    if (curveMin.ry() == curveMax.ry()) {
+        manager->sendError(DEBUG, MATH, 0, QString("unable to do calculations Y_min = Y_max"));
+        return false;
+    }
+
 
     newValues = false;
     Calcresult mmresult = getPeakAndCenter(points);
@@ -381,6 +393,10 @@ bool eveCalc::calculatePeakCenterFWHM(){
         curveFwhm.setY(mmresult.fwhm);
         curveCenter.setX(mmresult.center);
         return true;
+    }
+    else {
+        manager->sendError(DEBUG, MATH, 0, QString("unable to do calculate PeakCenterFWHM peak: %1, Center %2, Fwhm %3")
+                           .arg(mmresult.peak.ry()).arg(mmresult.center).arg(mmresult.fwhm));
     }
 
     return false;

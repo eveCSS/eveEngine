@@ -64,7 +64,7 @@ private:
     double zdata;
     double xdata;
     QPointF getEdge(const QVector<QPointF>& curve);
-    void acceptPoint(double, double);
+    bool acceptPoint(double, double);
     bool calculatePeakCenterFWHM();
     QVector<QPointF> getDerivative(const QVector<QPointF>& curve);
     Calcresult getPeakAndCenter(const QVector<QPointF>& curve);
