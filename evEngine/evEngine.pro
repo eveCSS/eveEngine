@@ -66,7 +66,8 @@ HEADERS += scanModule/eveDeviceDefinitions.h \
     mathModule/eveMathConfig.h \
     version.h \
     nwModule/evevalidationhandler.h \
-    scanModule/eveSMCounter.h
+    scanModule/eveSMCounter.h \
+    mathModule/eveVariance.h
 SOURCES += scanModule/eveDeviceDefinitions.cpp \
     scanModule/eveSMMotor.cpp \
     scanModule/eveSMDetector.cpp \
@@ -126,7 +127,8 @@ SOURCES += scanModule/eveDeviceDefinitions.cpp \
     mathModule/eveMath.cpp \
     mathModule/eveMathConfig.cpp \
     nwModule/evevalidationhandler.cpp \
-    scanModule/eveSMCounter.cpp
+    scanModule/eveSMCounter.cpp \
+    mathModule/eveVariance.cpp
 INCLUDEPATH += nwModule \
     scanModule \
     storageModule \

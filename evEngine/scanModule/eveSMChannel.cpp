@@ -20,6 +20,8 @@
 
 /**
  *
+ * normCalc = valueRaw/normRaw
+ *
  * @param scanmodule QObject parent
  * @param definition corresponding detectorchannel definition
  * @return
@@ -36,9 +38,14 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveSMDetector* smdetector,
     isDetectorTrigger = false;
     isDetectorUnit = false;
     isDetectorStop = false;
+    isInterval = false;
+    intervalRunning = false;
+    triggerinterval = 0.0;
+    delayedIntervalTrigger = false;
     deferredTrigger = false;
     name = definition->getName();
     xmlId = definition->getId();
+    intervalTimer = NULL;
     valueTrans = NULL;
     stopTrans = NULL;
     triggerTrans = NULL;
@@ -51,6 +58,7 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveSMDetector* smdetector,
     normRawMsg = NULL;
     averageMsg = NULL;
     averageParamsMsg = NULL;
+    stddevMsg = NULL;
     limitMsg = NULL;
     channelStatus = eveCHANNELINIT;
     channelType=definition->getChannelType();
@@ -58,7 +66,7 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveSMDetector* smdetector,
     unit = "";
     isTimer = false;
     // true if read timeout is <= 10s
-    timeoutShort = true;
+    testAtInit = true;
     normalizeChannel = normalizeWith;
     detector = smdetector;
     sendreadyevent = false;
@@ -88,7 +96,7 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveSMDetector* smdetector,
                 valueTrans = new eveSMCounter(scanModule, this, xmlId, name, transdef);
             }
         }
-        if (transdef->getTimeout() > 10.0) timeoutShort = false;
+        if (transdef->getTimeout() > 10.0) testAtInit = false;
     }
     if (valueTrans != NULL)
         haveValue = true;
@@ -118,14 +126,14 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveSMDetector* smdetector,
                 triggerValue.setValue(definition->getTrigCmd()->getValueString());
                 if (!transportList.contains(eveTRANS_CA)) transportList.append(eveTRANS_CA);
             }
-            if (definition->getTrigCmd()->getTrans()->getTimeout() > 10.0) timeoutShort = false;
+            if (definition->getTrigCmd()->getTrans()->getTimeout() > 10.0) testAtInit = false;
         }
     }
     else {
         triggerTrans = detector->getTrigTrans();
         triggerValue = detector->getTrigValue();
         isDetectorTrigger = true;
-        if (detector->getTriggerTimeout() > 10.0) timeoutShort = false;
+        if (detector->getTriggerTimeout() > 10.0) testAtInit = false;
     }
     if (triggerTrans != NULL) haveTrigger = true;
 
@@ -170,6 +178,27 @@ eveSMChannel::eveSMChannel(eveScanModule* scanmodule, eveSMDetector* smdetector,
         sendreadyevent = (parameter.value("sendreadyevent").toLower() == "true");
     if (parameter.contains("deferredtrigger"))
         deferredTrigger = (parameter.value("deferredtrigger").toLower() == "true");
+    if (parameter.contains("smchanneltype")) {
+         if (parameter.value("smchanneltype").toLower() == "interval") isInterval = true;
+    }
+    ok = true;
+    if (parameter.contains("triggerinterval")) {
+        triggerinterval = parameter.value("triggerinterval").toDouble(&ok);
+        if (!ok) sendError(ERROR, 0, "Unable to evaluate triggerinterval");
+    }
+
+    if (isInterval) {
+        if (averageCount > 1) {
+            sendError(ERROR, 0, "Unable to do average measurement with detector of type interval, switched to average count: 1");
+            averageCount = 1;
+        }
+        testAtInit = false;
+        intervalTimer = new QTimer(this);
+        connect(intervalTimer, SIGNAL(timeout()), this, SLOT(intervalTimerReady()));
+        intervalTimer->setSingleShot(true);
+        intervalTimer->setInterval((int)(triggerinterval*1000.));
+    }
+
 
     averageRaw = NULL;
     averageNormRaw = NULL;
@@ -371,6 +400,10 @@ void eveSMChannel::transportReady(int status) {
                     if (averageNormRaw) averageNormRaw->reset();
                     sendError(INFO, 0, QString("Channel %1 (%2), got redo event, beginning a new average measurement").arg(name).arg(xmlId));
                 }
+                else if (isInterval){
+                    intervalVariance.Clear();
+                    sendError(INFO, 0, QString("Channel %1 (%2), got redo event, beginning a new interval measurement").arg(name).arg(xmlId));
+                }
                 else
                     sendError(INFO, 0, QString("Channel %1 (%2), got redo event, beginning a new measurement").arg(name).arg(xmlId));
 
@@ -406,6 +439,7 @@ void eveSMChannel::transportReady(int status) {
 
                 if(averageRaw->isDone()){
                     // ready with average measurements
+                    if (valueRawMsg != NULL) delete valueRawMsg;
                     valueRawMsg = averageRaw->getResultMessage();
                     valueRawMsg->setXmlId(xmlId);
                     valueRawMsg->setName(name);
@@ -454,6 +488,22 @@ void eveSMChannel::transportReady(int status) {
                 else
                     triggerRead(false);
             }
+            else if (isInterval){
+                sendError(DEBUG, 0, QString("Interval Channel %1, addValue").arg(xmlId));
+                if (normalizeChannel)
+                    intervalVariance.Push(normCalc);
+                else
+                    intervalVariance.Push(valueRaw);
+
+                if (intervalRunning) {
+                    if (delayedIntervalTrigger){
+                        delayedIntervalTrigger = false;
+                        triggerRead(false);
+                    }
+                }
+                else
+                    intervalComplete();
+            }
             else {
                 valueRawMsg->setXmlId(xmlId);
                 valueRawMsg->setName(name);
@@ -463,6 +513,46 @@ void eveSMChannel::transportReady(int status) {
                 }
                 signalReady();
             }
+        }
+    }
+}
+void eveSMChannel::intervalComplete() {
+    QVector<double> dblArr1(1);
+    QVector<double> dblArr2(2);
+    dblArr1[0] = intervalVariance.Mean();
+    if (valueRawMsg != NULL) delete valueRawMsg;
+    valueRawMsg = new eveDataMessage(xmlId, name, eveDataStatus(), DMTunmodified, eveTime::getCurrent(), dblArr1);
+    if (normalizeChannel){
+        valueRawMsg->setNormalizeId(normalizeChannel->getXmlId());
+        valueRawMsg->setDataMod(DMTnormalized);
+    }
+    dblArr2[0] = (double)intervalVariance.NumDataValues();
+    dblArr2[1] = intervalVariance.StandardDeviation();
+    stddevMsg = new eveDataMessage(xmlId, name, eveDataStatus(), DMTstandarddev, eveTime::getCurrent(), dblArr2);
+    stddevMsg->setAuxString("Count");
+    sendError(DEBUG, 0, QString("Interval Channel %1, Mean %2, Stddev %3, Counts %4 ").arg(xmlId).arg(dblArr1[0]).arg(dblArr2[1]).arg(dblArr2[0]));
+    intervalVariance.Clear();
+    if (normCalcMsg != NULL){
+        delete normCalcMsg;
+        normCalcMsg = NULL;
+    }
+    if (normRawMsg != NULL) {
+        delete normRawMsg;
+        normRawMsg = NULL;
+    }
+    signalReady();
+}
+
+void eveSMChannel::intervalTimerReady() {
+
+    if(intervalRunning) {
+        sendError(DEBUG, 0, QString("called intervalTimerReady: %1").arg(name));
+        if (channelStatus != eveCHANNELIDLE){
+            // device is not ready yet, delay trigger
+            delayedIntervalTrigger = true;
+        }
+        else {
+            triggerRead(false);
         }
     }
 }
@@ -512,6 +602,11 @@ void eveSMChannel::triggerRead(bool queue) {
             }
             else {
                 read(queue);
+            }
+            if (isInterval) {
+                sendError(DEBUG, 0, QString("Trigger Interval Channel %1").arg(xmlId));
+                intervalTimer->start();
+                intervalRunning = true;
             }
         }
     }
@@ -565,57 +660,42 @@ void eveSMChannel::stop() {
  *
  * @return current channel value or NULL
  */
-eveDataMessage* eveSMChannel::getValueMessage(){
+eveDataMessage* eveSMChannel::getValueMessage(resultType rtype){
+
     eveDataMessage* return_data = valueRawMsg;
-    valueRawMsg = NULL;
-    return return_data;
-}
+    switch (rtype) {
+    case RAWVAL:
+        return_data = valueRawMsg;
+        valueRawMsg = NULL;
+        break;
+    case NORMVAL:
+        return_data = normCalcMsg;
+        normCalcMsg = NULL;
+        break;
+    case NORMRAW:
+        return_data = normRawMsg;
+        normRawMsg = NULL;
+        break;
+    case AVERAGE:
+        return_data = averageMsg;
+        averageMsg = NULL;
+        break;
+    case AVERAGEPARAMS:
+        return_data = averageParamsMsg;
+        averageParamsMsg = NULL;
+        break;
+    case LIMIT:
+        return_data = limitMsg;
+        limitMsg = NULL;
+        break;
+    case STDDEV:
+        return_data = stddevMsg;
+        stddevMsg = NULL;
+        break;
+    default:
+        break;
+    }
 
-/**
- *
- * @return value of normalize channel or NULL
- */
-eveDataMessage* eveSMChannel::getNormValueMessage(){
-    eveDataMessage* return_data = normCalcMsg;
-    normCalcMsg = NULL;
-    return return_data;
-}
-
-/**
- *
- * @return raw value of channel used for normalization or NULL
- */
-eveDataMessage* eveSMChannel::getNormRawValueMessage(){
-    eveDataMessage* return_data = normRawMsg;
-    normRawMsg = NULL;
-    return return_data;
-}
-
-/**
- *
- * @return average count and attempt
- */
-eveDataMessage* eveSMChannel::getAverageMessage(){
-    eveDataMessage* return_data = averageMsg;
-    averageMsg = NULL;
-    return return_data;
-}
-/**
- *
- * @return average count and attempt
- */
-eveDataMessage* eveSMChannel::getAverageParamsMessage(){
-    eveDataMessage* return_data = averageParamsMsg;
-    averageParamsMsg = NULL;
-    return return_data;
-}
-/**
- *
- * @return limit and deviation
- */
-eveDataMessage* eveSMChannel::getLimitMessage(){
-    eveDataMessage* return_data = limitMsg;
-    limitMsg = NULL;
     return return_data;
 }
 
@@ -654,7 +734,7 @@ bool eveSMChannel::retrieveData(){
         normRaw = 1.0;
         normCalc = NAN;
 
-        normRawMsg = normalizeChannel->getValueMessage();
+        normRawMsg = normalizeChannel->getValueMessage(RAWVAL);
         if (normRawMsg == NULL){
             sendError(ERROR,0,QString("unable to retrieve value of normalized Channel %1").arg(normalizeChannel->getXmlId()));
         }
@@ -707,6 +787,13 @@ eveDevInfoMessage* eveSMChannel::getDeviceInfo(bool normalizeInfo){
         sl->append(QString("MaxDeviation:%1").arg(maxDeviation));
         sl->append(QString("Minimum:%1").arg(minimum));
     }
+    if (isInterval) {
+        sl->append(QString("Detectortype:Interval"));
+        sl->append(QString("Triggerinterval:%1").arg(triggerinterval));
+    }
+    else {
+        sl->append(QString("Detectortype:Standard"));
+    }
     if (normalizeChannel && normalizeInfo){
         sl->append(QString("NormalizeChannelID:%1").arg(normalizeChannel->getXmlId()));
         dataMod = DMTnormalized;
@@ -749,6 +836,13 @@ void eveSMChannel::newEvent(eveEventProperty* evprop) {
                 delayedTrigger = false;
                 triggerRead(false);
             }
+        }
+    }
+    else if (evprop->getActionType() == eveEventProperty::STOP){
+        if(intervalRunning) {
+            intervalRunning = false;
+            if (channelStatus == eveCHANNELIDLE)
+                intervalComplete();
         }
     }
 }

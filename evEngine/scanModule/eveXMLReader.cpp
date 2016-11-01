@@ -1017,98 +1017,123 @@ QList<eveSMAxis*>* eveXMLReader::getAxisList(eveScanModule* scanmodule, int chai
  */
 QList<eveSMChannel*>* eveXMLReader::getChannelList(eveScanModule* scanmodule, int chain, int smid){
 
-	QList<eveSMChannel *> *channellist = new QList<eveSMChannel *>;
-	QHash<QString, eveSMDetector *> detectorHash;
-        QStringList normalizeIdList;
+    QList<eveSMChannel *> *channellist = new QList<eveSMChannel *>;
+    QHash<QString, eveSMDetector *> detectorHash;
+    QStringList normalizeIdList;
 
-	try
-	{
-		if (!smIdHash.contains(chain)) return channellist;
-                QDomElement domSMElement = smIdHash.value(chain)->value(smid);
-                QDomElement domElement = domSMElement.firstChildElement("smchannel");
-                while (!domElement.isNull()) {
-                    // first loop collects all normalizeIDs
-                    QDomElement normId = domElement.firstChildElement("normalize_id");
-                    if (!normId.isNull()) normalizeIdList.append(normId.text());
-                    domElement = domElement.nextSiblingElement("smchannel");
+    try
+    {
+        if (!smIdHash.contains(chain)) return channellist;
+        QDomElement domSMElement = smIdHash.value(chain)->value(smid);
+        QDomElement domElement = domSMElement.firstChildElement("smchannel");
+        while (!domElement.isNull()) {
+            // first loop collects all normalizeIDs
+            QDomElement normId = domElement.firstChildElement("normalize_id");
+            if (!normId.isNull()) normalizeIdList.append(normId.text());
+            domElement = domElement.nextSiblingElement("smchannel");
+        }
+
+        domElement = domSMElement.firstChildElement("smchannel");
+        while (!domElement.isNull()) {
+            QHash<QString, QString> paraHash;
+            eveSMChannel* nmChannel = NULL;
+            eveSMDetector* detector = NULL;
+            eveChannelDefinition* channelDefinition = NULL;
+            QDomElement domId = domElement.firstChildElement("channelid");
+
+            if (normalizeIdList.contains(domId.text())){
+                // skip this channel if it is used as normalized channel elsewhere
+                domElement = domElement.nextSiblingElement("smchannel");
+                continue;
+            }
+
+            channelDefinition = deviceList.getChannelDef(domId.text());
+            if (channelDefinition == NULL){
+                sendError(ERROR,0,QString("no channeldefinition found for %1").arg(domId.text()));
+                domElement = domElement.nextSiblingElement("smchannel");
+                continue;
+            }
+
+            eveDetectorDefinition* detectorDefinition = channelDefinition->getDetectorDefinition();
+            if (detectorHash.contains(detectorDefinition->getId())){
+                detector = detectorHash.value(detectorDefinition->getId());
+            }
+            else {
+                detector = new eveSMDetector(scanmodule, detectorDefinition);
+                detectorHash.insert(detectorDefinition->getId(), detector);
+            }
+
+            QList<eveEventProperty* > *eventList = new QList<eveEventProperty* >;
+            domId = domElement.firstChildElement();
+            while (!domId.isNull()){
+                eveChannelDefinition* normalizeDefinition = NULL;
+                eveSMDetector* normalizeDetector = NULL;
+                if (domId.nodeName() == "normalize_id"){
+                    // use a local copy of normalize definition because we modify it for this scanmodule
+                    normalizeDefinition = deviceList.getChannelDef(domId.text());
+                    if (normalizeDefinition == NULL) {
+                        sendError(ERROR,0,QString("no channeldefinition found for normalize channel %1").arg(domId.text()));
+                        domId = domId.nextSiblingElement();
+                        continue;
+                    }
+                    eveDetectorDefinition* detectorDefinition = normalizeDefinition->getDetectorDefinition();
+                    if (detectorHash.contains(detectorDefinition->getId())){
+                        normalizeDetector = detectorHash.value(detectorDefinition->getId());
+                    }
+                    else {
+                        normalizeDetector = new eveSMDetector(scanmodule, detectorDefinition);
+                        detectorHash.insert(detectorDefinition->getId(), normalizeDetector);
+                    }
+                    nmChannel = new eveSMChannel(scanmodule, normalizeDetector, normalizeDefinition, QHash<QString, QString>(), new QList<eveEventProperty* >, NULL);
                 }
-
-                domElement = domSMElement.firstChildElement("smchannel");
-                while (!domElement.isNull()) {
-			QHash<QString, QString> paraHash;
-			eveSMChannel* nmChannel = NULL;
-			eveSMDetector* detector = NULL;
-			eveChannelDefinition* channelDefinition = NULL;
-			QDomElement domId = domElement.firstChildElement("channelid");
-
-                        if (normalizeIdList.contains(domId.text())){
-                            // skip this channel if it is used as normalized channel elsewhere
-                            domElement = domElement.nextSiblingElement("smchannel");
-                            continue;
+                else if ((domId.nodeName() == "standard") || (domId.nodeName() == "interval")) {
+                    paraHash.insert("smchanneltype", domId.nodeName());
+                    QDomElement domSMTypeElement=domId.firstChildElement();
+                    while (!domSMTypeElement.isNull()){
+                        if (domSMTypeElement.nodeName() == "redoevent"){
+                            eveEventProperty* event = getEvent(eveEventProperty::REDO, domSMTypeElement);
+                            if (event != NULL ) eventList->append(event);
                         }
+                        else if (domSMTypeElement.nodeName() == "stoppedby"){
+                            QString detectorId = domSMTypeElement.text().trimmed();
+                            eveDeviceDefinition* deviceDef = deviceList.getAnyDef(detectorId);
+                            if ((deviceDef == NULL) || (deviceDef->getValueCmd() == NULL)){
+                                sendError(ERROR, 0, QString("get ChannelList: interval detector: no or invalid device definition found for %1").arg(detectorId));
+                                return NULL;
+                            }
+                            // rebuild eventId to remove possible leading zeros
+                            QString eventId = QString("D-%1-%2-%3").arg(chain).arg(smid).arg(detectorId);
+                            sendError(DEBUG, 0, QString("get ChannelList: interval: found stopped-by definition: %1, id:%2, smid: %3, chid: %4").arg(detectorId).arg(eventId).arg(smid).arg(chain));
+                            eveEventProperty* event =  new eveEventProperty(eventId, detectorId, eveVariant(QVariant(eveVariant::getMangled(chain,smid))), eveEventTypeDETECTOR, eveIncidentNONE, eveEventProperty::STOP, NULL);
+                            if (event != NULL ) eventList->append(event);
+                        }
+                        else {
+                            paraHash.insert(domSMTypeElement.nodeName(), domSMTypeElement.text().trimmed());
+                        }domSMTypeElement = domSMTypeElement.nextSiblingElement();
+                    }
+                }
+                else if (domId.nodeName() == "channelid") {
+                    paraHash.insert(domId.nodeName(), domId.text().trimmed());
+                }
+                else {
+                    sendError(ERROR,0,QString("unknown tag %1 in channeldefinition").arg(domId.nodeName()));
+                }
+                domId = domId.nextSiblingElement();
+            }
 
-			channelDefinition = deviceList.getChannelDef(domId.text());
-			if (channelDefinition == NULL){
-				sendError(ERROR,0,QString("no channeldefinition found for %1").arg(domId.text()));
-				domElement = domElement.nextSiblingElement("smchannel");
-				continue;
-			}
+            channellist->append(new eveSMChannel(scanmodule, detector, channelDefinition, paraHash, eventList, nmChannel));
+            domElement = domElement.nextSiblingElement("smchannel");
+        }
+    }
+    catch (std::exception& e)
+    {
+        //printf("C++ Exception %s\n",e.what());
+        sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getChannelList").arg(e.what()));
+    }
 
-			eveDetectorDefinition* detectorDefinition = channelDefinition->getDetectorDefinition();
-			if (detectorHash.contains(detectorDefinition->getId())){
-				detector = detectorHash.value(detectorDefinition->getId());
-			}
-			else {
-				detector = new eveSMDetector(scanmodule, detectorDefinition);
-				detectorHash.insert(detectorDefinition->getId(), detector);
-			}
-
-			QList<eveEventProperty* > *eventList = new QList<eveEventProperty* >;
-			domId = domElement.firstChildElement();
-			while (!domId.isNull()){
-				eveChannelDefinition* normalizeDefinition = NULL;
-				eveSMDetector* normalizeDetector = NULL;
-				if (domId.nodeName() == "redoevent"){
-					eveEventProperty* event = getEvent(eveEventProperty::REDO, domId);
-					if (event != NULL ) eventList->append(event);
-				}
-				else if (domId.nodeName() == "normalize_id"){
-					// use a local copy of normalize definition because we modify it for this scanmodule
-					normalizeDefinition = deviceList.getChannelDef(domId.text());
-					if (normalizeDefinition == NULL) {
-						sendError(ERROR,0,QString("no channeldefinition found for normalize channel %1").arg(domId.text()));
-						domId = domId.nextSiblingElement();
-						continue;
-					}
-					eveDetectorDefinition* detectorDefinition = normalizeDefinition->getDetectorDefinition();
-					if (detectorHash.contains(detectorDefinition->getId())){
-						normalizeDetector = detectorHash.value(detectorDefinition->getId());
-					}
-					else {
-						normalizeDetector = new eveSMDetector(scanmodule, detectorDefinition);
-						detectorHash.insert(detectorDefinition->getId(), normalizeDetector);
-					}
-					nmChannel = new eveSMChannel(scanmodule, normalizeDetector, normalizeDefinition, QHash<QString, QString>(), new QList<eveEventProperty* >, NULL);
-				}
-				else {
-					paraHash.insert(domId.nodeName(), domId.text().trimmed());
-				}
-				domId = domId.nextSiblingElement();
-			}
-
-			channellist->append(new eveSMChannel(scanmodule, detector, channelDefinition, paraHash, eventList, nmChannel));
-			domElement = domElement.nextSiblingElement("smchannel");
-		}
-	}
-	catch (std::exception& e)
-	{
-		//printf("C++ Exception %s\n",e.what());
-		sendError(FATAL,0,QString("C++ Exception %1 in eveXMLReader::getChannelList").arg(e.what()));
-	}
-
-	// TODO Before we can delete this we need a proper copy constructor for channelDefinition
-	// foreach (QString key, channelDefHash.keys()) delete channelDefHash.take(key);
-	return channellist;
+    // TODO Before we can delete this we need a proper copy constructor for channelDefinition
+    // foreach (QString key, channelDefHash.keys()) delete channelDefHash.take(key);
+    return channellist;
 }
 
 QList<eveEventProperty*>* eveXMLReader::getSMEventList(int chain, int smid){
@@ -1415,7 +1440,10 @@ void eveXMLReader::getMathConfigFromPlot(int chid, int smid, QList<eveMathConfig
 					eveMathConfig *mathConfig = new eveMathConfig(plotId, init, xAxisId);
 					mathConfig->addScanModule(smid);
 					mathConfig->addYAxis(yAxisId, normalizeId);
-                    if ((normalizeId.length() > 0 ) && compareWithSMChannel(domElement, yAxisId, normalizeId)) mathConfig->setNormalizeExternal(true);
+                    if ((normalizeId.length() > 0 ) && compareWithSMChannel(domElement, yAxisId, normalizeId)) {
+                        mathConfig->setNormalizeExternal(true);
+                        sendError(DEBUG, 0, QString("MathConfig: %1, %2, %3, normalize External: Yes").arg(xAxisId).arg(yAxisId).arg(normalizeId));
+                    }
 					mathConfigList->append(mathConfig);
 				}
 				domYAxis = domYAxis.nextSiblingElement("yaxis");

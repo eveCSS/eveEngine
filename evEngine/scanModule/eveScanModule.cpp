@@ -35,7 +35,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     triggerRid = 0;
     triggerDetecRid = 0;
     perPosCount = 0;
-    storageHint = "default";
+    storageHint = "main";
 
 	// convert times to msecs
     settleDelay = (int)(parser->getSMTagDouble(chainId, smId, "settletime", 0.0)*1000.0);
@@ -44,7 +44,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     manDetTrigger = parser->getSMTagBool(chainId, smId, "triggerconfirmchannel", false);
     QString SMType = parser->getSMTag(chainId, smId, "type");
     if ((SMType == "save_axis_positions") || (SMType == "save_channel_values")) {
-        storageHint = "alternate";
+        storageHint = "pre_post";
     }
 
     stageHash.insert(eveStgINIT, &eveScanModule::stgInit);
@@ -92,6 +92,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
         if (axis->getExpectedPositions() > expectedPositions) expectedPositions = axis->getExpectedPositions();
     }
 
+    // QList<eveSMChannel *> stoppedByList;
     // get all used detector channels and create a list of detectors
     // channels used as normalize channels are removed from this list
     channelList = parser->getChannelList(this, chainId, smId);
@@ -100,7 +101,10 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
         if (!detectorList.contains(channel->getDetector())) detectorList.append(channel->getDetector());
         if (channel->getNormalizeChannel() != NULL) if (!detectorList.contains(channel->getNormalizeChannel()->getDetector()))
                     detectorList.append(channel->getNormalizeChannel()->getDetector());
+    //    if (channel->isIntervalType()) stoppedByList.append(channel->getStoppedById());
     }
+    // make sure the sendreadyevent is set for all detectors which stop interval detectors
+    //foreach (eveSMChannel *channel, *stoppedByList) channel->setReadyEvent(true);
 
     eventList = parser->getSMEventList(chainId, smId);
 
@@ -700,25 +704,8 @@ void eveScanModule::stgTrigRead() {
             if (nestedSM) ready = nestedSM->isDone();
             if (ready) {
                 foreach (eveSMChannel *channel, *channelList){
-                    eveDataMessage* normMsg = channel->getNormValueMessage();
-                    eveDataMessage* normRawMsg = channel->getNormRawValueMessage();
-                    eveDataMessage* dataMsg = channel->getValueMessage();
-                    eveDataMessage* averageMsg = channel->getAverageMessage();
-                    eveDataMessage* limitMsg = channel->getLimitMessage();
-                    if (normMsg != NULL){
-                        normMsg->setPositionCount(triggerPosCount);
-                        bool ok = false;
-                        double dval = normMsg->toVariant().toDouble(&ok);
-                        if (ok) sendError(DEBUG, 0, QString("%1: normalized value %2").arg(channel->getName()).arg(dval));
-                        sendMessage(normMsg);
-                    }
-                    if (normRawMsg != NULL){
-                        normRawMsg->setPositionCount(triggerPosCount);
-                        bool ok = false;
-                        double dval = normRawMsg->toVariant().toDouble(&ok);
-                        if (ok) sendError(DEBUG, 0, QString("%2: channel (used for normalization by %1) raw value: %3").arg(channel->getName()).arg(normRawMsg->getName()).arg(dval));
-                        sendMessage(normRawMsg);
-                    }
+                    eveDataMessage* dataMsg;
+                    dataMsg = channel->getValueMessage(eveSMChannel::RAWVAL);
                     if (dataMsg != NULL) {
                         dataMsg->setPositionCount(triggerPosCount);
                         bool ok = false;
@@ -739,22 +726,48 @@ void eveScanModule::stgTrigRead() {
                     else {
                         sendError(ERROR, 0, QString(" no data available for channel %1").arg(channel->getName()));
                     }
-                    if (averageMsg != NULL){
-                        averageMsg->setPositionCount(triggerPosCount);
-                        QVector<int> intArr = averageMsg->getIntArray();
+
+                    dataMsg = channel->getValueMessage(eveSMChannel::NORMVAL);
+                    if (dataMsg != NULL){
+                        dataMsg->setPositionCount(triggerPosCount);
+                        bool ok = false;
+                        double dval = dataMsg->toVariant().toDouble(&ok);
+                        if (ok) sendError(DEBUG, 0, QString("%1: normalized value %2").arg(channel->getName()).arg(dval));
+                        sendMessage(dataMsg);
+                    }
+                    dataMsg = channel->getValueMessage(eveSMChannel::NORMRAW);
+                    if (dataMsg != NULL){
+                        dataMsg->setPositionCount(triggerPosCount);
+                        bool ok = false;
+                        double dval = dataMsg->toVariant().toDouble(&ok);
+                        if (ok) sendError(DEBUG, 0, QString("%2: channel (used for normalization by %1) raw value: %3").arg(channel->getName()).arg(dataMsg->getName()).arg(dval));
+                        sendMessage(dataMsg);
+                    }
+                    dataMsg = channel->getValueMessage(eveSMChannel::AVERAGE);
+                    if (dataMsg != NULL){
+                        dataMsg->setPositionCount(triggerPosCount);
+                        QVector<int> intArr = dataMsg->getIntArray();
                         sendError(DEBUG, 0, QString("%1: average count: %2, attempts: %3").arg(channel->getName()).arg(intArr[0]).arg(intArr[1]));
-                        sendMessage(averageMsg);
-                        averageMsg = channel->getAverageParamsMessage();
-                        if (averageMsg != NULL){
-                            averageMsg->setPositionCount(triggerPosCount);
-                            sendMessage(averageMsg);
+                        sendMessage(dataMsg);
+                        dataMsg = channel->getValueMessage(eveSMChannel::AVERAGEPARAMS);
+                        if (dataMsg != NULL){
+                            dataMsg->setPositionCount(triggerPosCount);
+                            sendMessage(dataMsg);
                         }
                     }
-                    if (limitMsg != NULL){
-                        limitMsg->setPositionCount(triggerPosCount);
-                        QVector<double> dblArr = limitMsg->getDoubleArray();
+                    dataMsg = channel->getValueMessage(eveSMChannel::LIMIT);
+                    if (dataMsg != NULL){
+                        dataMsg->setPositionCount(triggerPosCount);
+                        QVector<double> dblArr = dataMsg->getDoubleArray();
                         sendError(DEBUG, 0, QString("%1: limit: %2, max deviation: %3").arg(channel->getName()).arg(dblArr[0]).arg(dblArr[1]));
-                        sendMessage(limitMsg);
+                        sendMessage(dataMsg);
+                    }
+                    dataMsg = channel->getValueMessage(eveSMChannel::STDDEV);
+                    if (dataMsg != NULL){
+                        dataMsg->setPositionCount(triggerPosCount);
+                        QVector<double> dblArr = dataMsg->getDoubleArray();
+                        sendError(DEBUG, 0, QString("%1: std deviation: %2, counts: %3").arg(channel->getName()).arg(dblArr[1]).arg(dblArr[0]));
+                        sendMessage(dataMsg);
                     }
                 }
                 sendError(DEBUG, 0, "stgTrigRead Done");
