@@ -44,7 +44,7 @@ eveScanModule::eveScanModule(eveScanManager *parent, eveXMLReader *parser, int c
     manDetTrigger = parser->getSMTagBool(chainId, smId, "triggerconfirmchannel", false);
     QString SMType = parser->getSMTag(chainId, smId, "type");
     if ((SMType == "save_axis_positions") || (SMType == "save_channel_values")) {
-        storageHint = "pre_post";
+        storageHint = "snapshot";
     }
 
     stageHash.insert(eveStgINIT, &eveScanModule::stgInit);
