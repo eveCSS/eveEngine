@@ -525,6 +525,7 @@ public:
 	eveTime geteveDT(){return eveTime::eveTimeFromDateTime(dateTime);};
     QStringList getAttributes(){return attribList;};
     void addAttribute(QString attribute){attribList.append(attribute);};
+    void invalidate();
 
 	bool isEmpty(){return !(arraySize);};
 	int getArraySize(){return arraySize;};

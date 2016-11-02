@@ -167,6 +167,9 @@ int hdf5DataSet::addData(eveDataMessage* data){
     if (!isInit) init(data);
     if (!isInit) return ERROR;
 
+    // we don't save severity therefor we overwrite invalid data with NAN
+    if (data->getDataStatus().getSeverity() == 3) data->invalidate();
+
     if (arraySize != data->getArraySize()){
         errorString += QString("hdf5DataSet::addData: array size mismatch: should be %1, but is %2").arg(arraySize).arg(data->getArraySize());
         return ERROR;

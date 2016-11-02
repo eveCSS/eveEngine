@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include <assert.h>
+#include <cmath>
 #include <QChar>
 #include "eveMessage.h"
 #include "eveError.h"
@@ -845,6 +846,38 @@ bool eveDataMessage::isFloat(){
 bool eveDataMessage::isInteger(){
 	return ((dataType == eveInt8T) || (dataType == eveInt16T) || (dataType == eveInt32T));
 }
+
+void eveDataMessage::invalidate() {
+
+    switch (dataType) {
+    case eveInt8T:					/* eveInt8 */
+        foreach (signed char val, dataArrayChar) val = 0xff;
+        break;
+    case eveInt16T:					/* eveInt16 */
+        foreach (short val, dataArrayShort) val = 0xffff;
+        break;
+    case eveInt32T:					/* eveInt32 */
+        foreach (int val, dataArrayInt) val = 0xffffffff;
+        break;
+    case eveFloat32T:					/* eveFloat32 */
+        foreach (float val, dataArrayFloat) val = NAN;
+        break;
+    case eveFloat64T:					/* eveFloat64 */
+        foreach (double val, dataArrayDouble) val = NAN;
+        break;
+    case eveStringT:					/* eveString */
+        break;
+    case eveDateTimeT:					/* eveString */
+        break;
+    default:
+        eveError::log(ERROR,"eveDataMessage unknown data type");
+        break;
+    }
+
+
+}
+
+// -----------------------
 
 eveDevInfoMessage::eveDevInfoMessage(int cid, int sid, QString xmlid, QString name, eveType dtype, bool arr, eveDataModType dataMod, QString auxinfo, QStringList* info, int prio, int dest) :
 	eveBaseDataMessage(EVEMESSAGETYPE_DEVINFO, cid, sid, xmlid, name, auxinfo, dataMod, prio, dest)
